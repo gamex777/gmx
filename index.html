@@ -1,452 +1,214 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scar's Pet World</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MicroEmu</title>
 
-        /* --- GLOBAL STYLES --- */
-        body {
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            
-            /* HOT PINK STRIPES BACKGROUND */
-            background-color: #ff69b4; 
-            background-image: repeating-linear-gradient(
-                45deg,
-                #ff69b4, 
-                #ff69b4 20px, 
-                #db5a9a 20px, 
-                #db5a9a 40px  
-            );
-            
-            font-family: 'Press Start 2P', cursive;
-            padding: 10px;
-            user-select: none; 
-            -webkit-user-select: none;
-            overflow: hidden; 
-        }
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MicroEmu">
+<link rel="apple-touch-icon" href="icon.png">
 
-        /* --- LOADING SCREEN --- */
-        #loading-screen {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            z-index: 9999; 
-            background-color: #222;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            transition: opacity 0.5s ease-out;
-        }
+<style>
+    /* -----------------------------------------
+       1. Base Setup & Console Body
+       ----------------------------------------- */
+    body, html {
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        display: flex; justify-content: center; align-items: center;
+        background-color: #2c2c2c; overflow: hidden; font-family: Arial, sans-serif;
+    }
+    .console-body {
+        width: 100vw; max-width: 900px; height: 45.45vw; max-height: 409px; 
+        background-color: #f67a76; border-radius: 50px; 
+        box-shadow: 12px 18px 25px rgba(0, 0, 0, 0.4), inset -4px -4px 10px rgba(0, 0, 0, 0.1), inset 4px 4px 10px rgba(255, 255, 255, 0.3); 
+        display: flex; justify-content: center; align-items: center;
+        position: relative; box-sizing: border-box;
+    }
+    @media (max-width: 768px) { .console-body { border-radius: 8vw; } }
 
-        .loading-title {
-            font-size: 2rem;
-            color: #ff69b4;
-            text-shadow: 4px 4px 0 #fff;
-            margin-bottom: 20px;
-            text-align: center;
-            line-height: 1.5;
-        }
+    /* -----------------------------------------
+       2. The Screen (UPDATED TO CANVAS)
+       ----------------------------------------- */
+    .screen-container {
+        width: 58%; height: 85%; 
+        background-color: #000000; border-radius: 12px; 
+        box-shadow: inset 2px 2px 6px rgba(255, 255, 255, 0.08), inset -2px -2px 6px rgba(0, 0, 0, 0.5), 0px 0px 0px 3px #1a1a1a;                     
+        position: relative; z-index: 10; overflow: hidden; 
+        
+        display: flex; justify-content: center; align-items: center;
+        cursor: pointer; /* Indicates it can be tapped */
+        -webkit-transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
 
-        .loading-text {
-            margin-bottom: 30px;
-            font-size: 0.8rem;
-            color: #aaa;
-            min-height: 1.2em; 
-        }
+    .screen-container.is-on {
+        background-color: #1a1a1a; 
+        box-shadow: inset 2px 2px 6px rgba(255, 255, 255, 0.08), inset -2px -2px 6px rgba(0, 0, 0, 0.5), 0px 0px 0px 3px #1a1a1a, inset 0px 0px 40px rgba(255, 255, 255, 0.05); 
+    }
 
-        /* START BUTTON */
-        #start-btn {
-            display: none; 
-            margin-top: 20px;
-            padding: 20px 40px;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 1.2rem;
-            background: #ff69b4;
-            color: white;
-            border: 4px solid white;
-            cursor: pointer;
-            box-shadow: 6px 6px 0 #000;
-            animation: pulse 1.5s infinite;
-        }
+    /* The actual drawing surface */
+    canvas#gameScreen {
+        width: 100%; height: 100%;
+        /* Forces crisp pixel-art rendering instead of blurry scaling */
+        image-rendering: -moz-crisp-edges;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
+        display: none; /* Hidden until power is on */
+    }
 
-        #start-btn:hover {
-            background: #ff85c1;
-            transform: translate(-2px, -2px);
-            box-shadow: 8px 8px 0 #000;
-        }
+    /* Instruction text before a game is loaded */
+    .screen-text {
+        color: #4ade80; font-family: monospace; font-size: 1rem;
+        text-align: center; display: none; opacity: 0.8;
+        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+    }
 
-        #start-btn:active {
-            transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0 #000;
-        }
+    .screen-container.is-on .screen-text { display: block; }
+    .screen-container.is-playing .screen-text { display: none; }
+    .screen-container.is-playing canvas#gameScreen { display: block; }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
+    /* -----------------------------------------
+       3. Controls & Hardware (Same as previous)
+       ----------------------------------------- */
+    .controls-right { position: absolute; right: 0; top: 0; width: 21%; height: 100%; z-index: 20; }
+    .btn-action {
+        width: 65px; height: 65px; border-radius: 50%; background-color: #6da2e0; border: 5px solid #1a1a1a; 
+        display: flex; justify-content: center; align-items: center; color: #ffffff; font-weight: bold; font-size: 1.8rem; text-shadow: 1px 1px 1px rgba(0,0,0,0.3); 
+        box-sizing: border-box; cursor: pointer; 
+        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; 
+        box-shadow: 0px 4px 4px rgba(0,0,0,0.3);
+        -webkit-transition: -webkit-transform 0.05s ease, box-shadow 0.05s ease; transition: transform 0.05s ease, box-shadow 0.05s ease;
+    }
+    .btn-action:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.3); -webkit-transform: translateY(3px); transform: translateY(3px); }
+    .btn-a { position: absolute; right: 30px; top: 38%; }
+    .btn-b { position: absolute; left: 30px; top: 52%; }
 
-        /* --- LEGEND STYLES --- */
-        .legend-box {
-            border: 4px solid white;
-            padding: 20px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            max-width: 90%;
-            margin-bottom: 20px;
-        }
+    .controls-left { position: absolute; left: 0; top: 0; width: 21%; height: 100%; z-index: 20; display: flex; justify-content: center; align-items: center; }
+    .d-pad-base { width: 140px; height: 140px; background-color: #b5b5b5; border: 4px solid #1a1a1a; border-radius: 50%; position: relative; }
+    .d-btn { width: 38px; height: 38px; position: absolute; cursor: pointer; background: transparent; border: none; padding: 0; outline: none; touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    .d-btn svg { width: 100%; height: 100%; display: block; -webkit-filter: drop-shadow(0px 4px 3px rgba(0,0,0,0.3)); filter: drop-shadow(0px 4px 3px rgba(0,0,0,0.3)); -webkit-transition: -webkit-transform 0.05s ease, -webkit-filter 0.05s ease; transition: transform 0.05s ease, filter 0.05s ease; }
+    .d-btn:active svg { -webkit-filter: drop-shadow(0px 0px 0px rgba(0,0,0,0)); filter: drop-shadow(0px 0px 0px rgba(0,0,0,0)); -webkit-transform: translateY(3px); transform: translateY(3px); }
+    .d-up { top: 10px; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%); }
+    .d-right { top: 50%; right: 10px; -webkit-transform: translateY(-50%) rotate(90deg); transform: translateY(-50%) rotate(90deg); }
+    .d-down { bottom: 10px; left: 50%; -webkit-transform: translateX(-50%) rotate(180deg); transform: translateX(-50%) rotate(180deg); }
+    .d-left { top: 50%; left: 10px; -webkit-transform: translateY(-50%) rotate(270deg); transform: translateY(-50%) rotate(270deg); }
 
-        .legend-row {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 0.7rem;
-            color: #ddd;
-        }
+    .btn-sys {
+        position: absolute; width: 90px; height: 32px; background-color: #000000; border-radius: 16px; 
+        display: flex; justify-content: center; align-items: center; color: #ffffff; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px;
+        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-shadow: 0px 4px 4px rgba(0,0,0,0.4); cursor: pointer;
+        left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%);
+        -webkit-transition: -webkit-transform 0.05s ease, box-shadow 0.05s ease; transition: transform 0.05s ease, box-shadow 0.05s ease;
+    }
+    .btn-sys:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.4); -webkit-transform: translateX(-50%) translateY(3px); transform: translateX(-50%) translateY(3px); }
+    .btn-select { bottom: 12%; }
+    .btn-start { bottom: 12%; }
+    .btn-power { top: 12%; }
 
-        .mini-btn {
-            background: #fff;
-            border: 2px solid #000;
-            color: black;
-            font-family: 'Press Start 2P', cursive;
-            box-shadow: 2px 2px 0 #000;
-            padding: 5px 8px;
-            font-size: 0.6rem;
-            display: inline-block;
-        }
-
-        .mini-dpad {
-            width: 25px; height: 25px;
-            display: flex; justify-content: center; align-items: center;
-            padding: 0;
-        }
-
-        /* --- MAIN GAME STYLES --- */
-        .page-title {
-            color: white;
-            text-align: center;
-            text-shadow: 4px 4px 0 #000; 
-            margin-bottom: 30px;
-            font-size: 1.5rem;
-        }
-
-        .main-wrapper {
-            width: 100%;
-            max-width: 600px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            opacity: 0; 
-            transition: opacity 1s;
-        }
-
-        #game-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 4/3;
-            background-image: url('https://poochie9905.github.io/poochie/bg-default.jpg');
-            background-size: cover;
-            background-position: center;
-            border: 4px solid #fff;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            overflow: hidden;
-            margin-bottom: 20px;
-        }
-
-        /* CAT */
-        #cat {
-            width: 100px; height: 100px;
-            position: absolute; bottom: 5px; left: 10%; 
-            transform: translateX(-50%);
-            background-repeat: no-repeat;
-            image-rendering: pixelated;
-            transition: none; 
-        }
-        .auto-moving { transition: left 1s linear !important; }
-
-        /* ANIMATIONS */
-        .state-idle, .state-eat, .state-drink, .state-play {
-            background-size: 420px 100px;
-            animation: play4Frame 0.8s steps(4) infinite;
-        }
-        .state-idle  { background-image: url('https://poochie9905.github.io/poochie/idle.png'); }
-        .state-eat   { background-image: url('https://poochie9905.github.io/poochie/eat.png'); }
-        .state-drink { background-image: url('https://poochie9905.github.io/poochie/water.png'); }
-        .state-play  { background-image: url('https://poochie9905.github.io/poochie/play.png'); }
-
-        .state-walk-right { 
-            background-image: url('https://poochie9905.github.io/poochie/walk-right.png'); 
-            background-size: 500px 100px; 
-            animation: play5Frame 0.6s steps(5) infinite; 
-        }
-        .state-walk-left { 
-            background-image: url('https://poochie9905.github.io/poochie/walk-left.png'); 
-            background-size: 500px 100px; 
-            animation: play5Frame 0.6s steps(5) infinite; 
-        }
-
-        @keyframes play4Frame { from { background-position-x: 0px; } to { background-position-x: -400px; } }
-        @keyframes play5Frame { from { background-position-x: 0px; } to { background-position-x: -500px; } }
-
-        /* --- UPDATED SMALLER UI STATS --- */
-        .ui-panel {
-            position: absolute; top: 10px; left: 10px;
-            background: rgba(0,0,0,0.7); color: white; padding: 6px; /* Reduced Padding */
-            border-radius: 6px; border: 2px solid white;
-            font-size: 0.5rem; /* Smaller Font */
-            z-index: 10;
-        }
-        .bar-container {
-            width: 60px; /* Reduced from 100px */
-            height: 5px; /* Reduced from 8px */
-            background: #555; margin-top: 3px; margin-bottom: 5px;
-            border: 1px solid white;
-        }
-        .bar-fill { height: 100%; width: 100%; transition: width 0.5s; }
-
-        /* --- UPDATED SMALLER D-PAD --- */
-        .d-pad {
-            position: absolute; bottom: 8px; right: 8px;
-            display: flex; gap: 4px; z-index: 20;
-        }
-        .d-btn {
-            width: 35px; height: 35px; /* Reduced from 50px */
-            background: rgba(255, 255, 255, 0.8);
-            border: 2px solid black; 
-            font-size: 1rem; /* Reduced from 1.5rem */
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; font-weight: bold; box-shadow: 2px 2px 0 #000;
-        }
-        .d-btn:active { transform: translate(1px, 1px); box-shadow: none; }
-        .d-btn:disabled {
-            background: #777; color: #444; border-color: #444;
-            box-shadow: none; cursor: not-allowed; transform: translate(1px, 1px);
-        }
-
-        .controls { width: 100%; display: flex; gap: 10px; }
-        .action-btn {
-            flex: 1; padding: 20px; font-family: 'Press Start 2P', cursive;
-            background: #fff; border: 4px solid #000;
-            box-shadow: 4px 4px 0 #000; cursor: pointer; transition: all 0.1s;
-        }
-        .action-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
-        .action-btn:disabled {
-            background-color: #999; color: #555; border-color: #555;
-            box-shadow: none; cursor: not-allowed; transform: translate(4px, 4px);
-        }
-    </style>
+    .power-led { position: absolute; top: calc(12% + 11px); left: calc(50% + 55px); width: 10px; height: 10px; border-radius: 50%; background-color: #1a1a1a; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8); -webkit-transition: all 0.3s ease; transition: all 0.3s ease; }
+    .power-led.is-on { background-color: #4ade80; box-shadow: 0px 0px 8px #4ade80, 0px 0px 12px #4ade80, inset 2px 2px 3px rgba(255,255,255,0.6); }
+    
+    /* Hidden file input for ROM loading */
+    #romInput { display: none; }
+</style>
 </head>
 <body>
 
-    <div id="loading-screen">
-        <div class="loading-title">Scar's Pet World</div>
-        <div id="loading-status" class="loading-text">LOADING ASSETS...</div>
+    <div class="console-body">
         
-        <div class="legend-box">
-            <div style="text-align: center; color: white; margin-bottom: 10px;">CONTROLS</div>
-            <div class="legend-row">
-                <div>
-                    <span class="mini-btn mini-dpad">&lt;</span>
-                    <span class="mini-btn mini-dpad">&gt;</span>
-                </div>
-                <div>Move Scar Left / Right</div>
+        <div class="controls-left">
+            <div class="d-pad-base">
+                <button class="d-btn d-up" id="btnUp"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#6dc663" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+                <button class="d-btn d-right" id="btnRight"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#f7d33d" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+                <button class="d-btn d-down" id="btnDown"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#2c7eea" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+                <button class="d-btn d-left" id="btnLeft"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#df2b32" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
             </div>
-            <div class="legend-row">
-                <div>
-                    <span class="mini-btn">FEED</span>
-                    <span class="mini-btn">PLAY</span>
-                </div>
-                <div>Perform Activities</div>
-            </div>
+            <div class="btn-sys btn-select" id="btnSelect">SELECT</div>
         </div>
 
-        <button id="start-btn" onclick="startGame()">PRESS START</button>
-    </div>
-
-    <h1 class="page-title">Scar's Pet World</h1>
-
-    <div class="main-wrapper" id="main-wrapper">
-        <div id="game-container">
-            <div class="ui-panel">
-                Hunger <div class="bar-container"><div id="bar-hunger" class="bar-fill" style="background:#ff6b6b"></div></div>
-                Thirst <div class="bar-container"><div id="bar-thirst" class="bar-fill" style="background:#4ecdc4"></div></div>
-                Fun <div class="bar-container"><div id="bar-fun" class="bar-fill" style="background:#ffe66d"></div></div>
-            </div>
-
-            <div id="cat" class="state-idle"></div>
-
-            <div class="d-pad">
-                <button class="d-btn" id="btn-left" onmousedown="startMove(-1)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(-1)" ontouchend="stopMove()">&lt;</button>
-                <button class="d-btn" id="btn-right" onmousedown="startMove(1)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(1)" ontouchend="stopMove()">&gt;</button>
-            </div>
+        <div class="screen-container" id="screenContainer">
+            <div class="screen-text" id="screenMessage">TAP TO INSERT<br>CARTRIDGE</div>
+            <canvas id="gameScreen" width="240" height="160"></canvas>
+            <input type="file" id="romInput" accept=".gba,.zip">
         </div>
 
-        <div class="controls">
-            <button class="action-btn" onclick="interact('feed')">FEED</button>
-            <button class="action-btn" onclick="interact('water')">WATER</button>
-            <button class="action-btn" onclick="interact('play')">PLAY</button>
+        <div class="controls-right">
+            <div class="power-led" id="powerIndicator"></div>
+            <div class="btn-sys btn-power" id="powerBtn">POWER</div>
+            <div class="btn-action btn-a" id="btnA">A</div>
+            <div class="btn-action btn-b" id="btnB">B</div>
+            <div class="btn-sys btn-start" id="btnStart">START</div>
         </div>
+
     </div>
 
     <script>
-        // --- ASSET PRELOADING ---
-        const assets = [
-            "https://poochie9905.github.io/poochie/bg-default.jpg",
-            "https://poochie9905.github.io/poochie/bg-food.jpg",
-            "https://poochie9905.github.io/poochie/bg-water.jpg",
-            "https://poochie9905.github.io/poochie/idle.png",
-            "https://poochie9905.github.io/poochie/eat.png",
-            "https://poochie9905.github.io/poochie/water.png",
-            "https://poochie9905.github.io/poochie/play.png",
-            "https://poochie9905.github.io/poochie/walk-right.png",
-            "https://poochie9905.github.io/poochie/walk-left.png"
-        ];
+        document.addEventListener('DOMContentLoaded', function() {
+            var powerBtn = document.getElementById('powerBtn');
+            var powerIndicator = document.getElementById('powerIndicator');
+            var screenContainer = document.getElementById('screenContainer');
+            var romInput = document.getElementById('romInput');
+            var screenMessage = document.getElementById('screenMessage');
+            var isPowerOn = false;
 
-        let loadedCount = 0;
+            // Power Button Logic
+            powerBtn.addEventListener('click', function() {
+                isPowerOn = !isPowerOn;
+                powerIndicator.classList.toggle('is-on');
+                screenContainer.classList.toggle('is-on');
+                
+                if (!isPowerOn) {
+                    // Reset if turned off
+                    screenContainer.classList.remove('is-playing');
+                    screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
+                }
+            });
 
-        function checkLoad() {
-            loadedCount++;
-            if (loadedCount === assets.length) {
-                const statusText = document.getElementById('loading-status');
-                statusText.innerText = "READY!";
-                statusText.style.color = "#4ecdc4";
-                document.getElementById('start-btn').style.display = 'block';
-            }
-        }
+            // Tapping the screen triggers the file picker (if power is on)
+            screenContainer.addEventListener('click', function() {
+                if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
+                    romInput.click();
+                }
+            });
 
-        function startGame() {
-            const loader = document.getElementById('loading-screen');
-            const wrapper = document.getElementById('main-wrapper');
-            loader.style.opacity = '0';
-            wrapper.style.opacity = '1';
-            setTimeout(() => {
-                loader.style.display = 'none';
-                startGameLoop(); 
-            }, 500);
-        }
+            // Handling the loaded ROM file
+            romInput.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (!file) return;
 
-        assets.forEach(src => {
-            const img = new Image();
-            img.src = src;
-            img.onload = checkLoad;
-            img.onerror = checkLoad; 
+                screenMessage.innerHTML = "LOADING<br>" + file.name.substring(0, 15) + "...";
+                
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var romData = new Uint8Array(event.target.result);
+                    
+                    // The UI will switch from the text prompt to the actual Canvas
+                    screenContainer.classList.add('is-playing');
+                    
+                    // TODO: Pass 'romData' into the emulator core
+                    console.log("ROM loaded into memory! Size: " + romData.length + " bytes");
+                };
+                
+                // Read the file as an ArrayBuffer, which is exactly what emulators need
+                reader.readAsArrayBuffer(file);
+            });
         });
 
-        // --- GAME LOGIC ---
-        const state = { hunger: 100, thirst: 100, fun: 100, isBusy: false, catPos: 10 };
-        const cat = document.getElementById('cat');
-        const bg = document.getElementById('game-container');
-        const allActionBtns = document.querySelectorAll('.action-btn'); 
-        const allDPadBtns = document.querySelectorAll('.d-btn');
-
-        const bars = {
-            hunger: document.getElementById('bar-hunger'),
-            thirst: document.getElementById('bar-thirst'),
-            fun: document.getElementById('bar-fun')
-        };
-        const bgURL = "https://poochie9905.github.io/poochie/";
-
-        function startGameLoop() {
-            setInterval(() => {
-                if(state.hunger > 0) state.hunger -= 1;
-                if(state.thirst > 0) state.thirst -= 2;
-                if(state.fun > 0) state.fun -= 1;
-                updateUI();
-            }, 1000);
-        }
-
-        function updateUI() {
-            bars.hunger.style.width = state.hunger + '%';
-            bars.thirst.style.width = state.thirst + '%';
-            bars.fun.style.width = state.fun + '%';
-        }
-
-        function toggleButtons(disable) {
-            allActionBtns.forEach(btn => btn.disabled = disable);
-            allDPadBtns.forEach(btn => btn.disabled = disable);
-        }
-
-        let moveInterval = null;
-
-        function startMove(direction) {
-            if (state.isBusy) return;
-            if (moveInterval) clearInterval(moveInterval);
-
-            if (direction === -1) cat.className = 'state-walk-left';
-            else cat.className = 'state-walk-right';
-
-            moveInterval = setInterval(() => {
-                state.catPos += direction * 1; 
-                if (state.catPos < 10) state.catPos = 10;
-                if (state.catPos > 60) state.catPos = 60;
-                cat.style.left = state.catPos + '%';
-            }, 20);
-        }
-
-        function stopMove() {
-            if (state.isBusy) return;
-            if (moveInterval) {
-                clearInterval(moveInterval);
-                moveInterval = null;
-                cat.className = 'state-idle';
-            }
-        }
-
-        window.interact = function(action) {
-            if(state.isBusy) return;
-            state.isBusy = true;
-            toggleButtons(true);
-
-            cat.classList.add('auto-moving');
-            cat.className = 'state-walk-right auto-moving'; 
-            cat.style.left = '50%'; 
-            state.catPos = 50;           
-
-            setTimeout(() => { 
-                if (action === 'feed') {
-                    bg.style.backgroundImage = `url('${bgURL}bg-food.jpg')`;
-                    cat.className = 'state-eat';
-                    state.hunger = Math.min(state.hunger + 40, 100);
-                } else if (action === 'water') {
-                    bg.style.backgroundImage = `url('${bgURL}bg-water.jpg')`;
-                    cat.className = 'state-drink';
-                    state.thirst = Math.min(state.thirst + 40, 100);
-                } else if (action === 'play') {
-                    cat.className = 'state-play';
-                    state.fun = Math.min(state.fun + 40, 100);
-                }
-                updateUI();
-
-                setTimeout(() => { 
-                    bg.style.backgroundImage = `url('${bgURL}bg-default.jpg')`;
-                    cat.className = 'state-walk-left auto-moving'; 
-                    cat.style.left = '10%'; 
-                    state.catPos = 10; 
-
-                    setTimeout(() => { 
-                        cat.className = 'state-idle';
-                        cat.classList.remove('auto-moving'); 
-                        state.isBusy = false; 
-                        toggleButtons(false);
-                    }, 1000); 
-
-                }, 2000); 
-
-            }, 1000); 
+        // Register Service Worker for Offline PWA Support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function(registration) {
+                    console.log('PWA Offline Worker registered.');
+                }).catch(function(err) {
+                    console.log('PWA Worker registration failed: ', err);
+                });
+            });
         }
     </script>
+
 </body>
 </html>
