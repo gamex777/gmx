@@ -30,7 +30,7 @@
     @media (max-width: 768px) { .console-body { border-radius: 8vw; } }
 
     /* -----------------------------------------
-       2. The Screen (UPDATED TO CANVAS)
+       2. The Screen Container & Canvas
        ----------------------------------------- */
     .screen-container {
         width: 58%; height: 85%; 
@@ -39,7 +39,7 @@
         position: relative; z-index: 10; overflow: hidden; 
         
         display: flex; justify-content: center; align-items: center;
-        cursor: pointer; /* Indicates it can be tapped */
+        cursor: pointer; 
         -webkit-transition: background-color 0.3s ease, box-shadow 0.3s ease;
         transition: background-color 0.3s ease, box-shadow 0.3s ease;
     }
@@ -49,18 +49,15 @@
         box-shadow: inset 2px 2px 6px rgba(255, 255, 255, 0.08), inset -2px -2px 6px rgba(0, 0, 0, 0.5), 0px 0px 0px 3px #1a1a1a, inset 0px 0px 40px rgba(255, 255, 255, 0.05); 
     }
 
-    /* The actual drawing surface */
     canvas#gameScreen {
         width: 100%; height: 100%;
-        /* Forces crisp pixel-art rendering instead of blurry scaling */
         image-rendering: -moz-crisp-edges;
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
         image-rendering: pixelated;
-        display: none; /* Hidden until power is on */
+        display: none; 
     }
 
-    /* Instruction text before a game is loaded */
     .screen-text {
         color: #4ade80; font-family: monospace; font-size: 1rem;
         text-align: center; display: none; opacity: 0.8;
@@ -72,7 +69,7 @@
     .screen-container.is-playing canvas#gameScreen { display: block; }
 
     /* -----------------------------------------
-       3. Controls & Hardware (Same as previous)
+       3. Controls & Hardware
        ----------------------------------------- */
     .controls-right { position: absolute; right: 0; top: 0; width: 21%; height: 100%; z-index: 20; }
     .btn-action {
@@ -112,7 +109,6 @@
     .power-led { position: absolute; top: calc(12% + 11px); left: calc(50% + 55px); width: 10px; height: 10px; border-radius: 50%; background-color: #1a1a1a; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8); -webkit-transition: all 0.3s ease; transition: all 0.3s ease; }
     .power-led.is-on { background-color: #4ade80; box-shadow: 0px 0px 8px #4ade80, 0px 0px 12px #4ade80, inset 2px 2px 3px rgba(255,255,255,0.6); }
     
-    /* Hidden file input for ROM loading */
     #romInput { display: none; }
 </style>
 </head>
@@ -133,7 +129,8 @@
         <div class="screen-container" id="screenContainer">
             <div class="screen-text" id="screenMessage">TAP TO INSERT<br>CARTRIDGE</div>
             <canvas id="gameScreen" width="240" height="160"></canvas>
-            <input type="file" id="romInput" accept=".gba,.zip">
+            
+            <input type="file" id="romInput">
         </div>
 
         <div class="controls-right">
@@ -162,7 +159,6 @@
                 screenContainer.classList.toggle('is-on');
                 
                 if (!isPowerOn) {
-                    // Reset if turned off
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
                 }
@@ -174,11 +170,43 @@
                     romInput.click();
                 }
             });
+            // --- NEW: DRAG AND DROP SUPPORT ---
+            
+            // 1. Prevent the browser from opening the file as a new tab
+            screenContainer.addEventListener('dragover', function(e) {
+                e.preventDefault(); 
+            });
 
-            // Handling the loaded ROM file
+            // 2. Handle the file when it is dropped onto the screen
+            screenContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                
+                // Only accept drops if the power is ON and a game isn't already playing
+                if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
+                    
+                    // Check if a file was actually dropped
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        // Manually assign the dropped file to our hidden input
+                        romInput.files = e.dataTransfer.files;
+                        
+                        // Trick the input into thinking it was clicked, triggering our load logic!
+                        romInput.dispatchEvent(new Event('change')); 
+                    }
+                }
+            });
+
+            // Handling the loaded ROM file with JS Validation
             romInput.addEventListener('change', function(e) {
                 var file = e.target.files[0];
                 if (!file) return;
+
+                // Validate the file extension manually
+                var fileName = file.name.toLowerCase();
+                if (!fileName.endsWith('.gba') && !fileName.endsWith('.zip')) {
+                    screenMessage.innerHTML = "INVALID FILE<br>NEED .GBA";
+                    e.target.value = ''; // Reset the input
+                    return;
+                }
 
                 screenMessage.innerHTML = "LOADING<br>" + file.name.substring(0, 15) + "...";
                 
@@ -186,14 +214,12 @@
                 reader.onload = function(event) {
                     var romData = new Uint8Array(event.target.result);
                     
-                    // The UI will switch from the text prompt to the actual Canvas
                     screenContainer.classList.add('is-playing');
                     
-                    // TODO: Pass 'romData' into the emulator core
+                    // The ArrayBuffer is ready for the emulator core!
                     console.log("ROM loaded into memory! Size: " + romData.length + " bytes");
                 };
                 
-                // Read the file as an ArrayBuffer, which is exactly what emulators need
                 reader.readAsArrayBuffer(file);
             });
         });
