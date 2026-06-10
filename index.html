@@ -129,7 +129,6 @@
         <div class="screen-container" id="screenContainer">
             <div class="screen-text" id="screenMessage">TAP TO INSERT<br>CARTRIDGE</div>
             <canvas id="gameScreen" width="240" height="160"></canvas>
-            
             <input type="file" id="romInput">
         </div>
 
@@ -144,6 +143,25 @@
     </div>
 
     <script>
+        var Module = {
+            preRun: [],
+            postRun: [],
+            print: (text) => console.log("mGBA: " + text),
+            printErr: (text) => console.error("mGBA Error: " + text),
+            canvas: (function() {
+                var canvas = document.getElementById('gameScreen');
+                canvas.addEventListener("webglcontextlost", function(e) { 
+                    alert('WebGL context lost. You will need to reload the page.'); 
+                    e.preventDefault(); 
+                }, false);
+                return canvas;
+            })()
+        };
+    </script>
+
+    <script src="mgba_wasm.js"></script>
+
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             var powerBtn = document.getElementById('powerBtn');
             var powerIndicator = document.getElementById('powerIndicator');
@@ -152,7 +170,7 @@
             var screenMessage = document.getElementById('screenMessage');
             var isPowerOn = false;
 
-            // Power Button Logic
+            // --- Power Toggle ---
             powerBtn.addEventListener('click', function() {
                 isPowerOn = !isPowerOn;
                 powerIndicator.classList.toggle('is-on');
@@ -164,67 +182,100 @@
                 }
             });
 
-            // Tapping the screen triggers the file picker (if power is on)
+            // --- File Picker Trigger ---
             screenContainer.addEventListener('click', function() {
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
                     romInput.click();
                 }
             });
-            // --- NEW: DRAG AND DROP SUPPORT ---
-            
-            // 1. Prevent the browser from opening the file as a new tab
-            screenContainer.addEventListener('dragover', function(e) {
-                e.preventDefault(); 
-            });
 
-            // 2. Handle the file when it is dropped onto the screen
+            // --- Drag and Drop Logic ---
+            screenContainer.addEventListener('dragover', function(e) { e.preventDefault(); });
             screenContainer.addEventListener('drop', function(e) {
                 e.preventDefault();
-                
-                // Only accept drops if the power is ON and a game isn't already playing
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
-                    
-                    // Check if a file was actually dropped
                     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        // Manually assign the dropped file to our hidden input
                         romInput.files = e.dataTransfer.files;
-                        
-                        // Trick the input into thinking it was clicked, triggering our load logic!
                         romInput.dispatchEvent(new Event('change')); 
                     }
                 }
             });
 
-            // Handling the loaded ROM file with JS Validation
+            // --- ROM Loading & Engine Boot Sequence ---
             romInput.addEventListener('change', function(e) {
                 var file = e.target.files[0];
                 if (!file) return;
 
-                // Validate the file extension manually
                 var fileName = file.name.toLowerCase();
                 if (!fileName.endsWith('.gba') && !fileName.endsWith('.zip')) {
                     screenMessage.innerHTML = "INVALID FILE<br>NEED .GBA";
-                    e.target.value = ''; // Reset the input
+                    e.target.value = ''; 
                     return;
                 }
 
-                screenMessage.innerHTML = "LOADING<br>" + file.name.substring(0, 15) + "...";
+                screenMessage.innerHTML = "BOOTING ENGINE...";
                 
                 var reader = new FileReader();
                 reader.onload = function(event) {
                     var romData = new Uint8Array(event.target.result);
                     
-                    screenContainer.classList.add('is-playing');
-                    
-                    // The ArrayBuffer is ready for the emulator core!
-                    console.log("ROM loaded into memory! Size: " + romData.length + " bytes");
+                    try {
+                        // Write the physical ROM data into the virtual engine hard drive
+                        FS.writeFile('/game.gba', romData);
+                        console.log("ROM injected into virtual drive.");
+
+                        // Tell the engine to boot the game
+                        Module.callMain(['/game.gba']);
+
+                        // Switch screen from text to game canvas
+                        screenContainer.classList.add('is-playing');
+                    } catch (error) {
+                        screenMessage.innerHTML = "ENGINE ERROR<br>CHECK CONSOLE";
+                        console.error("Failed to load ROM into mGBA: ", error);
+                    }
                 };
                 
                 reader.readAsArrayBuffer(file);
             });
+
+            // --- Virtual Keyboard Control Mapping ---
+            const keyMap = {
+                'btnUp': 'ArrowUp',
+                'btnDown': 'ArrowDown',
+                'btnLeft': 'ArrowLeft',
+                'btnRight': 'ArrowRight',
+                'btnA': 'x',
+                'btnB': 'z',
+                'btnStart': 'Enter',
+                'btnSelect': 'Backspace'
+            };
+
+            function simulateKeyEvent(type, key) {
+                var event = new KeyboardEvent(type, {
+                    key: key,
+                    code: (key.startsWith('Arrow') ? key : 'Key' + key.toUpperCase()),
+                    bubbles: true,
+                    cancelable: true
+                });
+                document.dispatchEvent(event);
+            }
+
+            for (let btnId in keyMap) {
+                let buttonElement = document.getElementById(btnId);
+                let keyToSimulate = keyMap[btnId];
+
+                // Press Button
+                buttonElement.addEventListener('mousedown', (e) => { e.preventDefault(); simulateKeyEvent('keydown', keyToSimulate); });
+                buttonElement.addEventListener('touchstart', (e) => { e.preventDefault(); simulateKeyEvent('keydown', keyToSimulate); }, {passive: false});
+
+                // Release Button
+                buttonElement.addEventListener('mouseup', (e) => { e.preventDefault(); simulateKeyEvent('keyup', keyToSimulate); });
+                buttonElement.addEventListener('touchend', (e) => { e.preventDefault(); simulateKeyEvent('keyup', keyToSimulate); });
+                buttonElement.addEventListener('mouseleave', (e) => { simulateKeyEvent('keyup', keyToSimulate); });
+            }
         });
 
-        // Register Service Worker for Offline PWA Support
+        // --- Progressive Web App (Offline Support) ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('sw.js').then(function(registration) {
@@ -235,6 +286,5 @@
             });
         }
     </script>
-
 </body>
 </html>
