@@ -147,7 +147,35 @@
             preRun: [],
             postRun: [],
             print: (text) => console.log("mGBA: " + text),
-            printErr: (text) => console.error("mGBA Error: " + text),
+            
+            // Catch runtime errors
+            printErr: (text) => {
+                console.error("mGBA Error: " + text);
+                var screenMsg = document.getElementById('screenMessage');
+                var screenContainer = document.getElementById('screenContainer');
+
+                if (screenMsg && screenContainer && !screenContainer.classList.contains('is-playing')) {
+                    // Translate common WebAssembly errors into readable codes
+                    let errorCode = "ERR_UNKNOWN";
+                    if (text.includes("memory")) errorCode = "ERR_MEM_OOB";
+                    else if (text.includes("FS")) errorCode = "ERR_FILE_SYS";
+                    else if (text.includes("wasm validation error")) errorCode = "ERR_WASM_CORRUPT";
+                    else if (text.includes("unreachable")) errorCode = "ERR_CRASH";
+                    else if (text.includes("abort")) errorCode = "ERR_ABORT";
+
+                    screenMsg.innerHTML = `SYSTEM HALTED [${errorCode}]<br><span style='color: #ff6b6b; font-size: 0.65rem; line-height: 1.2; display: block; margin-top: 5px;'>${text.substring(0, 75)}</span>`;
+                }
+            },
+            
+            // Catch fatal memory aborts
+            onAbort: (what) => {
+                console.error("mGBA Aborted: ", what);
+                var screenMsg = document.getElementById('screenMessage');
+                if (screenMsg) {
+                    screenMsg.innerHTML = `FATAL EXCEPTION<br><span style='color: #ff6b6b; font-size: 0.65rem; display: block; margin-top: 5px;'>${String(what).substring(0, 60)}</span>`;
+                }
+            },
+
             canvas: (function() {
                 var canvas = document.getElementById('gameScreen');
                 canvas.addEventListener("webglcontextlost", function(e) { 
@@ -201,7 +229,7 @@
                 }
             });
 
-            // --- ROM Loading & Engine Boot Sequence ---
+            // --- Diagnostic ROM Loading & Engine Boot Sequence ---
             romInput.addEventListener('change', function(e) {
                 var file = e.target.files[0];
                 if (!file) return;
@@ -217,21 +245,43 @@
                 
                 var reader = new FileReader();
                 reader.onload = function(event) {
-                    var romData = new Uint8Array(event.target.result);
-                    
                     try {
+                        var romData = new Uint8Array(event.target.result);
+                        
+                        // Pre-Flight Check 1: Is the file completely empty?
+                        if (!romData || romData.length === 0) {
+                            throw new Error("ERR_EMPTY_ROM: The selected file contains zero data.");
+                        }
+
+                        // Pre-Flight Check 2: Did the WebAssembly Engine load?
+                        if (typeof FS === 'undefined') {
+                            throw new Error("ERR_ENGINE_OFFLINE: mgba_wasm.js failed to initialize the File System. Are you running this on a local server?");
+                        }
+
                         // Write the physical ROM data into the virtual engine hard drive
                         FS.writeFile('/game.gba', romData);
-                        console.log("ROM injected into virtual drive.");
+                        console.log("ROM injected into virtual drive. Size: " + romData.length);
 
                         // Tell the engine to boot the game
                         Module.callMain(['/game.gba']);
 
                         // Switch screen from text to game canvas
                         screenContainer.classList.add('is-playing');
+                        
                     } catch (error) {
-                        screenMessage.innerHTML = "ENGINE ERROR<br>CHECK CONSOLE";
-                        console.error("Failed to load ROM into mGBA: ", error);
+                        // Extract exact error code and message
+                        var exactError = error.message || error.toString();
+                        var errorCode = "ERR_EXEC_FAIL";
+                        
+                        if (exactError.includes("ERR_")) {
+                            let parts = exactError.split(":");
+                            errorCode = parts[0];
+                            exactError = parts[1] || exactError;
+                        }
+
+                        // Print beautiful error formatting to the screen
+                        screenMessage.innerHTML = `BOOT FAILED [${errorCode}]<br><span style='color: #ff6b6b; font-size: 0.65rem; line-height: 1.2; display: block; margin-top: 5px;'>${exactError.substring(0, 80)}</span>`;
+                        console.error("mGBA Boot Sequence Failed: ", error);
                     }
                 };
                 
