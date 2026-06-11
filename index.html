@@ -13,22 +13,7 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/util.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/core.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/arm.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/thumb.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/mmu.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/io.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/audio.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/video.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/video/proxy.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/video/software.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/irq.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/keypad.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/sio.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/savedata.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/gpio.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/gba.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@nicbarker/nintendo-gba-emulator@0.1.2/dist/index.umd.min.js"></script>
 
 <style>
     /* -----------------------------------------
@@ -201,7 +186,8 @@
 
     <script>
         var gba;
-        var runInterval;
+        var animationFrameId;
+        var isRunning = false;
 
         document.addEventListener('DOMContentLoaded', function() {
             var powerBtn = document.getElementById('powerBtn');
@@ -210,15 +196,31 @@
             var romInput = document.getElementById('romInput');
             var screenMessage = document.getElementById('screenMessage');
             var isPowerOn = false;
+            var canvas = document.getElementById('gameScreen');
 
-            // Initialize the emulator object
-            try {
-                gba = new GameBoyAdvance();
-                gba.keypad.eatInput = true;
-                gba.setLogger(function(level, error) { console.log(error); });
-                gba.setCanvas(document.getElementById('gameScreen'));
-            } catch (e) {
-                console.error("GBA Engine failed to initialize.", e);
+            // Initialize the new BIOS-free emulator
+            function initEmulator() {
+                try {
+                    gba = new NintendoGBA.Emulator({
+                        canvas: canvas,
+                        audioBufferSize: 8192,
+                        sampleRate: 44100
+                    });
+                    console.log("GBA Emulator initialized successfully (BIOS-free)");
+                } catch (e) {
+                    console.error("GBA Engine failed to initialize.", e);
+                }
+            }
+
+            // Initialize on load
+            initEmulator();
+
+            // Emulator run loop
+            function runEmulator() {
+                if (isRunning && gba) {
+                    gba.advanceFrame();
+                    animationFrameId = requestAnimationFrame(runEmulator);
+                }
             }
 
             // Power Button Logic
@@ -230,12 +232,37 @@
                 if (!isPowerOn) {
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
-                    if (gba) { gba.pause(); }
+                    stopEmulation();
                 }
             });
 
+            function stopEmulation() {
+                isRunning = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                if (gba) {
+                    try {
+                        gba.pause();
+                    } catch(e) {
+                        console.log("Pause error (non-critical):", e);
+                    }
+                }
+            }
+
+            function startEmulation() {
+                if (!isRunning) {
+                    isRunning = true;
+                    runEmulator();
+                }
+            }
+
             // Tap Screen to load ROM
-            screenContainer.addEventListener('click', function() {
+            screenContainer.addEventListener('click', function(e) {
+                // Prevent loading if clicking on the canvas itself
+                if (e.target === canvas) return;
+                
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
                     romInput.click();
                 }
@@ -257,62 +284,129 @@
                 
                 var reader = new FileReader();
                 reader.onload = function(event) {
-                    var romData = event.target.result;
+                    var romData = new Uint8Array(event.target.result);
                     
                     setTimeout(function() {
                         if (gba) {
                             try {
-                                gba.setRom(romData);
-                                gba.runStable();
+                                // Stop any current emulation
+                                stopEmulation();
+                                
+                                // Load the ROM
+                                gba.loadRom(romData);
+                                
+                                // Start emulation
+                                startEmulation();
                                 screenContainer.classList.add('is-playing');
+                                console.log("Game loaded successfully!");
                             } catch (error) {
-                                screenMessage.innerHTML = "ENGINE CRASH<br>RELOAD PAGE";
-                                console.error(error);
+                                screenMessage.innerHTML = "LOAD ERROR<br>TRY ANOTHER ROM";
+                                console.error("ROM loading error:", error);
                             }
                         }
-                    }, 500);
+                    }, 300);
+                };
+                reader.onerror = function() {
+                    screenMessage.innerHTML = "READ ERROR<br>TRY AGAIN";
                 };
                 reader.readAsArrayBuffer(file);
             });
 
-            // --- MULTI-TOUCH CONTROLLER BRIDGE ---
-            // Maps your on-screen IDs to the internal keypad bindings of gbajs
-            const gbaKeys = {
-                'btnUp': gba.keypad.UP,
-                'btnDown': gba.keypad.DOWN,
-                'btnLeft': gba.keypad.LEFT,
-                'btnRight': gba.keypad.RIGHT,
-                'btnA': gba.keypad.A,
-                'btnB': gba.keypad.B,
-                'btnL': gba.keypad.L,
-                'btnR': gba.keypad.R,
-                'btnStart': gba.keypad.START,
-                'btnSelect': gba.keypad.SELECT
+            // --- CONTROLLER MAPPING ---
+            // NintendoGBA emulator uses different key mapping
+            const keyMapping = {
+                'btnUp': 'UP',
+                'btnDown': 'DOWN',
+                'btnLeft': 'LEFT',
+                'btnRight': 'RIGHT',
+                'btnA': 'A',
+                'btnB': 'B',
+                'btnL': 'L',
+                'btnR': 'R',
+                'btnStart': 'START',
+                'btnSelect': 'SELECT'
             };
 
             const controls = document.querySelectorAll('.d-btn, .btn-action, .btn-sys');
             controls.forEach(btn => {
-                if(!gbaKeys[btn.id] && gbaKeys[btn.id] !== 0) return; 
+                if(!keyMapping[btn.id]) return; 
                 
+                // Touch events
                 btn.addEventListener('touchstart', function(e) {
-                    e.preventDefault(); 
-                    if(gba) gba.keypad.keyboardHandler(new KeyboardEvent("keydown")); // Wakeup
-                    if(gba) gba.keypad.currentDown |= gbaKeys[btn.id];
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if(gba && isRunning) {
+                        try {
+                            gba.pressKey(keyMapping[btn.id]);
+                        } catch(err) {
+                            console.log("Key press error:", err);
+                        }
+                    }
                 }, {passive: false});
 
                 btn.addEventListener('touchend', function(e) {
                     e.preventDefault();
-                    if(gba) gba.keypad.currentDown &= ~gbaKeys[btn.id];
+                    e.stopPropagation();
+                    if(gba && isRunning) {
+                        try {
+                            gba.releaseKey(keyMapping[btn.id]);
+                        } catch(err) {
+                            console.log("Key release error:", err);
+                        }
+                    }
                 }, {passive: false});
                 
-                // Fallback for mouse testing on desktop
-                btn.addEventListener('mousedown', function(e) {
-                    if(gba) gba.keypad.currentDown |= gbaKeys[btn.id];
+                btn.addEventListener('touchcancel', function(e) {
+                    e.preventDefault();
+                    if(gba && isRunning) {
+                        try {
+                            gba.releaseKey(keyMapping[btn.id]);
+                        } catch(err) {
+                            console.log("Key cancel error:", err);
+                        }
+                    }
                 });
+                
+                // Mouse events for desktop testing
+                btn.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    if(gba && isRunning) {
+                        try {
+                            gba.pressKey(keyMapping[btn.id]);
+                        } catch(err) {
+                            console.log("Mouse press error:", err);
+                        }
+                    }
+                });
+                
                 btn.addEventListener('mouseup', function(e) {
-                    if(gba) gba.keypad.currentDown &= ~gbaKeys[btn.id];
+                    e.preventDefault();
+                    if(gba && isRunning) {
+                        try {
+                            gba.releaseKey(keyMapping[btn.id]);
+                        } catch(err) {
+                            console.log("Mouse release error:", err);
+                        }
+                    }
+                });
+                
+                btn.addEventListener('mouseleave', function(e) {
+                    if(gba && isRunning) {
+                        try {
+                            gba.releaseKey(keyMapping[btn.id]);
+                        } catch(err) {
+                            console.log("Mouse leave error:", err);
+                        }
+                    }
                 });
             });
+
+            // Prevent default touch behavior on the entire console
+            document.querySelector('.console-body').addEventListener('touchstart', function(e) {
+                if (e.target.closest('.d-btn, .btn-action, .btn-sys')) {
+                    e.preventDefault();
+                }
+            }, {passive: false});
         });
     </script>
 </body>
