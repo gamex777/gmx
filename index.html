@@ -13,6 +13,23 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/util.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/core.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/arm.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/thumb.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/mmu.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/io.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/audio.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/video.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/video/proxy.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/video/software.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/irq.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/keypad.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/sio.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/savedata.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/gpio.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/endrift/gbajs@master/js/gba.js"></script>
+
 <style>
     /* -----------------------------------------
        1. Base Setup & Console Body
@@ -61,8 +78,8 @@
     }
 
     .screen-text {
-        color: #4ade80; font-family: monospace; font-size: 1rem;
-        text-align: center; display: none; opacity: 0.8;
+        color: #4ade80; font-family: 'Press Start 2P', monospace; font-size: 0.8rem;
+        text-align: center; display: none; opacity: 0.8; line-height: 1.5;
         -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
     }
 
@@ -104,11 +121,19 @@
         -webkit-transition: -webkit-transform 0.05s ease, box-shadow 0.05s ease; transition: transform 0.05s ease, box-shadow 0.05s ease;
     }
     .btn-sys:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.4); -webkit-transform: translateX(-50%) translateY(3px); transform: translateX(-50%) translateY(3px); }
-    .btn-select { bottom: 12%; }
-    .btn-start { bottom: 12%; }
-    .btn-power { top: 12%; }
+    
+    .btn-select { bottom: 6%; }
+    .btn-start { bottom: 6%; }
+    
+    .btn-l { top: 6%; width: 60px; -webkit-transform: translateX(-50%) rotate(-45deg); transform: translateX(-50%) rotate(-45deg); }
+    .btn-l:active { -webkit-transform: translateX(-50%) rotate(-45deg) translateY(3px); transform: translateX(-50%) rotate(-45deg) translateY(3px); }
 
-    .power-led { position: absolute; top: calc(12% + 11px); left: calc(50% + 55px); width: 10px; height: 10px; border-radius: 50%; background-color: #1a1a1a; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8); -webkit-transition: all 0.3s ease; transition: all 0.3s ease; }
+    .btn-r { top: 6%; width: 60px; -webkit-transform: translateX(-50%) rotate(45deg); transform: translateX(-50%) rotate(45deg); }
+    .btn-r:active { -webkit-transform: translateX(-50%) rotate(45deg) translateY(3px); transform: translateX(-50%) rotate(45deg) translateY(3px); }
+    
+    .btn-power { top: 22%; width: 32px; height: 32px; border-radius: 50%; padding: 0; }
+
+    .power-led { position: absolute; top: calc(22% + 11px); left: calc(50% + 26px); width: 10px; height: 10px; border-radius: 50%; background-color: #1a1a1a; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8); -webkit-transition: all 0.3s ease; transition: all 0.3s ease; }
     .power-led.is-on { background-color: #4ade80; box-shadow: 0px 0px 8px #4ade80, 0px 0px 12px #4ade80, inset 2px 2px 3px rgba(255,255,255,0.6); }
     
     #romInput { display: none; }
@@ -117,32 +142,18 @@
        4. Portrait Orientation Warning Overlay
        ----------------------------------------- */
     #orientation-warning {
-        display: none; /* Hidden by default in landscape */
-        position: fixed;
-        top: 0; left: 0; width: 100vw; height: 100vh;
-        background-color: #000000;
-        z-index: 9999; /* Sit on top of everything */
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        color: #39ff14; /* Neon green */
-        font-family: 'Press Start 2P', cursive;
-        font-size: 1.2rem;
-        text-align: center;
-        text-shadow: 0 0 10px rgba(57, 255, 20, 0.7);
-        line-height: 1.8;
-        box-sizing: border-box;
-        padding: 20px;
+        display: none; 
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: #000000; z-index: 9999; 
+        flex-direction: column; justify-content: center; align-items: center;
+        color: #39ff14; font-family: 'Press Start 2P', cursive; font-size: 1.2rem;
+        text-align: center; text-shadow: 0 0 10px rgba(57, 255, 20, 0.7);
+        line-height: 1.8; box-sizing: border-box; padding: 20px;
     }
 
-    /* Target mobile devices held vertically */
     @media screen and (orientation: portrait) {
-        #orientation-warning {
-            display: flex;
-        }
-        .console-body {
-            display: none; /* Hide console to prevent scrolling/interaction */
-        }
+        #orientation-warning { display: flex; }
+        .console-body { display: none; }
     }
 </style>
 </head>
@@ -155,6 +166,7 @@
     <div class="console-body">
         
         <div class="controls-left">
+            <div class="btn-sys btn-l" id="btnL">L</div>
             <div class="d-pad-base">
                 <button class="d-btn d-up" id="btnUp"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#6dc663" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
                 <button class="d-btn d-right" id="btnRight"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#f7d33d" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
@@ -167,13 +179,19 @@
         <div class="screen-container" id="screenContainer">
             <div class="screen-text" id="screenMessage">TAP TO INSERT<br>CARTRIDGE</div>
             <canvas id="gameScreen" width="240" height="160"></canvas>
-            
             <input type="file" id="romInput">
         </div>
 
         <div class="controls-right">
+            <div class="btn-sys btn-r" id="btnR">R</div>
             <div class="power-led" id="powerIndicator"></div>
-            <div class="btn-sys btn-power" id="powerBtn">POWER</div>
+            
+            <div class="btn-sys btn-power" id="powerBtn">
+                <svg viewBox="0 0 24 24" width="14" height="14">
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round"/>
+                </svg>
+            </div>
+            
             <div class="btn-action btn-a" id="btnA">A</div>
             <div class="btn-action btn-b" id="btnB">B</div>
             <div class="btn-sys btn-start" id="btnStart">START</div>
@@ -182,6 +200,9 @@
     </div>
 
     <script>
+        var gba;
+        var runInterval;
+
         document.addEventListener('DOMContentLoaded', function() {
             var powerBtn = document.getElementById('powerBtn');
             var powerIndicator = document.getElementById('powerIndicator');
@@ -189,6 +210,16 @@
             var romInput = document.getElementById('romInput');
             var screenMessage = document.getElementById('screenMessage');
             var isPowerOn = false;
+
+            // Initialize the emulator object
+            try {
+                gba = new GameBoyAdvance();
+                gba.keypad.eatInput = true;
+                gba.setLogger(function(level, error) { console.log(error); });
+                gba.setCanvas(document.getElementById('gameScreen'));
+            } catch (e) {
+                console.error("GBA Engine failed to initialize.", e);
+            }
 
             // Power Button Logic
             powerBtn.addEventListener('click', function() {
@@ -199,28 +230,14 @@
                 if (!isPowerOn) {
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
+                    if (gba) { gba.pause(); }
                 }
             });
 
-            // Tapping the screen triggers the file picker (if power is on)
+            // Tap Screen to load ROM
             screenContainer.addEventListener('click', function() {
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
                     romInput.click();
-                }
-            });
-
-            // --- DRAG AND DROP SUPPORT ---
-            screenContainer.addEventListener('dragover', function(e) {
-                e.preventDefault(); 
-            });
-
-            screenContainer.addEventListener('drop', function(e) {
-                e.preventDefault();
-                if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
-                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        romInput.files = e.dataTransfer.files;
-                        romInput.dispatchEvent(new Event('change')); 
-                    }
                 }
             });
 
@@ -229,43 +246,74 @@
                 var file = e.target.files[0];
                 if (!file) return;
 
-                // Validate the file extension manually
                 var fileName = file.name.toLowerCase();
-                if (!fileName.endsWith('.gba') && !fileName.endsWith('.zip')) {
+                if (!fileName.endsWith('.gba')) {
                     screenMessage.innerHTML = "INVALID FILE<br>NEED .GBA";
-                    e.target.value = ''; // Reset the input
+                    e.target.value = ''; 
                     return;
                 }
 
-                screenMessage.innerHTML = "LOADING<br>" + file.name.substring(0, 15) + "...";
+                screenMessage.innerHTML = "LOADING<br>" + file.name.substring(0, 10) + "...";
                 
                 var reader = new FileReader();
                 reader.onload = function(event) {
-                    var romData = new Uint8Array(event.target.result);
-                    console.log("ROM loaded into memory! Size: " + romData.length + " bytes");
+                    var romData = event.target.result;
                     
-                    // Artificially wait 1.5 seconds so the user can see the "LOADING" text
                     setTimeout(function() {
-                        screenMessage.innerHTML = "SYSTEM READY<br>AWAITING ENGINE";
-                        // screenContainer.classList.add('is-playing'); // Uncomment when engine is ready
-                    }, 1500);
+                        if (gba) {
+                            try {
+                                gba.setRom(romData);
+                                gba.runStable();
+                                screenContainer.classList.add('is-playing');
+                            } catch (error) {
+                                screenMessage.innerHTML = "ENGINE CRASH<br>RELOAD PAGE";
+                                console.error(error);
+                            }
+                        }
+                    }, 500);
                 };
-                
                 reader.readAsArrayBuffer(file);
             });
-        });
 
-        // Register Service Worker for Offline PWA Support
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('sw.js').then(function(registration) {
-                    console.log('PWA Offline Worker registered.');
-                }).catch(function(err) {
-                    console.log('PWA Worker registration failed: ', err);
+            // --- MULTI-TOUCH CONTROLLER BRIDGE ---
+            // Maps your on-screen IDs to the internal keypad bindings of gbajs
+            const gbaKeys = {
+                'btnUp': gba.keypad.UP,
+                'btnDown': gba.keypad.DOWN,
+                'btnLeft': gba.keypad.LEFT,
+                'btnRight': gba.keypad.RIGHT,
+                'btnA': gba.keypad.A,
+                'btnB': gba.keypad.B,
+                'btnL': gba.keypad.L,
+                'btnR': gba.keypad.R,
+                'btnStart': gba.keypad.START,
+                'btnSelect': gba.keypad.SELECT
+            };
+
+            const controls = document.querySelectorAll('.d-btn, .btn-action, .btn-sys');
+            controls.forEach(btn => {
+                if(!gbaKeys[btn.id] && gbaKeys[btn.id] !== 0) return; 
+                
+                btn.addEventListener('touchstart', function(e) {
+                    e.preventDefault(); 
+                    if(gba) gba.keypad.keyboardHandler(new KeyboardEvent("keydown")); // Wakeup
+                    if(gba) gba.keypad.currentDown |= gbaKeys[btn.id];
+                }, {passive: false});
+
+                btn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    if(gba) gba.keypad.currentDown &= ~gbaKeys[btn.id];
+                }, {passive: false});
+                
+                // Fallback for mouse testing on desktop
+                btn.addEventListener('mousedown', function(e) {
+                    if(gba) gba.keypad.currentDown |= gbaKeys[btn.id];
+                });
+                btn.addEventListener('mouseup', function(e) {
+                    if(gba) gba.keypad.currentDown &= ~gbaKeys[btn.id];
                 });
             });
-        }
+        });
     </script>
-
 </body>
 </html>
