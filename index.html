@@ -1,202 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>GMX</title>
-
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MicroEmu">
-<link rel="apple-touch-icon" href="icon.png">
-
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-
-<script src="jsnes.min.js"></script>
-
-<style>
-    /* -----------------------------------------
-       1. Base Setup & Console Body
-       ----------------------------------------- */
-    body, html {
-        margin: 0; padding: 0; width: 100%; height: 100%;
-        display: flex; justify-content: center; align-items: center;
-        background-color: #2c2c2c; overflow: hidden; font-family: Arial, sans-serif;
-        
-        /* PREVENT COPY/PASTE MENUS AND TEXT SELECTION */
-        -webkit-touch-callout: none; 
-        -webkit-user-select: none;   
-        -khtml-user-select: none;    
-        -moz-user-select: none;      
-        -ms-user-select: none;       
-        user-select: none;           
-        
-        /* FORCE INSTANT TOUCH (Removes input lag/gesture zoom) */
-        touch-action: none; 
-    }
-    
-    .console-body {
-        width: 100vw; max-width: 900px; height: 45.45vw; max-height: 409px; 
-        background-color: #f67a76; border-radius: 50px; 
-        box-shadow: 12px 18px 25px rgba(0, 0, 0, 0.4), inset -4px -4px 10px rgba(0, 0, 0, 0.1), inset 4px 4px 10px rgba(255, 255, 255, 0.3); 
-        display: flex; justify-content: center; align-items: center;
-        position: relative; box-sizing: border-box;
-    }
-    @media (max-width: 768px) { .console-body { border-radius: 8vw; } }
-
-    /* -----------------------------------------
-       2. The Screen Container & Canvas
-       ----------------------------------------- */
-    .screen-container {
-        width: 58%; height: 85%; 
-        background-color: #000000; border-radius: 12px; 
-        box-shadow: inset 2px 2px 6px rgba(255, 255, 255, 0.08), inset -2px -2px 6px rgba(0, 0, 0, 0.5), 0px 0px 0px 3px #1a1a1a;                    
-        position: relative; z-index: 10; overflow: hidden; 
-        
-        display: flex; justify-content: center; align-items: center;
-        cursor: pointer; 
-        -webkit-transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        transition: background-color 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .screen-container.is-on {
-        background-color: #1a1a1a; 
-        box-shadow: inset 2px 2px 6px rgba(255, 255, 255, 0.08), inset -2px -2px 6px rgba(0, 0, 0, 0.5), 0px 0px 0px 3px #1a1a1a, inset 0px 0px 40px rgba(255, 255, 255, 0.05); 
-    }
-
-    canvas#gameScreen {
-        width: 100%; height: 100%;
-        image-rendering: -moz-crisp-edges;
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: crisp-edges;
-        image-rendering: pixelated;
-        display: none; 
-    }
-
-    .screen-text {
-        color: #4ade80; font-family: 'Press Start 2P', monospace; font-size: 0.8rem;
-        text-align: center; display: none; opacity: 0.8; line-height: 1.5;
-        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-    }
-
-    .screen-container.is-on .screen-text { display: block; }
-    .screen-container.is-playing .screen-text { display: none; }
-    .screen-container.is-playing canvas#gameScreen { display: block; }
-
-    /* -----------------------------------------
-       3. Controls & Hardware
-       ----------------------------------------- */
-    .controls-right { position: absolute; right: 0; top: 0; width: 21%; height: 100%; z-index: 20; }
-    .btn-action {
-        width: 50px; height: 50px; border-radius: 50%; background-color: #6da2e0; border: 5px solid #1a1a1a; 
-        display: flex; justify-content: center; align-items: center; color: #ffffff; font-weight: bold; font-size: 1.4rem; text-shadow: 1px 1px 1px rgba(0,0,0,0.3); 
-        box-sizing: border-box; cursor: pointer; 
-        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; 
-        box-shadow: 0px 4px 4px rgba(0,0,0,0.3);
-        -webkit-transition: -webkit-transform 0.05s ease, box-shadow 0.05s ease; transition: transform 0.05s ease, box-shadow 0.05s ease;
-    }
-    .btn-action:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.3); -webkit-transform: translateY(3px); transform: translateY(3px); }
-    .btn-a { position: absolute; right: 30px; top: 38%; }
-    .btn-b { position: absolute; left: 30px; top: 52%; }
-
-    .controls-left { position: absolute; left: 0; top: 0; width: 21%; height: 100%; z-index: 20; display: flex; justify-content: center; align-items: center; }
-    .d-pad-base { width: 110px; height: 110px; background-color: #b5b5b5; border: 4px solid #1a1a1a; border-radius: 50%; position: relative; }
-    .d-btn { width: 30px; height: 30px; position: absolute; cursor: pointer; background: transparent; border: none; padding: 0; outline: none; touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-    .d-btn svg { width: 100%; height: 100%; display: block; -webkit-filter: drop-shadow(0px 4px 3px rgba(0,0,0,0.3)); filter: drop-shadow(0px 4px 3px rgba(0,0,0,0.3)); -webkit-transition: -webkit-transform 0.05s ease, -webkit-filter 0.05s ease; transition: transform 0.05s ease, filter 0.05s ease; }
-    .d-btn:active svg { -webkit-filter: drop-shadow(0px 0px 0px rgba(0,0,0,0)); filter: drop-shadow(0px 0px 0px rgba(0,0,0,0)); -webkit-transform: translateY(3px); transform: translateY(3px); }
-    .d-up { top: 8px; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%); }
-    .d-right { top: 50%; right: 8px; -webkit-transform: translateY(-50%) rotate(90deg); transform: translateY(-50%) rotate(90deg); }
-    .d-down { bottom: 8px; left: 50%; -webkit-transform: translateX(-50%) rotate(180deg); transform: translateX(-50%) rotate(180deg); }
-    .d-left { top: 50%; left: 8px; -webkit-transform: translateY(-50%) rotate(270deg); transform: translateY(-50%) rotate(270deg); }
-
-    .btn-sys {
-        position: absolute; width: 90px; height: 32px; background-color: #000000; border-radius: 16px; 
-        display: flex; justify-content: center; align-items: center; color: #ffffff; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px;
-        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-shadow: 0px 4px 4px rgba(0,0,0,0.4); cursor: pointer;
-        left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%);
-        -webkit-transition: -webkit-transform 0.05s ease, box-shadow 0.05s ease; transition: transform 0.05s ease, box-shadow 0.05s ease;
-    }
-    .btn-sys:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.4); -webkit-transform: translateX(-50%) translateY(3px); transform: translateX(-50%) translateY(3px); }
-    
-    .btn-select { bottom: 6%; }
-    .btn-start { bottom: 6%; }
-    
-    .btn-l { top: 6%; width: 60px; -webkit-transform: translateX(-50%) rotate(-45deg); transform: translateX(-50%) rotate(-45deg); }
-    .btn-l:active { -webkit-transform: translateX(-50%) rotate(-45deg) translateY(3px); transform: translateX(-50%) rotate(-45deg) translateY(3px); }
-
-    .btn-r { top: 6%; width: 60px; -webkit-transform: translateX(-50%) rotate(45deg); transform: translateX(-50%) rotate(45deg); }
-    .btn-r:active { -webkit-transform: translateX(-50%) rotate(45deg) translateY(3px); transform: translateX(-50%) rotate(45deg) translateY(3px); }
-    
-    .btn-power { top: 22%; width: 32px; height: 32px; border-radius: 50%; padding: 0; }
-
-    .power-led { position: absolute; top: calc(22% + 11px); left: calc(50% + 26px); width: 10px; height: 10px; border-radius: 50%; background-color: #1a1a1a; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8); -webkit-transition: all 0.3s ease; transition: all 0.3s ease; }
-    .power-led.is-on { background-color: #4ade80; box-shadow: 0px 0px 8px #4ade80, 0px 0px 12px #4ade80, inset 2px 2px 3px rgba(255,255,255,0.6); }
-    
-    #romInput { display: none; }
-
-    /* -----------------------------------------
-       4. Portrait Orientation Warning Overlay
-       ----------------------------------------- */
-    #orientation-warning {
-        display: none; 
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background-color: #000000; z-index: 9999; 
-        flex-direction: column; justify-content: center; align-items: center;
-        color: #39ff14; font-family: 'Press Start 2P', cursive; font-size: 1.2rem;
-        text-align: center; text-shadow: 0 0 10px rgba(57, 255, 20, 0.7);
-        line-height: 1.8; box-sizing: border-box; padding: 20px;
-    }
-
-    @media screen and (orientation: portrait) {
-        #orientation-warning { display: flex; }
-        .console-body { display: none; }
-    }
-</style>
-</head>
-<body>
-
-    <div id="orientation-warning">
-        Please rotate<br><br>your device
-    </div>
-
-    <div class="console-body">
-        
-        <div class="controls-left">
-            <div class="btn-sys btn-l" id="btnL">L</div>
-            <div class="d-pad-base">
-                <button class="d-btn d-up" id="btnUp"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#6dc663" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
-                <button class="d-btn d-right" id="btnRight"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#f7d33d" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
-                <button class="d-btn d-down" id="btnDown"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#2c7eea" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
-                <button class="d-btn d-left" id="btnLeft"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#df2b32" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
-            </div>
-            <div class="btn-sys btn-select" id="btnSelect">SELECT</div>
-        </div>
-
-        <div class="screen-container" id="screenContainer">
-            <div class="screen-text" id="screenMessage">TAP TO INSERT<br>CARTRIDGE</div>
-            <canvas id="gameScreen" width="256" height="240"></canvas>
-            <input type="file" id="romInput" accept=".nes">
-        </div>
-
-        <div class="controls-right">
-            <div class="btn-sys btn-r" id="btnR">R</div>
-            <div class="power-led" id="powerIndicator"></div>
-            
-            <div class="btn-sys btn-power" id="powerBtn">
-                <svg viewBox="0 0 24 24" width="14" height="14">
-                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round"/>
-                </svg>
-            </div>
-            
-            <div class="btn-action btn-a" id="btnA">A</div>
-            <div class="btn-action btn-b" id="btnB">B</div>
-            <div class="btn-sys btn-start" id="btnStart">START</div>
-        </div>
-
-    </div>
-
-    <script>
+<script>
         var nes;
         var frameTimer;
         var isRunning = false;
@@ -216,15 +18,88 @@
             var screenMessage = document.getElementById('screenMessage');
             var isPowerOn = false;
             
-            // --- OPTIMIZED CANVAS SETUP ---
+            // --- OPTIMIZED WEBGL CANVAS SETUP ---
             var canvas = document.getElementById('gameScreen');
-            var ctx = canvas.getContext('2d', { alpha: false }); 
-            var imageData = ctx.createImageData(256, 240);
-            var buf = new ArrayBuffer(imageData.data.length);
-            var buf8 = new Uint8ClampedArray(buf);
-            var buf32 = new Uint32Array(buf);
+            var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
             
-            var renderFrame = 0;
+            if (!gl) {
+                console.error("WebGL not supported. Emulator will run slowly.");
+                // Fallback to old method if WebGL is somehow disabled
+            }
+
+            // WebGL Shaders (These tell the GPU how to draw the pixels)
+            var vertexShaderSrc = `
+                attribute vec2 a_position;
+                attribute vec2 a_texCoord;
+                varying vec2 v_texCoord;
+                void main() {
+                    gl_Position = vec4(a_position, 0, 1);
+                    v_texCoord = a_texCoord;
+                }
+            `;
+
+            var fragmentShaderSrc = `
+                precision mediump float;
+                uniform sampler2D u_image;
+                varying vec2 v_texCoord;
+                void main() {
+                    gl_FragColor = texture2D(u_image, v_texCoord);
+                }
+            `;
+
+            function createShader(gl, type, source) {
+                var shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                return shader;
+            }
+
+            var vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSrc);
+            var fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSrc);
+
+            var program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            gl.useProgram(program);
+
+            // Set up a simple rectangle that covers the canvas
+            var positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1.0, -1.0,  1.0, -1.0, -1.0,  1.0,
+                -1.0,  1.0,  1.0, -1.0,  1.0,  1.0
+            ]), gl.STATIC_DRAW);
+
+            var positionLocation = gl.getAttribLocation(program, "a_position");
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+            // Set up texture coordinates
+            var texCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+            // Notice the coordinates are flipped vertically. Canvas puts 0,0 at top-left. WebGL puts 0,0 at bottom-left.
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                0.0,  1.0,  1.0,  1.0,  0.0,  0.0,
+                0.0,  0.0,  1.0,  1.0,  1.0,  0.0
+            ]), gl.STATIC_DRAW);
+
+            var texCoordLocation = gl.getAttribLocation(program, "a_texCoord");
+            gl.enableVertexAttribArray(texCoordLocation);
+            gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+
+            // Create the texture that the NES engine will write to
+            var texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            // NEAREST keeps the pixels sharp and blocky, perfect for NES
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+            // Our 32-bit memory buffer for the NES pixels
+            var nesPixelBuffer = new Uint8Array(256 * 240 * 4);
+            var nesPixelBuffer32 = new Uint32Array(nesPixelBuffer.buffer);
 
             // --- THE BULLETPROOF IOS AUDIO UNLOCKER ---
             function globalAudioUnlock() {
@@ -234,10 +109,9 @@
                 try {
                     audioCtx = new windowAudioContext({ sampleRate: 44100 });
                 } catch (e) {
-                    audioCtx = new windowAudioContext(); // Fallback for older iOS
+                    audioCtx = new windowAudioContext(); 
                 }
                 
-                // Play a silent ping instantly
                 var unlockSource = audioCtx.createBufferSource();
                 unlockSource.buffer = audioCtx.createBuffer(1, 1, 22050);
                 unlockSource.connect(audioCtx.destination);
@@ -247,12 +121,11 @@
                     audioCtx.resume();
                 }
 
-                // Check if it worked, then hook up the NES speakers
                 setTimeout(function() {
                     if (audioCtx && audioCtx.state === 'running') {
                         audioUnlocked = true;
-                        console.log("iOS Speakers Unlocked!");
-
+                        
+                        // We can process smaller audio chunks now that rendering is fast!
                         scriptNode = audioCtx.createScriptProcessor(4096, 0, 2);
                         scriptNode.onaudioprocess = function(e) {
                             var outL = e.outputBuffer.getChannelData(0);
@@ -260,7 +133,7 @@
                             
                             for (var i = 0; i < outL.length; i++) {
                                 if (audioQueueL.length > 0) {
-                                    outL[i] = audioQueueL.shift() * 1.5; // Volume boost
+                                    outL[i] = audioQueueL.shift() * 1.5; 
                                     outR[i] = audioQueueR.shift() * 1.5;
                                 } else {
                                     outL[i] = 0;
@@ -270,7 +143,6 @@
                         };
                         scriptNode.connect(audioCtx.destination);
 
-                        // Remove these invisible listeners once audio is working
                         document.removeEventListener('touchstart', globalAudioUnlock, true);
                         document.removeEventListener('touchend', globalAudioUnlock, true);
                         document.removeEventListener('click', globalAudioUnlock, true);
@@ -278,7 +150,6 @@
                 }, 10);
             }
 
-            // 'capture: true' means this runs BEFORE any other button script can block the tap
             document.addEventListener('touchstart', globalAudioUnlock, {capture: true, passive: true});
             document.addEventListener('touchend', globalAudioUnlock, {capture: true, passive: true});
             document.addEventListener('click', globalAudioUnlock, {capture: true, passive: true});
@@ -288,23 +159,30 @@
                 try {
                     nes = new jsnes.NES({
                         onFrame: function(frameBuffer) {
-                            renderFrame++;
-                            if (renderFrame % 2 === 0) {
-                                for (var i = 0; i < 61440; i++) { 
-                                    var pixel = frameBuffer[i];
-                                    buf32[i] = 0xff000000 | ((pixel & 0xFF) << 16) | (pixel & 0xFF00) | ((pixel >> 16) & 0xFF); 
-                                }
-                                imageData.data.set(buf8);
-                                ctx.putImageData(imageData, 0, 0);
+                            // 1. Write the 32-bit colors into our array
+                            for (var i = 0; i < 61440; i++) { 
+                                var pixel = frameBuffer[i];
+                                // We don't need to flip endianness for WebGL the same way we did for Canvas
+                                nesPixelBuffer32[i] = 0xff000000 | 
+                                                      ((pixel & 0xFF) << 16) | 
+                                                      (pixel & 0xFF00) | 
+                                                      ((pixel >> 16) & 0xFF); 
                             }
+                            
+                            // 2. Blast the array to the GPU
+                            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 240, 0, gl.RGBA, gl.UNSIGNED_BYTE, nesPixelBuffer);
+                            
+                            // 3. Tell the GPU to draw the rectangle
+                            gl.drawArrays(gl.TRIANGLES, 0, 6);
                         },
                         onAudioSample: function(left, right) {
                             audioQueueL.push(left);
                             audioQueueR.push(right);
                             
-                            if (audioQueueL.length > 16384) {
-                                audioQueueL.splice(0, 8192);
-                                audioQueueR.splice(0, 8192);
+                            // Audio queue won't build up as much now that frames aren't dropping
+                            if (audioQueueL.length > 8192) {
+                                audioQueueL.splice(0, 4096);
+                                audioQueueR.splice(0, 4096);
                             }
                         }
                     });
@@ -358,6 +236,12 @@
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
                     stopNES();
+                    
+                    // Clear the WebGL canvas
+                    if(gl) {
+                        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                        gl.clear(gl.COLOR_BUFFER_BIT);
+                    }
                 }
             }
             
@@ -438,7 +322,6 @@
                 btn.addEventListener('mouseleave', function(e) { releaseButton(); });
             });
 
-            // Prevent default touch behavior on the entire console (except power button)
             document.querySelector('.console-body').addEventListener('touchstart', function(e) {
                 if (e.target.closest('.d-btn, .btn-action, .btn-sys') && !e.target.closest('#powerBtn')) {
                     e.preventDefault();
@@ -455,5 +338,3 @@
             });
         }
     </script>
-</body>
-</html>
