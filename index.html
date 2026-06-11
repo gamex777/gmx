@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MicroEmu - NES</title>
+<title>GMX</title>
 
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -68,6 +68,353 @@
         -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
     }
 
+    .screen-container.is-on .screen-text { display: block; }
+    .screen-container.is-playing .screen-text { display: none; }
+    .screen-container.is-playing canvas#gameScreen { display: block; }
+
+    /* -----------------------------------------
+       3. Controls & Hardware
+       ----------------------------------------- */
+    .controls-right { position: absolute; right: 0; top: 0; width: 21%; height: 100%; z-index: 20; }
+    .btn-action {
+        width: 50px; height: 50px; border-radius: 50%; background-color: #6da2e0; border: 5px solid #1a1a1a; 
+        display: flex; justify-content: center; align-items: center; color: #ffffff; font-weight: bold; font-size: 1.4rem; text-shadow: 1px 1px 1px rgba(0,0,0,0.3); 
+        box-sizing: border-box; cursor: pointer; 
+        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; 
+        box-shadow: 0px 4px 4px rgba(0,0,0,0.3);
+        -webkit-transition: -webkit-transform 0.05s ease, box-shadow 0.05s ease; transition: transform 0.05s ease, box-shadow 0.05s ease;
+    }
+    .btn-action:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.3); -webkit-transform: translateY(3px); transform: translateY(3px); }
+    .btn-a { position: absolute; right: 30px; top: 38%; }
+    .btn-b { position: absolute; left: 30px; top: 52%; }
+
+    .controls-left { position: absolute; left: 0; top: 0; width: 21%; height: 100%; z-index: 20; display: flex; justify-content: center; align-items: center; }
+    .d-pad-base { width: 110px; height: 110px; background-color: #b5b5b5; border: 4px solid #1a1a1a; border-radius: 50%; position: relative; }
+    .d-btn { width: 30px; height: 30px; position: absolute; cursor: pointer; background: transparent; border: none; padding: 0; outline: none; touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    .d-btn svg { width: 100%; height: 100%; display: block; -webkit-filter: drop-shadow(0px 4px 3px rgba(0,0,0,0.3)); filter: drop-shadow(0px 4px 3px rgba(0,0,0,0.3)); -webkit-transition: -webkit-transform 0.05s ease, -webkit-filter 0.05s ease; transition: transform 0.05s ease, filter 0.05s ease; }
+    .d-btn:active svg { -webkit-filter: drop-shadow(0px 0px 0px rgba(0,0,0,0)); filter: drop-shadow(0px 0px 0px rgba(0,0,0,0)); -webkit-transform: translateY(3px); transform: translateY(3px); }
+    .d-up { top: 8px; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%); }
+    .d-right { top: 50%; right: 8px; -webkit-transform: translateY(-50%) rotate(90deg); transform: translateY(-50%) rotate(90deg); }
+    .d-down { bottom: 8px; left: 50%; -webkit-transform: translateX(-50%) rotate(180deg); transform: translateX(-50%) rotate(180deg); }
+    .d-left { top: 50%; left: 8px; -webkit-transform: translateY(-50%) rotate(270deg); transform: translateY(-50%) rotate(270deg); }
+
+    .btn-sys {
+        position: absolute; width: 90px; height: 32px; background-color: #000000; border-radius: 16px; 
+        display: flex; justify-content: center; align-items: center; color: #ffffff; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px;
+        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-shadow: 0px 4px 4px rgba(0,0,0,0.4); cursor: pointer;
+        left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%);
+        -webkit-transition: -webkit-transform 0.05s ease, box-shadow 0.05s ease; transition: transform 0.05s ease, box-shadow 0.05s ease;
+    }
+    .btn-sys:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.4); -webkit-transform: translateX(-50%) translateY(3px); transform: translateX(-50%) translateY(3px); }
+    
+    .btn-select { bottom: 6%; }
+    .btn-start { bottom: 6%; }
+    
+    .btn-l { top: 6%; width: 60px; -webkit-transform: translateX(-50%) rotate(-45deg); transform: translateX(-50%) rotate(-45deg); }
+    .btn-l:active { -webkit-transform: translateX(-50%) rotate(-45deg) translateY(3px); transform: translateX(-50%) rotate(-45deg) translateY(3px); }
+
+    .btn-r { top: 6%; width: 60px; -webkit-transform: translateX(-50%) rotate(45deg); transform: translateX(-50%) rotate(45deg); }
+    .btn-r:active { -webkit-transform: translateX(-50%) rotate(45deg) translateY(3px); transform: translateX(-50%) rotate(45deg) translateY(3px); }
+    
+    .btn-power { top: 22%; width: 32px; height: 32px; border-radius: 50%; padding: 0; }
+
+    .power-led { position: absolute; top: calc(22% + 11px); left: calc(50% + 26px); width: 10px; height: 10px; border-radius: 50%; background-color: #1a1a1a; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8); -webkit-transition: all 0.3s ease; transition: all 0.3s ease; }
+    .power-led.is-on { background-color: #4ade80; box-shadow: 0px 0px 8px #4ade80, 0px 0px 12px #4ade80, inset 2px 2px 3px rgba(255,255,255,0.6); }
+    
+    #romInput { display: none; }
+
+    /* -----------------------------------------
+       4. Portrait Orientation Warning Overlay
+       ----------------------------------------- */
+    #orientation-warning {
+        display: none; 
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: #000000; z-index: 9999; 
+        flex-direction: column; justify-content: center; align-items: center;
+        color: #39ff14; font-family: 'Press Start 2P', cursive; font-size: 1.2rem;
+        text-align: center; text-shadow: 0 0 10px rgba(57, 255, 20, 0.7);
+        line-height: 1.8; box-sizing: border-box; padding: 20px;
+    }
+
+    @media screen and (orientation: portrait) {
+        #orientation-warning { display: flex; }
+        .console-body { display: none; }
+    }
+</style>
+</head>
+<body>
+
+    <div id="orientation-warning">
+        Please rotate<br><br>your device
+    </div>
+
+    <div class="console-body">
+        
+        <div class="controls-left">
+            <div class="btn-sys btn-l" id="btnL">L</div>
+            <div class="d-pad-base">
+                <button class="d-btn d-up" id="btnUp"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#6dc663" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+                <button class="d-btn d-right" id="btnRight"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#f7d33d" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+                <button class="d-btn d-down" id="btnDown"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#2c7eea" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+                <button class="d-btn d-left" id="btnLeft"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#df2b32" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+            </div>
+            <div class="btn-sys btn-select" id="btnSelect">SELECT</div>
+        </div>
+
+        <div class="screen-container" id="screenContainer">
+            <div class="screen-text" id="screenMessage">TAP TO INSERT<br>CARTRIDGE</div>
+            <canvas id="gameScreen" width="256" height="240"></canvas>
+            <input type="file" id="romInput" accept=".nes">
+        </div>
+
+        <div class="controls-right">
+            <div class="btn-sys btn-r" id="btnR">R</div>
+            <div class="power-led" id="powerIndicator"></div>
+            
+            <div class="btn-sys btn-power" id="powerBtn">
+                <svg viewBox="0 0 24 24" width="14" height="14">
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round"/>
+                </svg>
+            </div>
+            
+            <div class="btn-action btn-a" id="btnA">A</div>
+            <div class="btn-action btn-b" id="btnB">B</div>
+            <div class="btn-sys btn-start" id="btnStart">START</div>
+        </div>
+
+    </div>
+
+    <script>
+        var nes;
+        var frameTimer;
+        var isRunning = false;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var powerBtn = document.getElementById('powerBtn');
+            var powerIndicator = document.getElementById('powerIndicator');
+            var screenContainer = document.getElementById('screenContainer');
+            var romInput = document.getElementById('romInput');
+            var screenMessage = document.getElementById('screenMessage');
+            var isPowerOn = false;
+            var canvas = document.getElementById('gameScreen');
+            var ctx = canvas.getContext('2d');
+            var imageData = ctx.createImageData(256, 240);
+
+            // Initialize NES emulator
+            function initNES() {
+                try {
+                    nes = new jsnes.NES({
+                        onFrame: function(frameBuffer) {
+                            // Convert NES frame buffer to canvas image data
+                            for (var i = 0; i < frameBuffer.length; i++) {
+                                var pixel = frameBuffer[i];
+                                // NES color palette conversion
+                                var r = (pixel >> 16) & 0xFF;
+                                var g = (pixel >> 8) & 0xFF;
+                                var b = pixel & 0xFF;
+                                
+                                var index = i * 4;
+                                imageData.data[index] = r;
+                                imageData.data[index + 1] = g;
+                                imageData.data[index + 2] = b;
+                                imageData.data[index + 3] = 0xFF;
+                            }
+                            ctx.putImageData(imageData, 0, 0);
+                        },
+                        onAudioSample: function(left, right) {
+                            // Audio handling (optional)
+                        }
+                    });
+                    console.log("NES Emulator initialized successfully!");
+                } catch (e) {
+                    console.error("NES Engine failed to initialize.", e);
+                }
+            }
+
+            // Initialize on load
+            initNES();
+
+            // Emulator run loop
+            function runFrame() {
+                if (isRunning && nes) {
+                    try {
+                        nes.frame();
+                        frameTimer = requestAnimationFrame(runFrame);
+                    } catch(e) {
+                        console.error("Frame error:", e);
+                        stopNES();
+                    }
+                }
+            }
+
+            function startNES() {
+                if (!isRunning) {
+                    isRunning = true;
+                    runFrame();
+                }
+            }
+
+            function stopNES() {
+                isRunning = false;
+                if (frameTimer) {
+                    cancelAnimationFrame(frameTimer);
+                    frameTimer = null;
+                }
+                if (nes) {
+                    try {
+                        nes.reset();
+                    } catch(e) {
+                        console.log("Reset error:", e);
+                    }
+                }
+            }
+
+            // Power Button Logic
+            powerBtn.addEventListener('click', function() {
+                isPowerOn = !isPowerOn;
+                powerIndicator.classList.toggle('is-on');
+                screenContainer.classList.toggle('is-on');
+                
+                if (!isPowerOn) {
+                    screenContainer.classList.remove('is-playing');
+                    screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
+                    stopNES();
+                }
+            });
+
+            // Tap Screen to load ROM
+            screenContainer.addEventListener('click', function(e) {
+                if (e.target === canvas) return;
+                
+                if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
+                    romInput.click();
+                }
+            });
+
+            // --- ROM LOADING LOGIC (FIXED) ---
+            romInput.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (!file) return;
+
+                var fileName = file.name.toLowerCase();
+                if (!fileName.endsWith('.nes')) {
+                    screenMessage.innerHTML = "INVALID FILE<br>NEED .NES";
+                    e.target.value = ''; 
+                    return;
+                }
+
+                screenMessage.innerHTML = "LOADING<br>" + file.name.substring(0, 10) + "...";
+                
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        // Get ROM data as string (JSNES expects string format)
+                        var romString = String.fromCharCode.apply(null, new Uint8Array(event.target.result));
+                        
+                        // Stop any current emulation
+                        stopNES();
+                        
+                        // Create new NES instance
+                        initNES();
+                        
+                        // Load and start the ROM
+                        nes.loadROM(romString);
+                        startNES();
+                        screenContainer.classList.add('is-playing');
+                        console.log("NES game loaded successfully!");
+                    } catch (error) {
+                        console.error("NES ROM loading error:", error);
+                        screenMessage.innerHTML = "LOAD ERROR<br>TRY ANOTHER ROM";
+                        
+                        // Reset for retry
+                        stopNES();
+                        initNES();
+                    }
+                };
+                reader.onerror = function() {
+                    screenMessage.innerHTML = "READ ERROR<br>TRY AGAIN";
+                    console.error("FileReader error");
+                };
+                reader.readAsBinaryString(file);
+            });
+
+            // --- NES CONTROLLER MAPPING ---
+            const nesButtons = {
+                'btnUp': jsnes.Controller.BUTTON_UP,
+                'btnDown': jsnes.Controller.BUTTON_DOWN,
+                'btnLeft': jsnes.Controller.BUTTON_LEFT,
+                'btnRight': jsnes.Controller.BUTTON_RIGHT,
+                'btnA': jsnes.Controller.BUTTON_A,
+                'btnB': jsnes.Controller.BUTTON_B,
+                'btnStart': jsnes.Controller.BUTTON_START,
+                'btnSelect': jsnes.Controller.BUTTON_SELECT
+            };
+
+            const controls = document.querySelectorAll('.d-btn, .btn-action, .btn-sys');
+            controls.forEach(btn => {
+                if(!nesButtons[btn.id] && nesButtons[btn.id] !== 0) return; 
+                
+                function pressButton() {
+                    if(nes && isRunning) {
+                        nes.buttonDown(1, nesButtons[btn.id]);
+                    }
+                }
+                
+                function releaseButton() {
+                    if(nes && isRunning) {
+                        nes.buttonUp(1, nesButtons[btn.id]);
+                    }
+                }
+                
+                // Touch events
+                btn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    pressButton();
+                }, {passive: false});
+
+                btn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    releaseButton();
+                }, {passive: false});
+                
+                btn.addEventListener('touchcancel', function(e) {
+                    e.preventDefault();
+                    releaseButton();
+                });
+                
+                // Mouse events for desktop testing
+                btn.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    pressButton();
+                });
+                
+                btn.addEventListener('mouseup', function(e) {
+                    e.preventDefault();
+                    releaseButton();
+                });
+                
+                btn.addEventListener('mouseleave', function(e) {
+                    releaseButton();
+                });
+            });
+
+            // Prevent default touch behavior on the entire console
+            document.querySelector('.console-body').addEventListener('touchstart', function(e) {
+                if (e.target.closest('.d-btn, .btn-action, .btn-sys')) {
+                    e.preventDefault();
+                }
+            }, {passive: false});
+            
+            // Prevent context menu on game screen
+            canvas.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
+        });
+    </script>
+</body>
+</html>
     .screen-container.is-on .screen-text { display: block; }
     .screen-container.is-playing .screen-text { display: none; }
     .screen-container.is-playing canvas#gameScreen { display: block; }
