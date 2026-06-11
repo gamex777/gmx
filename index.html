@@ -208,7 +208,6 @@
                             // Convert NES frame buffer to canvas image data
                             for (var i = 0; i < frameBuffer.length; i++) {
                                 var pixel = frameBuffer[i];
-                                // NES color palette conversion
                                 var r = (pixel >> 16) & 0xFF;
                                 var g = (pixel >> 8) & 0xFF;
                                 var b = pixel & 0xFF;
@@ -217,15 +216,14 @@
                                 imageData.data[index] = r;
                                 imageData.data[index + 1] = g;
                                 imageData.data[index + 2] = b;
-                                imageData.data[index + 3] = 0xFF;
+                                imageData.data[index + 3] = 0xFF; // Alpha channel
                             }
                             ctx.putImageData(imageData, 0, 0);
                         },
                         onAudioSample: function(left, right) {
-                            // Audio handling (optional)
+                            // Audio handling goes here
                         }
                     });
-                    console.log("NES Emulator initialized successfully!");
                 } catch (e) {
                     console.error("NES Engine failed to initialize.", e);
                 }
@@ -269,8 +267,10 @@
                 }
             }
 
-            // Power Button Logic
-            powerBtn.addEventListener('click', function() {
+            // --- FIXED Power Button Logic ---
+            function togglePower(e) {
+                if (e) e.preventDefault(); // Prevents touchstart from triggering click twice
+                
                 isPowerOn = !isPowerOn;
                 powerIndicator.classList.toggle('is-on');
                 screenContainer.classList.toggle('is-on');
@@ -280,7 +280,10 @@
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
                     stopNES();
                 }
-            });
+            }
+            
+            powerBtn.addEventListener('click', togglePower);
+            powerBtn.addEventListener('touchstart', togglePower, {passive: false});
 
             // Tap Screen to load ROM
             screenContainer.addEventListener('click', function(e) {
@@ -291,7 +294,7 @@
                 }
             });
 
-            // --- ROM LOADING LOGIC (FIXED) ---
+            // --- FIXED ROM LOADING LOGIC ---
             romInput.addEventListener('change', function(e) {
                 var file = e.target.files[0];
                 if (!file) return;
@@ -308,13 +311,11 @@
                 var reader = new FileReader();
                 reader.onload = function(event) {
                     try {
-                        // Get ROM data as string (JSNES expects string format)
-                        var romString = String.fromCharCode.apply(null, new Uint8Array(event.target.result));
+                        // readAsBinaryString already returns exactly the string format jsnes expects!
+                        var romString = event.target.result;
                         
-                        // Stop any current emulation
+                        // Stop any current emulation & flush memory
                         stopNES();
-                        
-                        // Create new NES instance
                         initNES();
                         
                         // Load and start the ROM
@@ -326,7 +327,6 @@
                         console.error("NES ROM loading error:", error);
                         screenMessage.innerHTML = "LOAD ERROR<br>TRY ANOTHER ROM";
                         
-                        // Reset for retry
                         stopNES();
                         initNES();
                     }
@@ -335,6 +335,8 @@
                     screenMessage.innerHTML = "READ ERROR<br>TRY AGAIN";
                     console.error("FileReader error");
                 };
+                
+                // Keep this! jsnes requires Binary String, NOT ArrayBuffer
                 reader.readAsBinaryString(file);
             });
 
@@ -366,7 +368,6 @@
                     }
                 }
                 
-                // Touch events
                 btn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -384,7 +385,6 @@
                     releaseButton();
                 });
                 
-                // Mouse events for desktop testing
                 btn.addEventListener('mousedown', function(e) {
                     e.preventDefault();
                     pressButton();
@@ -400,14 +400,14 @@
                 });
             });
 
-            // Prevent default touch behavior on the entire console
+            // --- FIXED: Exclude Power Button from blanket block ---
             document.querySelector('.console-body').addEventListener('touchstart', function(e) {
-                if (e.target.closest('.d-btn, .btn-action, .btn-sys')) {
+                // Ignore the power button here so it can handle its own logic
+                if (e.target.closest('.d-btn, .btn-action, .btn-sys') && !e.target.closest('#powerBtn')) {
                     e.preventDefault();
                 }
             }, {passive: false});
             
-            // Prevent context menu on game screen
             canvas.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
             });
