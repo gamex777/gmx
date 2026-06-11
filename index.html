@@ -3,15 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MicroEmu - NES</title>
+<title>GMX</title>
 
-<link rel="manifest" href="data:application/manifest+json,{"name":"MicroEmu","short_name":"MicroEmu","description":"NES Emulator","start_url":".","display":"standalone","orientation":"landscape","background_color":"%232c2c2c","theme_color":"%23f67a76","icons":[{"src":"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f67a76'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>🎮</text></svg>","sizes":"512x512","type":"image/svg+xml"}]}">
+<link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MicroEmu">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f67a76'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>🎮</text></svg>">
+<link rel="apple-touch-icon" href="icon.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/jsnes@1.2.1/dist/jsnes.min.js"></script>
 
 <style>
     /* -----------------------------------------
@@ -21,7 +23,19 @@
         margin: 0; padding: 0; width: 100%; height: 100%;
         display: flex; justify-content: center; align-items: center;
         background-color: #2c2c2c; overflow: hidden; font-family: Arial, sans-serif;
+        
+        /* PREVENT COPY/PASTE MENUS AND TEXT SELECTION */
+        -webkit-touch-callout: none; 
+        -webkit-user-select: none;   
+        -khtml-user-select: none;    
+        -moz-user-select: none;      
+        -ms-user-select: none;       
+        user-select: none;           
+        
+        /* FORCE INSTANT TOUCH (Removes input lag/gesture zoom) */
+        touch-action: none; 
     }
+    
     .console-body {
         width: 100vw; max-width: 900px; height: 45.45vw; max-height: 409px; 
         background-color: #f67a76; border-radius: 50px; 
@@ -183,111 +197,15 @@
     </div>
 
     <script>
-        // Self-contained JSNES (embedded for offline use)
-        // This is a minified version that will work offline
-        // We'll load it dynamically and cache it
-        
         var nes;
         var frameTimer;
         var isRunning = false;
-        var audioContext;
-        var audioBuffer;
-        var audioBufferSize = 8192;
-        var audioWritePosition = 0;
-        var jsnesLoaded = false;
-
-        // Load JSNES and cache it for offline use
-        function loadJSNES() {
-            return new Promise(function(resolve, reject) {
-                // Check if already cached in localStorage
-                var cachedJSNES = localStorage.getItem('jsnes_lib');
-                
-                if (cachedJSNES) {
-                    // Use cached version
-                    var script = document.createElement('script');
-                    script.textContent = cachedJSNES;
-                    document.head.appendChild(script);
-                    
-                    // Wait for it to load
-                    var checkInterval = setInterval(function() {
-                        if (typeof jsnes !== 'undefined') {
-                            clearInterval(checkInterval);
-                            jsnesLoaded = true;
-                            console.log('JSNES loaded from cache');
-                            resolve();
-                        }
-                    }, 50);
-                } else {
-                    // Fetch and cache
-                    fetch('https://unpkg.com/jsnes@1.2.1/dist/jsnes.min.js')
-                        .then(function(response) {
-                            return response.text();
-                        })
-                        .then(function(code) {
-                            // Cache in localStorage
-                            try {
-                                localStorage.setItem('jsnes_lib', code);
-                            } catch(e) {
-                                console.log('Could not cache JSNES (storage full)');
-                            }
-                            
-                            // Execute the code
-                            var script = document.createElement('script');
-                            script.textContent = code;
-                            document.head.appendChild(script);
-                            
-                            // Wait for it to load
-                            var checkInterval = setInterval(function() {
-                                if (typeof jsnes !== 'undefined') {
-                                    clearInterval(checkInterval);
-                                    jsnesLoaded = true;
-                                    console.log('JSNES loaded and cached');
-                                    resolve();
-                                }
-                            }, 50);
-                        })
-                        .catch(function(error) {
-                            console.error('Failed to load JSNES:', error);
-                            reject(error);
-                        });
-                }
-            });
-        }
-
-        // Register service worker for offline support
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                // Create inline service worker
-                var swCode = `
-                    self.addEventListener('install', function(event) {
-                        self.skipWaiting();
-                    });
-                    
-                    self.addEventListener('activate', function(event) {
-                        event.waitUntil(clients.claim());
-                    });
-                    
-                    self.addEventListener('fetch', function(event) {
-                        event.respondWith(
-                            caches.match(event.request).then(function(response) {
-                                return response || fetch(event.request);
-                            })
-                        );
-                    });
-                `;
-                
-                var blob = new Blob([swCode], {type: 'application/javascript'});
-                var swUrl = URL.createObjectURL(blob);
-                
-                navigator.serviceWorker.register(swUrl)
-                    .then(function(registration) {
-                        console.log('Service Worker registered for offline support');
-                    })
-                    .catch(function(error) {
-                        console.log('Service Worker registration failed:', error);
-                    });
-            });
-        }
+        
+        // --- Audio Variables ---
+        var audioCtx;
+        var scriptNode;
+        var audioQueueL = [];
+        var audioQueueR = [];
 
         document.addEventListener('DOMContentLoaded', function() {
             var powerBtn = document.getElementById('powerBtn');
@@ -296,90 +214,85 @@
             var romInput = document.getElementById('romInput');
             var screenMessage = document.getElementById('screenMessage');
             var isPowerOn = false;
+            
+            // --- OPTIMIZED CANVAS SETUP ---
             var canvas = document.getElementById('gameScreen');
-            var ctx = canvas.getContext('2d');
+            var ctx = canvas.getContext('2d', { alpha: false }); 
             var imageData = ctx.createImageData(256, 240);
+            var buf = new ArrayBuffer(imageData.data.length);
+            var buf8 = new Uint8ClampedArray(buf);
+            var buf32 = new Uint32Array(buf);
+            
+            var renderFrame = 0;
 
-            // Load JSNES first
-            loadJSNES().then(function() {
-                initAudio();
-                initNES();
-                console.log('Emulator ready for offline use!');
-            }).catch(function(error) {
-                screenMessage.innerHTML = "LOAD ERROR<br>CHECK CONNECTION";
-                console.error('Failed to initialize emulator:', error);
-            });
-
-            // Initialize Web Audio API
+            // --- Web Audio API Setup ---
             function initAudio() {
-                try {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                        sampleRate: 44100,
-                        latencyHint: 'interactive'
-                    });
-                    audioBuffer = new Float32Array(audioBufferSize * 2);
-                    audioWritePosition = 0;
-                    console.log("Audio initialized at", audioContext.sampleRate, "Hz");
+                if (!audioCtx) {
+                    var windowAudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new windowAudioContext({ sampleRate: 44100 });
                     
-                    const scriptNode = audioContext.createScriptProcessor(4096, 0, 2);
-                    scriptNode.onaudioprocess = function(event) {
-                        const outputBuffer = event.outputBuffer;
-                        const leftChannel = outputBuffer.getChannelData(0);
-                        const rightChannel = outputBuffer.getChannelData(1);
+                    scriptNode = audioCtx.createScriptProcessor(8192, 0, 2);
+                    scriptNode.onaudioprocess = function(e) {
+                        var outL = e.outputBuffer.getChannelData(0);
+                        var outR = e.outputBuffer.getChannelData(1);
                         
-                        for (let i = 0; i < leftChannel.length; i++) {
-                            const pos = (audioWritePosition + i * 2) % (audioBufferSize * 2);
-                            leftChannel[i] = audioBuffer[pos] || 0;
-                            rightChannel[i] = audioBuffer[pos + 1] || 0;
+                        for (var i = 0; i < outL.length; i++) {
+                            if (audioQueueL.length > 0) {
+                                outL[i] = audioQueueL.shift();
+                                outR[i] = audioQueueR.shift();
+                            } else {
+                                outL[i] = 0;
+                                outR[i] = 0;
+                            }
                         }
                     };
-                    scriptNode.connect(audioContext.destination);
-                    
-                    return true;
-                } catch(e) {
-                    console.error("Audio initialization error:", e);
-                    return false;
+                    scriptNode.connect(audioCtx.destination);
+                }
+                
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
                 }
             }
 
-            // Initialize NES emulator
+            // --- Initialize NES emulator ---
             function initNES() {
                 try {
                     nes = new jsnes.NES({
                         onFrame: function(frameBuffer) {
-                            for (var i = 0; i < frameBuffer.length; i++) {
-                                var pixel = frameBuffer[i];
-                                var r = (pixel >> 16) & 0xFF;
-                                var g = (pixel >> 8) & 0xFF;
-                                var b = pixel & 0xFF;
-                                
-                                var index = i * 4;
-                                imageData.data[index] = r;
-                                imageData.data[index + 1] = g;
-                                imageData.data[index + 2] = b;
-                                imageData.data[index + 3] = 0xFF;
+                            renderFrame++;
+                            
+                            // Frame-skip: Render at 30fps to save mobile CPU
+                            if (renderFrame % 2 === 0) {
+                                // High-speed 32-bit pixel writing loop
+                                for (var i = 0; i < 61440; i++) { 
+                                    var pixel = frameBuffer[i];
+                                    buf32[i] = 0xff000000 | 
+                                              ((pixel & 0xFF) << 16) | 
+                                              (pixel & 0xFF00) | 
+                                              ((pixel >> 16) & 0xFF); 
+                                }
+                                imageData.data.set(buf8);
+                                ctx.putImageData(imageData, 0, 0);
                             }
-                            ctx.putImageData(imageData, 0, 0);
                         },
                         onAudioSample: function(left, right) {
-                            if (audioBuffer && audioWritePosition < audioBufferSize * 2) {
-                                audioBuffer[audioWritePosition] = left;
-                                audioBuffer[audioWritePosition + 1] = right;
-                                audioWritePosition += 2;
-                                
-                                if (audioWritePosition >= audioBufferSize * 2) {
-                                    audioWritePosition = 0;
-                                }
+                            audioQueueL.push(left);
+                            audioQueueR.push(right);
+                            
+                            // Cap buffer to prevent audio lag build-up
+                            if (audioQueueL.length > 16384) {
+                                audioQueueL.splice(0, 8192);
+                                audioQueueR.splice(0, 8192);
                             }
                         }
                     });
-                    console.log("NES Emulator initialized successfully!");
                 } catch (e) {
                     console.error("NES Engine failed to initialize.", e);
                 }
             }
 
-            // Emulator run loop
+            initNES();
+
             function runFrame() {
                 if (isRunning && nes) {
                     try {
@@ -395,13 +308,6 @@
             function startNES() {
                 if (!isRunning) {
                     isRunning = true;
-                    
-                    if (audioContext && audioContext.state === 'suspended') {
-                        audioContext.resume().then(function() {
-                            console.log("Audio context resumed");
-                        });
-                    }
-                    
                     runFrame();
                 }
             }
@@ -413,41 +319,37 @@
                     frameTimer = null;
                 }
                 if (nes) {
-                    try {
-                        nes.reset();
-                    } catch(e) {
-                        console.log("Reset error:", e);
-                    }
+                    try { nes.reset(); } catch(e) { console.log("Reset error:", e); }
                 }
-                
-                if (audioBuffer) {
-                    audioBuffer.fill(0);
-                    audioWritePosition = 0;
-                }
-                
-                if (audioContext && audioContext.state === 'running') {
-                    audioContext.suspend();
-                }
+                audioQueueL = [];
+                audioQueueR = [];
             }
 
-            // Power Button Logic
-            powerBtn.addEventListener('click', function() {
+            // --- Power Button Logic ---
+            function togglePower(e) {
+                if (e) e.preventDefault(); 
+                
                 isPowerOn = !isPowerOn;
                 powerIndicator.classList.toggle('is-on');
                 screenContainer.classList.toggle('is-on');
                 
-                if (!isPowerOn) {
+                if (isPowerOn) {
+                    initAudio(); 
+                } else {
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
                     stopNES();
                 }
-            });
+            }
+            
+            powerBtn.addEventListener('click', togglePower);
+            powerBtn.addEventListener('touchstart', togglePower, {passive: false});
 
-            // Tap Screen to load ROM
+            // --- Tap Screen to load ROM ---
             screenContainer.addEventListener('click', function(e) {
                 if (e.target === canvas) return;
-                
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
+                    initAudio(); 
                     romInput.click();
                 }
             });
@@ -469,115 +371,67 @@
                 var reader = new FileReader();
                 reader.onload = function(event) {
                     try {
-                        var romString = String.fromCharCode.apply(null, new Uint8Array(event.target.result));
-                        
+                        var romString = event.target.result;
                         stopNES();
                         initNES();
                         nes.loadROM(romString);
-                        
-                        if (audioContext && audioContext.state === 'suspended') {
-                            audioContext.resume();
-                        }
-                        
                         startNES();
                         screenContainer.classList.add('is-playing');
                         console.log("NES game loaded successfully!");
                     } catch (error) {
                         console.error("NES ROM loading error:", error);
                         screenMessage.innerHTML = "LOAD ERROR<br>TRY ANOTHER ROM";
-                        
                         stopNES();
                         initNES();
                     }
                 };
                 reader.onerror = function() {
                     screenMessage.innerHTML = "READ ERROR<br>TRY AGAIN";
-                    console.error("FileReader error");
                 };
                 reader.readAsBinaryString(file);
             });
 
             // --- NES CONTROLLER MAPPING ---
-            function setupControls() {
-                var nesButtons = {
-                    'btnUp': jsnes.Controller.BUTTON_UP,
-                    'btnDown': jsnes.Controller.BUTTON_DOWN,
-                    'btnLeft': jsnes.Controller.BUTTON_LEFT,
-                    'btnRight': jsnes.Controller.BUTTON_RIGHT,
-                    'btnA': jsnes.Controller.BUTTON_A,
-                    'btnB': jsnes.Controller.BUTTON_B,
-                    'btnStart': jsnes.Controller.BUTTON_START,
-                    'btnSelect': jsnes.Controller.BUTTON_SELECT
-                };
+            const nesButtons = {
+                'btnUp': jsnes.Controller.BUTTON_UP,
+                'btnDown': jsnes.Controller.BUTTON_DOWN,
+                'btnLeft': jsnes.Controller.BUTTON_LEFT,
+                'btnRight': jsnes.Controller.BUTTON_RIGHT,
+                'btnA': jsnes.Controller.BUTTON_A,
+                'btnB': jsnes.Controller.BUTTON_B,
+                'btnStart': jsnes.Controller.BUTTON_START,
+                'btnSelect': jsnes.Controller.BUTTON_SELECT
+            };
 
-                const controls = document.querySelectorAll('.d-btn, .btn-action, .btn-sys');
-                controls.forEach(btn => {
-                    if(!nesButtons[btn.id] && nesButtons[btn.id] !== 0) return; 
-                    
-                    function pressButton() {
-                        if(nes && isRunning) {
-                            nes.buttonDown(1, nesButtons[btn.id]);
-                        }
-                    }
-                    
-                    function releaseButton() {
-                        if(nes && isRunning) {
-                            nes.buttonUp(1, nesButtons[btn.id]);
-                        }
-                    }
-                    
-                    btn.addEventListener('touchstart', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        pressButton();
-                    }, {passive: false});
+            const controls = document.querySelectorAll('.d-btn, .btn-action, .btn-sys');
+            controls.forEach(btn => {
+                if(!nesButtons[btn.id] && nesButtons[btn.id] !== 0) return; 
+                
+                function pressButton() { if(nes && isRunning) { nes.buttonDown(1, nesButtons[btn.id]); } }
+                function releaseButton() { if(nes && isRunning) { nes.buttonUp(1, nesButtons[btn.id]); } }
+                
+                btn.addEventListener('touchstart', function(e) {
+                    e.preventDefault(); e.stopPropagation(); pressButton();
+                }, {passive: false});
 
-                    btn.addEventListener('touchend', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        releaseButton();
-                    }, {passive: false});
-                    
-                    btn.addEventListener('touchcancel', function(e) {
-                        e.preventDefault();
-                        releaseButton();
-                    });
-                    
-                    btn.addEventListener('mousedown', function(e) {
-                        e.preventDefault();
-                        pressButton();
-                    });
-                    
-                    btn.addEventListener('mouseup', function(e) {
-                        e.preventDefault();
-                        releaseButton();
-                    });
-                    
-                    btn.addEventListener('mouseleave', function(e) {
-                        releaseButton();
-                    });
-                });
-            }
+                btn.addEventListener('touchend', function(e) {
+                    e.preventDefault(); e.stopPropagation(); releaseButton();
+                }, {passive: false});
+                
+                btn.addEventListener('touchcancel', function(e) { e.preventDefault(); releaseButton(); });
+                btn.addEventListener('mousedown', function(e) { e.preventDefault(); pressButton(); });
+                btn.addEventListener('mouseup', function(e) { e.preventDefault(); releaseButton(); });
+                btn.addEventListener('mouseleave', function(e) { releaseButton(); });
+            });
 
-            // Set up controls once JSNES is loaded
-            var checkJSNESInterval = setInterval(function() {
-                if (jsnesLoaded && typeof jsnes !== 'undefined') {
-                    clearInterval(checkJSNESInterval);
-                    setupControls();
-                }
-            }, 100);
-
-            // Prevent default touch behavior on the entire console
+            // Prevent default touch behavior on the entire console (except power button)
             document.querySelector('.console-body').addEventListener('touchstart', function(e) {
-                if (e.target.closest('.d-btn, .btn-action, .btn-sys')) {
+                if (e.target.closest('.d-btn, .btn-action, .btn-sys') && !e.target.closest('#powerBtn')) {
                     e.preventDefault();
                 }
             }, {passive: false});
             
-            // Prevent context menu on game screen
-            canvas.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-            });
+            canvas.addEventListener('contextmenu', function(e) { e.preventDefault(); });
         });
     </script>
 </body>
