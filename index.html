@@ -195,17 +195,22 @@
         </div>
 
     </div>
-              <script>
+<script>
         var nes;
         var frameTimer;
         var isRunning = false;
         
         // --- Audio Variables ---
+        var windowAudioContext = window.AudioContext || window.webkitAudioContext;
+        // Initialize early to grab the hardware's native sample rate (often 48000 on iOS)
         var audioCtx;
+        try { audioCtx = new windowAudioContext(); } catch(e) {}
+        
         var scriptNode;
         var audioQueueL = [];
         var audioQueueR = [];
         var audioUnlocked = false;
+        var audioPrebuffered = false; // Helps prevent initial stutter
 
         document.addEventListener('DOMContentLoaded', function() {
             var powerBtn = document.getElementById('powerBtn');
@@ -218,13 +223,7 @@
             // --- OPTIMIZED WEBGL CANVAS SETUP ---
             var canvas = document.getElementById('gameScreen');
             var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            
-            if (!gl) {
-                console.error("WebGL not supported. Emulator will run slowly.");
-                // Fallback to old method if WebGL is somehow disabled
-            }
 
-            // WebGL Shaders (These tell the GPU how to draw the pixels)
             var vertexShaderSrc = `
                 attribute vec2 a_position;
                 attribute vec2 a_texCoord;
@@ -251,16 +250,12 @@
                 return shader;
             }
 
-            var vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSrc);
-            var fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSrc);
-
             var program = gl.createProgram();
-            gl.attachShader(program, vertexShader);
-            gl.attachShader(program, fragmentShader);
+            gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vertexShaderSrc));
+            gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSrc));
             gl.linkProgram(program);
             gl.useProgram(program);
 
-            // Set up a simple rectangle that covers the canvas
             var positionBuffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
@@ -272,10 +267,8 @@
             gl.enableVertexAttribArray(positionLocation);
             gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-            // Set up texture coordinates
             var texCoordBuffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-            // Notice the coordinates are flipped vertically. Canvas puts 0,0 at top-left. WebGL puts 0,0 at bottom-left.
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
                 0.0,  1.0,  1.0,  1.0,  0.0,  0.0,
                 0.0,  0.0,  1.0,  1.0,  1.0,  0.0
@@ -285,29 +278,19 @@
             gl.enableVertexAttribArray(texCoordLocation);
             gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
 
-            // Create the texture that the NES engine will write to
             var texture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            // NEAREST keeps the pixels sharp and blocky, perfect for NES
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-            // Our 32-bit memory buffer for the NES pixels
             var nesPixelBuffer = new Uint8Array(256 * 240 * 4);
             var nesPixelBuffer32 = new Uint32Array(nesPixelBuffer.buffer);
 
             // --- THE BULLETPROOF IOS AUDIO UNLOCKER ---
             function globalAudioUnlock() {
-                if (audioUnlocked) return;
-
-                var windowAudioContext = window.AudioContext || window.webkitAudioContext;
-                try {
-                    audioCtx = new windowAudioContext({ sampleRate: 44100 });
-                } catch (e) {
-                    audioCtx = new windowAudioContext(); 
-                }
+                if (audioUnlocked || !audioCtx) return;
                 
                 var unlockSource = audioCtx.createBufferSource();
                 unlockSource.buffer = audioCtx.createBuffer(1, 1, 22050);
@@ -322,11 +305,20 @@
                     if (audioCtx && audioCtx.state === 'running') {
                         audioUnlocked = true;
                         
-                        // We can process smaller audio chunks now that rendering is fast!
                         scriptNode = audioCtx.createScriptProcessor(4096, 0, 2);
                         scriptNode.onaudioprocess = function(e) {
                             var outL = e.outputBuffer.getChannelData(0);
                             var outR = e.outputBuffer.getChannelData(1);
+                            
+                            // Pre-buffer logic: don't play sound until we have enough samples saved up
+                            if (!audioPrebuffered) {
+                                if (audioQueueL.length > 4096) {
+                                    audioPrebuffered = true;
+                                } else {
+                                    for (var j = 0; j < outL.length; j++) { outL[j] = 0; outR[j] = 0; }
+                                    return;
+                                }
+                            }
                             
                             for (var i = 0; i < outL.length; i++) {
                                 if (audioQueueL.length > 0) {
@@ -335,6 +327,7 @@
                                 } else {
                                     outL[i] = 0;
                                     outR[i] = 0;
+                                    audioPrebuffered = false; // Starved, wait for buffer to refill
                                 }
                             }
                         };
@@ -355,29 +348,22 @@
             function initNES() {
                 try {
                     nes = new jsnes.NES({
+                        // Sync NES to exactly match the iPhone's hardware speaker rate
+                        sampleRate: audioCtx ? audioCtx.sampleRate : 44100,
                         onFrame: function(frameBuffer) {
-                            // 1. Write the 32-bit colors into our array
                             for (var i = 0; i < 61440; i++) { 
-                                var pixel = frameBuffer[i];
-                                // We don't need to flip endianness for WebGL the same way we did for Canvas
-                                nesPixelBuffer32[i] = 0xff000000 | 
-                                                      ((pixel & 0xFF) << 16) | 
-                                                      (pixel & 0xFF00) | 
-                                                      ((pixel >> 16) & 0xFF); 
+                                // FIXED: Removed the Red/Blue bitwise swap. WebGL expects it native.
+                                nesPixelBuffer32[i] = 0xff000000 | frameBuffer[i]; 
                             }
-                            
-                            // 2. Blast the array to the GPU
                             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 240, 0, gl.RGBA, gl.UNSIGNED_BYTE, nesPixelBuffer);
-                            
-                            // 3. Tell the GPU to draw the rectangle
                             gl.drawArrays(gl.TRIANGLES, 0, 6);
                         },
                         onAudioSample: function(left, right) {
                             audioQueueL.push(left);
                             audioQueueR.push(right);
                             
-                            // Audio queue won't build up as much now that frames aren't dropping
-                            if (audioQueueL.length > 8192) {
+                            // Keep buffer capped so audio doesn't delay
+                            if (audioQueueL.length > 16384) {
                                 audioQueueL.splice(0, 4096);
                                 audioQueueR.splice(0, 4096);
                             }
@@ -392,12 +378,8 @@
 
             function runFrame() {
                 if (isRunning && nes) {
-                    try {
-                        nes.frame();
-                        frameTimer = requestAnimationFrame(runFrame);
-                    } catch(e) {
-                        stopNES();
-                    }
+                    nes.frame();
+                    frameTimer = requestAnimationFrame(runFrame);
                 }
             }
 
@@ -419,6 +401,7 @@
                 }
                 audioQueueL = [];
                 audioQueueR = [];
+                audioPrebuffered = false;
             }
 
             // --- Power Button Logic ---
@@ -434,7 +417,6 @@
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
                     stopNES();
                     
-                    // Clear the WebGL canvas
                     if(gl) {
                         gl.clearColor(0.0, 0.0, 0.0, 1.0);
                         gl.clear(gl.COLOR_BUFFER_BIT);
@@ -528,12 +510,12 @@
             canvas.addEventListener('contextmenu', function(e) { e.preventDefault(); });
         });
 
-        // Register Service Worker for Offline PWA Support
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('sw.js').catch(function(err) {});
             });
         }
     </script>
+            
 </body>
 </html>
