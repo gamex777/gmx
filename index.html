@@ -225,33 +225,48 @@
             
             var renderFrame = 0;
 
-            // --- Web Audio API Setup ---
-            function initAudio() {
-                if (!audioCtx) {
-                    var windowAudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new windowAudioContext({ sampleRate: 44100 });
-                    
-                    scriptNode = audioCtx.createScriptProcessor(8192, 0, 2);
-                    scriptNode.onaudioprocess = function(e) {
-                        var outL = e.outputBuffer.getChannelData(0);
-                        var outR = e.outputBuffer.getChannelData(1);
-                        
-                        for (var i = 0; i < outL.length; i++) {
-                            if (audioQueueL.length > 0) {
-                                outL[i] = audioQueueL.shift();
-                                outR[i] = audioQueueR.shift();
-                            } else {
-                                outL[i] = 0;
-                                outR[i] = 0;
-                            }
-                        }
-                    };
-                    scriptNode.connect(audioCtx.destination);
+            // --- Web Audio API Setup (With iOS Unlock Hack) ---
+            function unlockAudio() {
+                // If it already exists and is running, just make sure it's awake
+                if (audioCtx) {
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    return;
                 }
+
+                // 1. Initialize the Context
+                var windowAudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new windowAudioContext({ sampleRate: 44100 });
                 
+                // 2. THE IOS HACK: Play a silent sound instantly to "unlock" the audio engine
+                var unlockSource = audioCtx.createBufferSource();
+                unlockSource.buffer = audioCtx.createBuffer(1, 1, 22050);
+                unlockSource.connect(audioCtx.destination);
+                unlockSource.start(0);
+
                 if (audioCtx.state === 'suspended') {
                     audioCtx.resume();
                 }
+
+                // 3. Setup the JSNES Audio Processor
+                scriptNode = audioCtx.createScriptProcessor(4096, 0, 2);
+                scriptNode.onaudioprocess = function(e) {
+                    var outL = e.outputBuffer.getChannelData(0);
+                    var outR = e.outputBuffer.getChannelData(1);
+                    
+                    for (var i = 0; i < outL.length; i++) {
+                        if (audioQueueL.length > 0) {
+                            // JSNES can be quiet, multiply by 1.5 to boost volume
+                            outL[i] = audioQueueL.shift() * 1.5;
+                            outR[i] = audioQueueR.shift() * 1.5;
+                        } else {
+                            outL[i] = 0;
+                            outR[i] = 0;
+                        }
+                    }
+                };
+                
+                // Connect the processor to the speakers
+                scriptNode.connect(audioCtx.destination);
             }
 
             // --- Initialize NES emulator ---
@@ -334,7 +349,8 @@
                 screenContainer.classList.toggle('is-on');
                 
                 if (isPowerOn) {
-                    initAudio(); 
+                    // Force the audio unlock the exact millisecond the power button is tapped
+                    unlockAudio(); 
                 } else {
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
@@ -349,7 +365,7 @@
             screenContainer.addEventListener('click', function(e) {
                 if (e.target === canvas) return;
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
-                    initAudio(); 
+                    unlockAudio(); // Double check it's awake before loading
                     romInput.click();
                 }
             });
