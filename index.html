@@ -13,7 +13,7 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
-<script src="https://unpkg.com/jsnes@1.2.1/dist/jsnes.min.js"></script>
+<script src="jsnes.min.js"></script>
 
 <style>
     /* -----------------------------------------
@@ -206,6 +206,7 @@
         var scriptNode;
         var audioQueueL = [];
         var audioQueueR = [];
+        var audioUnlocked = false;
 
         document.addEventListener('DOMContentLoaded', function() {
             var powerBtn = document.getElementById('powerBtn');
@@ -225,19 +226,18 @@
             
             var renderFrame = 0;
 
-            // --- Web Audio API Setup (With iOS Unlock Hack) ---
-            function unlockAudio() {
-                // If it already exists and is running, just make sure it's awake
-                if (audioCtx) {
-                    if (audioCtx.state === 'suspended') audioCtx.resume();
-                    return;
-                }
+            // --- THE BULLETPROOF IOS AUDIO UNLOCKER ---
+            function globalAudioUnlock() {
+                if (audioUnlocked) return;
 
-                // 1. Initialize the Context
                 var windowAudioContext = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new windowAudioContext({ sampleRate: 44100 });
+                try {
+                    audioCtx = new windowAudioContext({ sampleRate: 44100 });
+                } catch (e) {
+                    audioCtx = new windowAudioContext(); // Fallback for older iOS
+                }
                 
-                // 2. THE IOS HACK: Play a silent sound instantly to "unlock" the audio engine
+                // Play a silent ping instantly
                 var unlockSource = audioCtx.createBufferSource();
                 unlockSource.buffer = audioCtx.createBuffer(1, 1, 22050);
                 unlockSource.connect(audioCtx.destination);
@@ -247,27 +247,41 @@
                     audioCtx.resume();
                 }
 
-                // 3. Setup the JSNES Audio Processor
-                scriptNode = audioCtx.createScriptProcessor(4096, 0, 2);
-                scriptNode.onaudioprocess = function(e) {
-                    var outL = e.outputBuffer.getChannelData(0);
-                    var outR = e.outputBuffer.getChannelData(1);
-                    
-                    for (var i = 0; i < outL.length; i++) {
-                        if (audioQueueL.length > 0) {
-                            // JSNES can be quiet, multiply by 1.5 to boost volume
-                            outL[i] = audioQueueL.shift() * 1.5;
-                            outR[i] = audioQueueR.shift() * 1.5;
-                        } else {
-                            outL[i] = 0;
-                            outR[i] = 0;
-                        }
+                // Check if it worked, then hook up the NES speakers
+                setTimeout(function() {
+                    if (audioCtx && audioCtx.state === 'running') {
+                        audioUnlocked = true;
+                        console.log("iOS Speakers Unlocked!");
+
+                        scriptNode = audioCtx.createScriptProcessor(4096, 0, 2);
+                        scriptNode.onaudioprocess = function(e) {
+                            var outL = e.outputBuffer.getChannelData(0);
+                            var outR = e.outputBuffer.getChannelData(1);
+                            
+                            for (var i = 0; i < outL.length; i++) {
+                                if (audioQueueL.length > 0) {
+                                    outL[i] = audioQueueL.shift() * 1.5; // Volume boost
+                                    outR[i] = audioQueueR.shift() * 1.5;
+                                } else {
+                                    outL[i] = 0;
+                                    outR[i] = 0;
+                                }
+                            }
+                        };
+                        scriptNode.connect(audioCtx.destination);
+
+                        // Remove these invisible listeners once audio is working
+                        document.removeEventListener('touchstart', globalAudioUnlock, true);
+                        document.removeEventListener('touchend', globalAudioUnlock, true);
+                        document.removeEventListener('click', globalAudioUnlock, true);
                     }
-                };
-                
-                // Connect the processor to the speakers
-                scriptNode.connect(audioCtx.destination);
+                }, 10);
             }
+
+            // 'capture: true' means this runs BEFORE any other button script can block the tap
+            document.addEventListener('touchstart', globalAudioUnlock, {capture: true, passive: true});
+            document.addEventListener('touchend', globalAudioUnlock, {capture: true, passive: true});
+            document.addEventListener('click', globalAudioUnlock, {capture: true, passive: true});
 
             // --- Initialize NES emulator ---
             function initNES() {
@@ -275,16 +289,10 @@
                     nes = new jsnes.NES({
                         onFrame: function(frameBuffer) {
                             renderFrame++;
-                            
-                            // Frame-skip: Render at 30fps to save mobile CPU
                             if (renderFrame % 2 === 0) {
-                                // High-speed 32-bit pixel writing loop
                                 for (var i = 0; i < 61440; i++) { 
                                     var pixel = frameBuffer[i];
-                                    buf32[i] = 0xff000000 | 
-                                              ((pixel & 0xFF) << 16) | 
-                                              (pixel & 0xFF00) | 
-                                              ((pixel >> 16) & 0xFF); 
+                                    buf32[i] = 0xff000000 | ((pixel & 0xFF) << 16) | (pixel & 0xFF00) | ((pixel >> 16) & 0xFF); 
                                 }
                                 imageData.data.set(buf8);
                                 ctx.putImageData(imageData, 0, 0);
@@ -294,7 +302,6 @@
                             audioQueueL.push(left);
                             audioQueueR.push(right);
                             
-                            // Cap buffer to prevent audio lag build-up
                             if (audioQueueL.length > 16384) {
                                 audioQueueL.splice(0, 8192);
                                 audioQueueR.splice(0, 8192);
@@ -302,7 +309,7 @@
                         }
                     });
                 } catch (e) {
-                    console.error("NES Engine failed to initialize.", e);
+                    console.error("NES Engine failed.", e);
                 }
             }
 
@@ -314,7 +321,6 @@
                         nes.frame();
                         frameTimer = requestAnimationFrame(runFrame);
                     } catch(e) {
-                        console.error("Frame error:", e);
                         stopNES();
                     }
                 }
@@ -334,7 +340,7 @@
                     frameTimer = null;
                 }
                 if (nes) {
-                    try { nes.reset(); } catch(e) { console.log("Reset error:", e); }
+                    try { nes.reset(); } catch(e) {}
                 }
                 audioQueueL = [];
                 audioQueueR = [];
@@ -348,10 +354,7 @@
                 powerIndicator.classList.toggle('is-on');
                 screenContainer.classList.toggle('is-on');
                 
-                if (isPowerOn) {
-                    // Force the audio unlock the exact millisecond the power button is tapped
-                    unlockAudio(); 
-                } else {
+                if (!isPowerOn) {
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
                     stopNES();
@@ -365,7 +368,6 @@
             screenContainer.addEventListener('click', function(e) {
                 if (e.target === canvas) return;
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
-                    unlockAudio(); // Double check it's awake before loading
                     romInput.click();
                 }
             });
@@ -393,17 +395,13 @@
                         nes.loadROM(romString);
                         startNES();
                         screenContainer.classList.add('is-playing');
-                        console.log("NES game loaded successfully!");
                     } catch (error) {
-                        console.error("NES ROM loading error:", error);
                         screenMessage.innerHTML = "LOAD ERROR<br>TRY ANOTHER ROM";
                         stopNES();
                         initNES();
                     }
                 };
-                reader.onerror = function() {
-                    screenMessage.innerHTML = "READ ERROR<br>TRY AGAIN";
-                };
+                reader.onerror = function() { screenMessage.innerHTML = "READ ERROR<br>TRY AGAIN"; };
                 reader.readAsBinaryString(file);
             });
 
@@ -449,6 +447,13 @@
             
             canvas.addEventListener('contextmenu', function(e) { e.preventDefault(); });
         });
+
+        // Register Service Worker for Offline PWA Support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').catch(function(err) {});
+            });
+        }
     </script>
 </body>
 </html>
