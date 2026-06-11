@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MicroEmu</title>
+<title>MicroEmu - NES</title>
 
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,7 +13,7 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
-<script src="https://cdn.jsdelivr.net/npm/@nicbarker/nintendo-gba-emulator@0.1.2/dist/index.umd.min.js"></script>
+<script src="https://unpkg.com/jsnes@1.2.1/dist/jsnes.min.js"></script>
 
 <style>
     /* -----------------------------------------
@@ -163,8 +163,8 @@
 
         <div class="screen-container" id="screenContainer">
             <div class="screen-text" id="screenMessage">TAP TO INSERT<br>CARTRIDGE</div>
-            <canvas id="gameScreen" width="240" height="160"></canvas>
-            <input type="file" id="romInput">
+            <canvas id="gameScreen" width="256" height="240"></canvas>
+            <input type="file" id="romInput" accept=".nes">
         </div>
 
         <div class="controls-right">
@@ -185,8 +185,8 @@
     </div>
 
     <script>
-        var gba;
-        var animationFrameId;
+        var nes;
+        var frameTimer;
         var isRunning = false;
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -197,29 +197,71 @@
             var screenMessage = document.getElementById('screenMessage');
             var isPowerOn = false;
             var canvas = document.getElementById('gameScreen');
+            var ctx = canvas.getContext('2d');
+            var imageData = ctx.createImageData(256, 240);
 
-            // Initialize the new BIOS-free emulator
-            function initEmulator() {
+            // Initialize NES emulator
+            function initNES() {
                 try {
-                    gba = new NintendoGBA.Emulator({
-                        canvas: canvas,
-                        audioBufferSize: 8192,
-                        sampleRate: 44100
+                    nes = new jsnes.NES({
+                        onFrame: function(frameBuffer) {
+                            // Convert NES frame buffer to canvas image data
+                            for (var i = 0; i < frameBuffer.length; i++) {
+                                var pixel = frameBuffer[i];
+                                // NES color palette conversion
+                                var r = (pixel >> 16) & 0xFF;
+                                var g = (pixel >> 8) & 0xFF;
+                                var b = pixel & 0xFF;
+                                
+                                var index = i * 4;
+                                imageData.data[index] = r;
+                                imageData.data[index + 1] = g;
+                                imageData.data[index + 2] = b;
+                                imageData.data[index + 3] = 0xFF;
+                            }
+                            ctx.putImageData(imageData, 0, 0);
+                        },
+                        onAudioSample: function(left, right) {
+                            // Audio handling (optional)
+                        }
                     });
-                    console.log("GBA Emulator initialized successfully (BIOS-free)");
+                    console.log("NES Emulator initialized successfully!");
                 } catch (e) {
-                    console.error("GBA Engine failed to initialize.", e);
+                    console.error("NES Engine failed to initialize.", e);
                 }
             }
 
             // Initialize on load
-            initEmulator();
+            initNES();
 
             // Emulator run loop
-            function runEmulator() {
-                if (isRunning && gba) {
-                    gba.advanceFrame();
-                    animationFrameId = requestAnimationFrame(runEmulator);
+            function runFrame() {
+                if (isRunning && nes) {
+                    try {
+                        nes.frame();
+                        frameTimer = requestAnimationFrame(runFrame);
+                    } catch(e) {
+                        console.error("Frame error:", e);
+                        stopNES();
+                    }
+                }
+            }
+
+            function startNES() {
+                if (!isRunning) {
+                    isRunning = true;
+                    runFrame();
+                }
+            }
+
+            function stopNES() {
+                isRunning = false;
+                if (frameTimer) {
+                    cancelAnimationFrame(frameTimer);
+                    frameTimer = null;
+                }
+                if (nes) {
+                    nes.reset();
                 }
             }
 
@@ -232,35 +274,12 @@
                 if (!isPowerOn) {
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
-                    stopEmulation();
+                    stopNES();
                 }
             });
 
-            function stopEmulation() {
-                isRunning = false;
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                    animationFrameId = null;
-                }
-                if (gba) {
-                    try {
-                        gba.pause();
-                    } catch(e) {
-                        console.log("Pause error (non-critical):", e);
-                    }
-                }
-            }
-
-            function startEmulation() {
-                if (!isRunning) {
-                    isRunning = true;
-                    runEmulator();
-                }
-            }
-
             // Tap Screen to load ROM
             screenContainer.addEventListener('click', function(e) {
-                // Prevent loading if clicking on the canvas itself
                 if (e.target === canvas) return;
                 
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
@@ -274,8 +293,8 @@
                 if (!file) return;
 
                 var fileName = file.name.toLowerCase();
-                if (!fileName.endsWith('.gba')) {
-                    screenMessage.innerHTML = "INVALID FILE<br>NEED .GBA";
+                if (!fileName.endsWith('.nes')) {
+                    screenMessage.innerHTML = "INVALID FILE<br>NEED .NES";
                     e.target.value = ''; 
                     return;
                 }
@@ -287,21 +306,19 @@
                     var romData = new Uint8Array(event.target.result);
                     
                     setTimeout(function() {
-                        if (gba) {
+                        if (nes) {
                             try {
                                 // Stop any current emulation
-                                stopEmulation();
+                                stopNES();
                                 
-                                // Load the ROM
-                                gba.loadRom(romData);
-                                
-                                // Start emulation
-                                startEmulation();
+                                // Load and start the ROM
+                                nes.loadROM(romData);
+                                startNES();
                                 screenContainer.classList.add('is-playing');
-                                console.log("Game loaded successfully!");
+                                console.log("NES game loaded successfully!");
                             } catch (error) {
                                 screenMessage.innerHTML = "LOAD ERROR<br>TRY ANOTHER ROM";
-                                console.error("ROM loading error:", error);
+                                console.error("NES ROM loading error:", error);
                             }
                         }
                     }, 300);
@@ -312,92 +329,65 @@
                 reader.readAsArrayBuffer(file);
             });
 
-            // --- CONTROLLER MAPPING ---
-            // NintendoGBA emulator uses different key mapping
-            const keyMapping = {
-                'btnUp': 'UP',
-                'btnDown': 'DOWN',
-                'btnLeft': 'LEFT',
-                'btnRight': 'RIGHT',
-                'btnA': 'A',
-                'btnB': 'B',
-                'btnL': 'L',
-                'btnR': 'R',
-                'btnStart': 'START',
-                'btnSelect': 'SELECT'
+            // --- NES CONTROLLER MAPPING ---
+            const nesButtons = {
+                'btnUp': jsnes.Controller.BUTTON_UP,
+                'btnDown': jsnes.Controller.BUTTON_DOWN,
+                'btnLeft': jsnes.Controller.BUTTON_LEFT,
+                'btnRight': jsnes.Controller.BUTTON_RIGHT,
+                'btnA': jsnes.Controller.BUTTON_A,
+                'btnB': jsnes.Controller.BUTTON_B,
+                'btnStart': jsnes.Controller.BUTTON_START,
+                'btnSelect': jsnes.Controller.BUTTON_SELECT
             };
 
             const controls = document.querySelectorAll('.d-btn, .btn-action, .btn-sys');
             controls.forEach(btn => {
-                if(!keyMapping[btn.id]) return; 
+                if(!nesButtons[btn.id] && nesButtons[btn.id] !== 0) return; 
+                
+                function pressButton() {
+                    if(nes && isRunning) {
+                        nes.controller1.setButton(nesButtons[btn.id], true, 0);
+                    }
+                }
+                
+                function releaseButton() {
+                    if(nes && isRunning) {
+                        nes.controller1.setButton(nesButtons[btn.id], false, 0);
+                    }
+                }
                 
                 // Touch events
                 btn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    if(gba && isRunning) {
-                        try {
-                            gba.pressKey(keyMapping[btn.id]);
-                        } catch(err) {
-                            console.log("Key press error:", err);
-                        }
-                    }
+                    pressButton();
                 }, {passive: false});
 
                 btn.addEventListener('touchend', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    if(gba && isRunning) {
-                        try {
-                            gba.releaseKey(keyMapping[btn.id]);
-                        } catch(err) {
-                            console.log("Key release error:", err);
-                        }
-                    }
+                    releaseButton();
                 }, {passive: false});
                 
                 btn.addEventListener('touchcancel', function(e) {
                     e.preventDefault();
-                    if(gba && isRunning) {
-                        try {
-                            gba.releaseKey(keyMapping[btn.id]);
-                        } catch(err) {
-                            console.log("Key cancel error:", err);
-                        }
-                    }
+                    releaseButton();
                 });
                 
                 // Mouse events for desktop testing
                 btn.addEventListener('mousedown', function(e) {
                     e.preventDefault();
-                    if(gba && isRunning) {
-                        try {
-                            gba.pressKey(keyMapping[btn.id]);
-                        } catch(err) {
-                            console.log("Mouse press error:", err);
-                        }
-                    }
+                    pressButton();
                 });
                 
                 btn.addEventListener('mouseup', function(e) {
                     e.preventDefault();
-                    if(gba && isRunning) {
-                        try {
-                            gba.releaseKey(keyMapping[btn.id]);
-                        } catch(err) {
-                            console.log("Mouse release error:", err);
-                        }
-                    }
+                    releaseButton();
                 });
                 
                 btn.addEventListener('mouseleave', function(e) {
-                    if(gba && isRunning) {
-                        try {
-                            gba.releaseKey(keyMapping[btn.id]);
-                        } catch(err) {
-                            console.log("Mouse leave error:", err);
-                        }
-                    }
+                    releaseButton();
                 });
             });
 
@@ -407,6 +397,11 @@
                     e.preventDefault();
                 }
             }, {passive: false});
+            
+            // Prevent context menu on game screen
+            canvas.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
         });
     </script>
 </body>
