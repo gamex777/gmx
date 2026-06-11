@@ -19,22 +19,23 @@
     /* -----------------------------------------
        1. Base Setup & Console Body
        ----------------------------------------- */
-    /* -----------------------------------------
-       1. Base Setup & Console Body
-       ----------------------------------------- */
     body, html {
         margin: 0; padding: 0; width: 100%; height: 100%;
         display: flex; justify-content: center; align-items: center;
         background-color: #2c2c2c; overflow: hidden; font-family: Arial, sans-serif;
         
         /* PREVENT COPY/PASTE MENUS AND TEXT SELECTION */
-        -webkit-touch-callout: none; /* Disable iOS long-press popup */
-        -webkit-user-select: none;   /* Safari */
-        -khtml-user-select: none;    /* Konqueror HTML */
-        -moz-user-select: none;      /* Old versions of Firefox */
-        -ms-user-select: none;       /* Internet Explorer/Edge */
-        user-select: none;           /* Standard syntax */
+        -webkit-touch-callout: none; 
+        -webkit-user-select: none;   
+        -khtml-user-select: none;    
+        -moz-user-select: none;      
+        -ms-user-select: none;       
+        user-select: none;           
+        
+        /* FORCE INSTANT TOUCH (Removes input lag/gesture zoom) */
+        touch-action: none; 
     }
+    
     .console-body {
         width: 100vw; max-width: 900px; height: 45.45vw; max-height: 409px; 
         background-color: #f67a76; border-radius: 50px; 
@@ -213,9 +214,16 @@
             var romInput = document.getElementById('romInput');
             var screenMessage = document.getElementById('screenMessage');
             var isPowerOn = false;
+            
+            // --- OPTIMIZED CANVAS SETUP ---
             var canvas = document.getElementById('gameScreen');
-            var ctx = canvas.getContext('2d');
+            var ctx = canvas.getContext('2d', { alpha: false }); 
             var imageData = ctx.createImageData(256, 240);
+            var buf = new ArrayBuffer(imageData.data.length);
+            var buf8 = new Uint8ClampedArray(buf);
+            var buf32 = new Uint32Array(buf);
+            
+            var renderFrame = 0;
 
             // --- Web Audio API Setup ---
             function initAudio() {
@@ -223,7 +231,7 @@
                     var windowAudioContext = window.AudioContext || window.webkitAudioContext;
                     audioCtx = new windowAudioContext({ sampleRate: 44100 });
                     
-                    scriptNode = audioCtx.createScriptProcessor(4096, 0, 2);
+                    scriptNode = audioCtx.createScriptProcessor(8192, 0, 2);
                     scriptNode.onaudioprocess = function(e) {
                         var outL = e.outputBuffer.getChannelData(0);
                         var outR = e.outputBuffer.getChannelData(1);
@@ -241,41 +249,40 @@
                     scriptNode.connect(audioCtx.destination);
                 }
                 
-                // Browsers suspend audio until user interaction. This wakes it up.
                 if (audioCtx.state === 'suspended') {
                     audioCtx.resume();
                 }
             }
 
-            // Initialize NES emulator
+            // --- Initialize NES emulator ---
             function initNES() {
                 try {
                     nes = new jsnes.NES({
                         onFrame: function(frameBuffer) {
-                            // Convert NES frame buffer to canvas image data
-                            for (var i = 0; i < frameBuffer.length; i++) {
-                                var pixel = frameBuffer[i];
-                                var r = (pixel >> 16) & 0xFF;
-                                var g = (pixel >> 8) & 0xFF;
-                                var b = pixel & 0xFF;
-                                
-                                var index = i * 4;
-                                imageData.data[index] = r;
-                                imageData.data[index + 1] = g;
-                                imageData.data[index + 2] = b;
-                                imageData.data[index + 3] = 0xFF; // Alpha channel
+                            renderFrame++;
+                            
+                            // Frame-skip: Render at 30fps to save mobile CPU
+                            if (renderFrame % 2 === 0) {
+                                // High-speed 32-bit pixel writing loop
+                                for (var i = 0; i < 61440; i++) { 
+                                    var pixel = frameBuffer[i];
+                                    buf32[i] = 0xff000000 | 
+                                              ((pixel & 0xFF) << 16) | 
+                                              (pixel & 0xFF00) | 
+                                              ((pixel >> 16) & 0xFF); 
+                                }
+                                imageData.data.set(buf8);
+                                ctx.putImageData(imageData, 0, 0);
                             }
-                            ctx.putImageData(imageData, 0, 0);
                         },
                         onAudioSample: function(left, right) {
-                            // Push samples to our custom audio queue
                             audioQueueL.push(left);
                             audioQueueR.push(right);
                             
-                            // Prevent audio latency build-up by capping the queue length
-                            if (audioQueueL.length > 8192) {
-                                audioQueueL.splice(0, 4096);
-                                audioQueueR.splice(0, 4096);
+                            // Cap buffer to prevent audio lag build-up
+                            if (audioQueueL.length > 16384) {
+                                audioQueueL.splice(0, 8192);
+                                audioQueueR.splice(0, 8192);
                             }
                         }
                     });
@@ -284,10 +291,8 @@
                 }
             }
 
-            // Initialize on load
             initNES();
 
-            // Emulator run loop
             function runFrame() {
                 if (isRunning && nes) {
                     try {
@@ -314,18 +319,13 @@
                     frameTimer = null;
                 }
                 if (nes) {
-                    try {
-                        nes.reset();
-                    } catch(e) {
-                        console.log("Reset error:", e);
-                    }
+                    try { nes.reset(); } catch(e) { console.log("Reset error:", e); }
                 }
-                // Clear audio queues to prevent old sound playing on next boot
                 audioQueueL = [];
                 audioQueueR = [];
             }
 
-            // Power Button Logic
+            // --- Power Button Logic ---
             function togglePower(e) {
                 if (e) e.preventDefault(); 
                 
@@ -334,7 +334,7 @@
                 screenContainer.classList.toggle('is-on');
                 
                 if (isPowerOn) {
-                    initAudio(); // Wake up the speakers!
+                    initAudio(); 
                 } else {
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
@@ -345,17 +345,16 @@
             powerBtn.addEventListener('click', togglePower);
             powerBtn.addEventListener('touchstart', togglePower, {passive: false});
 
-            // Tap Screen to load ROM
+            // --- Tap Screen to load ROM ---
             screenContainer.addEventListener('click', function(e) {
                 if (e.target === canvas) return;
-                
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
-                    initAudio(); // Double check audio is awake
+                    initAudio(); 
                     romInput.click();
                 }
             });
 
-            // ROM LOADING LOGIC
+            // --- ROM LOADING LOGIC ---
             romInput.addEventListener('change', function(e) {
                 var file = e.target.files[0];
                 if (!file) return;
@@ -373,10 +372,8 @@
                 reader.onload = function(event) {
                     try {
                         var romString = event.target.result;
-                        
                         stopNES();
                         initNES();
-                        
                         nes.loadROM(romString);
                         startNES();
                         screenContainer.classList.add('is-playing');
@@ -384,16 +381,13 @@
                     } catch (error) {
                         console.error("NES ROM loading error:", error);
                         screenMessage.innerHTML = "LOAD ERROR<br>TRY ANOTHER ROM";
-                        
                         stopNES();
                         initNES();
                     }
                 };
                 reader.onerror = function() {
                     screenMessage.innerHTML = "READ ERROR<br>TRY AGAIN";
-                    console.error("FileReader error");
                 };
-                
                 reader.readAsBinaryString(file);
             });
 
@@ -413,59 +407,31 @@
             controls.forEach(btn => {
                 if(!nesButtons[btn.id] && nesButtons[btn.id] !== 0) return; 
                 
-                function pressButton() {
-                    if(nes && isRunning) {
-                        nes.buttonDown(1, nesButtons[btn.id]);
-                    }
-                }
-                
-                function releaseButton() {
-                    if(nes && isRunning) {
-                        nes.buttonUp(1, nesButtons[btn.id]);
-                    }
-                }
+                function pressButton() { if(nes && isRunning) { nes.buttonDown(1, nesButtons[btn.id]); } }
+                function releaseButton() { if(nes && isRunning) { nes.buttonUp(1, nesButtons[btn.id]); } }
                 
                 btn.addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    pressButton();
+                    e.preventDefault(); e.stopPropagation(); pressButton();
                 }, {passive: false});
 
                 btn.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    releaseButton();
+                    e.preventDefault(); e.stopPropagation(); releaseButton();
                 }, {passive: false});
                 
-                btn.addEventListener('touchcancel', function(e) {
-                    e.preventDefault();
-                    releaseButton();
-                });
-                
-                btn.addEventListener('mousedown', function(e) {
-                    e.preventDefault();
-                    pressButton();
-                });
-                
-                btn.addEventListener('mouseup', function(e) {
-                    e.preventDefault();
-                    releaseButton();
-                });
-                
-                btn.addEventListener('mouseleave', function(e) {
-                    releaseButton();
-                });
+                btn.addEventListener('touchcancel', function(e) { e.preventDefault(); releaseButton(); });
+                btn.addEventListener('mousedown', function(e) { e.preventDefault(); pressButton(); });
+                btn.addEventListener('mouseup', function(e) { e.preventDefault(); releaseButton(); });
+                btn.addEventListener('mouseleave', function(e) { releaseButton(); });
             });
 
+            // Prevent default touch behavior on the entire console (except power button)
             document.querySelector('.console-body').addEventListener('touchstart', function(e) {
                 if (e.target.closest('.d-btn, .btn-action, .btn-sys') && !e.target.closest('#powerBtn')) {
                     e.preventDefault();
                 }
             }, {passive: false});
             
-            canvas.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-            });
+            canvas.addEventListener('contextmenu', function(e) { e.preventDefault(); });
         });
     </script>
 </body>
