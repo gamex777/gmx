@@ -289,6 +289,7 @@
             var nesPixelBuffer32 = new Uint32Array(nesPixelBuffer.buffer);
 
             // --- THE BULLETPROOF IOS AUDIO UNLOCKER ---
+           // --- THE BULLETPROOF IOS AUDIO UNLOCKER ---
             function globalAudioUnlock() {
                 if (audioUnlocked || !audioCtx) return;
                 
@@ -305,32 +306,38 @@
                     if (audioCtx && audioCtx.state === 'running') {
                         audioUnlocked = true;
                         
-                        scriptNode = audioCtx.createScriptProcessor(4096, 0, 2);
+                        // Use a smaller buffer for lower latency, but we'll manage the queue better
+                        scriptNode = audioCtx.createScriptProcessor(2048, 0, 2);
+                        
                         scriptNode.onaudioprocess = function(e) {
                             var outL = e.outputBuffer.getChannelData(0);
                             var outR = e.outputBuffer.getChannelData(1);
                             
-                            // Pre-buffer logic: don't play sound until we have enough samples saved up
-                            if (!audioPrebuffered) {
-                                if (audioQueueL.length > 4096) {
-                                    audioPrebuffered = true;
-                                } else {
-                                    for (var j = 0; j < outL.length; j++) { outL[j] = 0; outR[j] = 0; }
-                                    return;
+                            // Check if we have enough samples to play this chunk
+                            if (audioQueueL.length < outL.length) {
+                                // Buffer under-run (starvation). Output silence and let it build up.
+                                for (var j = 0; j < outL.length; j++) { 
+                                    outL[j] = 0; 
+                                    outR[j] = 0; 
                                 }
+                                return;
                             }
                             
+                            // If we have way too many samples, fast-forward slightly to catch up
+                            // This prevents the audio from drifting behind the video
+                            if (audioQueueL.length > 8192) {
+                                var dropCount = audioQueueL.length - 8192;
+                                audioQueueL.splice(0, dropCount);
+                                audioQueueR.splice(0, dropCount);
+                            }
+
+                            // We have enough samples, fill the output buffer
                             for (var i = 0; i < outL.length; i++) {
-                                if (audioQueueL.length > 0) {
-                                    outL[i] = audioQueueL.shift() * 1.5; 
-                                    outR[i] = audioQueueR.shift() * 1.5;
-                                } else {
-                                    outL[i] = 0;
-                                    outR[i] = 0;
-                                    audioPrebuffered = false; // Starved, wait for buffer to refill
-                                }
+                                outL[i] = audioQueueL.shift() * 1.5; // Apply volume boost
+                                outR[i] = audioQueueR.shift() * 1.5;
                             }
                         };
+                        
                         scriptNode.connect(audioCtx.destination);
 
                         document.removeEventListener('touchstart', globalAudioUnlock, true);
@@ -348,11 +355,10 @@
             function initNES() {
                 try {
                     nes = new jsnes.NES({
-                        // Sync NES to exactly match the iPhone's hardware speaker rate
-                        sampleRate: audioCtx ? audioCtx.sampleRate : 44100,
+                        // Force the emulator to match the hardware's native sample rate
+                        sampleRate: audioCtx ? audioCtx.sampleRate : 44100, 
                         onFrame: function(frameBuffer) {
                             for (var i = 0; i < 61440; i++) { 
-                                // FIXED: Removed the Red/Blue bitwise swap. WebGL expects it native.
                                 nesPixelBuffer32[i] = 0xff000000 | frameBuffer[i]; 
                             }
                             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 240, 0, gl.RGBA, gl.UNSIGNED_BYTE, nesPixelBuffer);
@@ -361,19 +367,12 @@
                         onAudioSample: function(left, right) {
                             audioQueueL.push(left);
                             audioQueueR.push(right);
-                            
-                            // Keep buffer capped so audio doesn't delay
-                            if (audioQueueL.length > 16384) {
-                                audioQueueL.splice(0, 4096);
-                                audioQueueR.splice(0, 4096);
-                            }
                         }
                     });
                 } catch (e) {
                     console.error("NES Engine failed.", e);
                 }
             }
-
             initNES();
 
             function runFrame() {
