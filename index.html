@@ -188,6 +188,12 @@
         var nes;
         var frameTimer;
         var isRunning = false;
+        
+        // --- Audio Variables ---
+        var audioCtx;
+        var scriptNode;
+        var audioQueueL = [];
+        var audioQueueR = [];
 
         document.addEventListener('DOMContentLoaded', function() {
             var powerBtn = document.getElementById('powerBtn');
@@ -199,6 +205,36 @@
             var canvas = document.getElementById('gameScreen');
             var ctx = canvas.getContext('2d');
             var imageData = ctx.createImageData(256, 240);
+
+            // --- Web Audio API Setup ---
+            function initAudio() {
+                if (!audioCtx) {
+                    var windowAudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new windowAudioContext({ sampleRate: 44100 });
+                    
+                    scriptNode = audioCtx.createScriptProcessor(4096, 0, 2);
+                    scriptNode.onaudioprocess = function(e) {
+                        var outL = e.outputBuffer.getChannelData(0);
+                        var outR = e.outputBuffer.getChannelData(1);
+                        
+                        for (var i = 0; i < outL.length; i++) {
+                            if (audioQueueL.length > 0) {
+                                outL[i] = audioQueueL.shift();
+                                outR[i] = audioQueueR.shift();
+                            } else {
+                                outL[i] = 0;
+                                outR[i] = 0;
+                            }
+                        }
+                    };
+                    scriptNode.connect(audioCtx.destination);
+                }
+                
+                // Browsers suspend audio until user interaction. This wakes it up.
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }
 
             // Initialize NES emulator
             function initNES() {
@@ -221,7 +257,15 @@
                             ctx.putImageData(imageData, 0, 0);
                         },
                         onAudioSample: function(left, right) {
-                            // Audio handling goes here
+                            // Push samples to our custom audio queue
+                            audioQueueL.push(left);
+                            audioQueueR.push(right);
+                            
+                            // Prevent audio latency build-up by capping the queue length
+                            if (audioQueueL.length > 8192) {
+                                audioQueueL.splice(0, 4096);
+                                audioQueueR.splice(0, 4096);
+                            }
                         }
                     });
                 } catch (e) {
@@ -265,17 +309,22 @@
                         console.log("Reset error:", e);
                     }
                 }
+                // Clear audio queues to prevent old sound playing on next boot
+                audioQueueL = [];
+                audioQueueR = [];
             }
 
-            // --- FIXED Power Button Logic ---
+            // Power Button Logic
             function togglePower(e) {
-                if (e) e.preventDefault(); // Prevents touchstart from triggering click twice
+                if (e) e.preventDefault(); 
                 
                 isPowerOn = !isPowerOn;
                 powerIndicator.classList.toggle('is-on');
                 screenContainer.classList.toggle('is-on');
                 
-                if (!isPowerOn) {
+                if (isPowerOn) {
+                    initAudio(); // Wake up the speakers!
+                } else {
                     screenContainer.classList.remove('is-playing');
                     screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
                     stopNES();
@@ -290,11 +339,12 @@
                 if (e.target === canvas) return;
                 
                 if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
+                    initAudio(); // Double check audio is awake
                     romInput.click();
                 }
             });
 
-            // --- FIXED ROM LOADING LOGIC ---
+            // ROM LOADING LOGIC
             romInput.addEventListener('change', function(e) {
                 var file = e.target.files[0];
                 if (!file) return;
@@ -311,14 +361,11 @@
                 var reader = new FileReader();
                 reader.onload = function(event) {
                     try {
-                        // readAsBinaryString already returns exactly the string format jsnes expects!
                         var romString = event.target.result;
                         
-                        // Stop any current emulation & flush memory
                         stopNES();
                         initNES();
                         
-                        // Load and start the ROM
                         nes.loadROM(romString);
                         startNES();
                         screenContainer.classList.add('is-playing');
@@ -336,7 +383,6 @@
                     console.error("FileReader error");
                 };
                 
-                // Keep this! jsnes requires Binary String, NOT ArrayBuffer
                 reader.readAsBinaryString(file);
             });
 
@@ -400,9 +446,7 @@
                 });
             });
 
-            // --- FIXED: Exclude Power Button from blanket block ---
             document.querySelector('.console-body').addEventListener('touchstart', function(e) {
-                // Ignore the power button here so it can handle its own logic
                 if (e.target.closest('.d-btn, .btn-action, .btn-sys') && !e.target.closest('#powerBtn')) {
                     e.preventDefault();
                 }
