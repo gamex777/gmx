@@ -16,53 +16,45 @@
 <script src="jsnes.min.js"></script>
 
 <style>
-    /* -----------------------------------------
-       1. Base Setup & Console Body
-       ----------------------------------------- */
     body, html {
         margin: 0; padding: 0; width: 100%; height: 100%;
         display: flex; justify-content: center; align-items: center;
         background-color: #2c2c2c; overflow: hidden; font-family: Arial, sans-serif;
-        
-        /* PREVENT COPY/PASTE MENUS AND TEXT SELECTION */
-        -webkit-touch-callout: none; 
-        -webkit-user-select: none;   
-        -khtml-user-select: none;    
-        -moz-user-select: none;      
-        -ms-user-select: none;       
-        user-select: none;           
-        
-        /* FORCE INSTANT TOUCH (Removes input lag/gesture zoom) */
-        touch-action: none; 
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        touch-action: none;
     }
-    
+
     .console-body {
-        width: 100vw; max-width: 900px; height: 45.45vw; max-height: 409px; 
-        background-color: #f67a76; border-radius: 50px; 
-        box-shadow: 12px 18px 25px rgba(0, 0, 0, 0.4), inset -4px -4px 10px rgba(0, 0, 0, 0.1), inset 4px 4px 10px rgba(255, 255, 255, 0.3); 
+        width: 100vw; max-width: 900px; height: 45.45vw; max-height: 409px;
+        background-color: #f67a76; border-radius: 50px;
+        box-shadow: 12px 18px 25px rgba(0, 0, 0, 0.4), inset -4px -4px 10px rgba(0, 0, 0, 0.1), inset 4px 4px 10px rgba(255, 255, 255, 0.3);
         display: flex; justify-content: center; align-items: center;
         position: relative; box-sizing: border-box;
     }
-    @media (max-width: 768px) { .console-body { border-radius: 8vw; } }
 
-    /* -----------------------------------------
-       2. The Screen Container & Canvas
-       ----------------------------------------- */
+    @media (max-width: 768px) {
+        .console-body { border-radius: 8vw; }
+    }
+
     .screen-container {
-        width: 58%; height: 85%; 
-        background-color: #000000; border-radius: 12px; 
-        box-shadow: inset 2px 2px 6px rgba(255, 255, 255, 0.08), inset -2px -2px 6px rgba(0, 0, 0, 0.5), 0px 0px 0px 3px #1a1a1a;                    
-        position: relative; z-index: 10; overflow: hidden; 
-        
+        width: 58%; height: 85%;
+        background-color: #000000; border-radius: 12px;
+        box-shadow: inset 2px 2px 6px rgba(255, 255, 255, 0.08), inset -2px -2px 6px rgba(0, 0, 0, 0.5), 0px 0px 0px 3px #1a1a1a;
+        position: relative; z-index: 10; overflow: hidden;
         display: flex; justify-content: center; align-items: center;
-        cursor: pointer; 
+        cursor: pointer;
         -webkit-transition: background-color 0.3s ease, box-shadow 0.3s ease;
         transition: background-color 0.3s ease, box-shadow 0.3s ease;
     }
 
     .screen-container.is-on {
-        background-color: #1a1a1a; 
-        box-shadow: inset 2px 2px 6px rgba(255, 255, 255, 0.08), inset -2px -2px 6px rgba(0, 0, 0, 0.5), 0px 0px 0px 3px #1a1a1a, inset 0px 0px 40px rgba(255, 255, 255, 0.05); 
+        background-color: #1a1a1a;
+        box-shadow: inset 2px 2px 6px rgba(255, 255, 255, 0.08), inset -2px -2px 6px rgba(0, 0, 0, 0.5), 0px 0px 0px 3px #1a1a1a, inset 0px 0px 40px rgba(255, 255, 255, 0.05);
     }
 
     canvas#gameScreen {
@@ -71,7 +63,7 @@
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
         image-rendering: pixelated;
-        display: none; 
+        display: none;
     }
 
     .screen-text {
@@ -84,15 +76,12 @@
     .screen-container.is-playing .screen-text { display: none; }
     .screen-container.is-playing canvas#gameScreen { display: block; }
 
-    /* -----------------------------------------
-       3. Controls & Hardware
-       ----------------------------------------- */
     .controls-right { position: absolute; right: 0; top: 0; width: 21%; height: 100%; z-index: 20; }
     .btn-action {
-        width: 50px; height: 50px; border-radius: 50%; background-color: #6da2e0; border: 5px solid #1a1a1a; 
-        display: flex; justify-content: center; align-items: center; color: #ffffff; font-weight: bold; font-size: 1.4rem; text-shadow: 1px 1px 1px rgba(0,0,0,0.3); 
-        box-sizing: border-box; cursor: pointer; 
-        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; 
+        width: 50px; height: 50px; border-radius: 50%; background-color: #6da2e0; border: 5px solid #1a1a1a;
+        display: flex; justify-content: center; align-items: center; color: #ffffff; font-weight: bold; font-size: 1.4rem; text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        box-sizing: border-box; cursor: pointer;
+        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         box-shadow: 0px 4px 4px rgba(0,0,0,0.3);
         -webkit-transition: -webkit-transform 0.05s ease, box-shadow 0.05s ease; transition: transform 0.05s ease, box-shadow 0.05s ease;
     }
@@ -111,37 +100,34 @@
     .d-left { top: 50%; left: 8px; -webkit-transform: translateY(-50%) rotate(270deg); transform: translateY(-50%) rotate(270deg); }
 
     .btn-sys {
-        position: absolute; width: 90px; height: 32px; background-color: #000000; border-radius: 16px; 
+        position: absolute; width: 90px; height: 32px; background-color: #000000; border-radius: 16px;
         display: flex; justify-content: center; align-items: center; color: #ffffff; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px;
         -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; box-shadow: 0px 4px 4px rgba(0,0,0,0.4); cursor: pointer;
         left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%);
         -webkit-transition: -webkit-transform 0.05s ease, box-shadow 0.05s ease; transition: transform 0.05s ease, box-shadow 0.05s ease;
     }
     .btn-sys:active { box-shadow: 0px 0px 0px rgba(0,0,0,0.4); -webkit-transform: translateX(-50%) translateY(3px); transform: translateX(-50%) translateY(3px); }
-    
+
     .btn-select { bottom: 6%; }
     .btn-start { bottom: 6%; }
-    
+
     .btn-l { top: 6%; width: 60px; -webkit-transform: translateX(-50%) rotate(-45deg); transform: translateX(-50%) rotate(-45deg); }
     .btn-l:active { -webkit-transform: translateX(-50%) rotate(-45deg) translateY(3px); transform: translateX(-50%) rotate(-45deg) translateY(3px); }
 
     .btn-r { top: 6%; width: 60px; -webkit-transform: translateX(-50%) rotate(45deg); transform: translateX(-50%) rotate(45deg); }
     .btn-r:active { -webkit-transform: translateX(-50%) rotate(45deg) translateY(3px); transform: translateX(-50%) rotate(45deg) translateY(3px); }
-    
+
     .btn-power { top: 22%; width: 32px; height: 32px; border-radius: 50%; padding: 0; }
 
     .power-led { position: absolute; top: calc(22% + 11px); left: calc(50% + 26px); width: 10px; height: 10px; border-radius: 50%; background-color: #1a1a1a; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8); -webkit-transition: all 0.3s ease; transition: all 0.3s ease; }
     .power-led.is-on { background-color: #4ade80; box-shadow: 0px 0px 8px #4ade80, 0px 0px 12px #4ade80, inset 2px 2px 3px rgba(255,255,255,0.6); }
-    
+
     #romInput { display: none; }
 
-    /* -----------------------------------------
-       4. Portrait Orientation Warning Overlay
-       ----------------------------------------- */
     #orientation-warning {
-        display: none; 
+        display: none;
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background-color: #000000; z-index: 9999; 
+        background-color: #000000; z-index: 9999;
         flex-direction: column; justify-content: center; align-items: center;
         color: #39ff14; font-family: 'Press Start 2P', cursive; font-size: 1.2rem;
         text-align: center; text-shadow: 0 0 10px rgba(57, 255, 20, 0.7);
@@ -156,365 +142,462 @@
 </head>
 <body>
 
-    <div id="orientation-warning">
-        Please rotate<br><br>your device
+<div id="orientation-warning">
+    Please rotate<br><br>your device
+</div>
+
+<div class="console-body">
+    <div class="controls-left">
+        <div class="btn-sys btn-l" id="btnL">L</div>
+        <div class="d-pad-base">
+            <button class="d-btn d-up" id="btnUp"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#6dc663" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+            <button class="d-btn d-right" id="btnRight"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#f7d33d" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+            <button class="d-btn d-down" id="btnDown"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#2c7eea" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+            <button class="d-btn d-left" id="btnLeft"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#df2b32" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
+        </div>
+        <div class="btn-sys btn-select" id="btnSelect">SELECT</div>
     </div>
 
-    <div class="console-body">
-        
-        <div class="controls-left">
-            <div class="btn-sys btn-l" id="btnL">L</div>
-            <div class="d-pad-base">
-                <button class="d-btn d-up" id="btnUp"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#6dc663" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
-                <button class="d-btn d-right" id="btnRight"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#f7d33d" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
-                <button class="d-btn d-down" id="btnDown"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#2c7eea" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
-                <button class="d-btn d-left" id="btnLeft"><svg viewBox="0 0 100 100"><polygon points="50,10 90,45 90,90 10,90 10,45" fill="#df2b32" stroke="#1a1a1a" stroke-width="10" stroke-linejoin="round"/></svg></button>
-            </div>
-            <div class="btn-sys btn-select" id="btnSelect">SELECT</div>
-        </div>
-
-        <div class="screen-container" id="screenContainer">
-            <div class="screen-text" id="screenMessage">TAP TO INSERT<br>CARTRIDGE</div>
-            <canvas id="gameScreen" width="256" height="240"></canvas>
-            <input type="file" id="romInput" accept=".nes">
-        </div>
-
-        <div class="controls-right">
-            <div class="btn-sys btn-r" id="btnR">R</div>
-            <div class="power-led" id="powerIndicator"></div>
-            
-            <div class="btn-sys btn-power" id="powerBtn">
-                <svg viewBox="0 0 24 24" width="14" height="14">
-                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round"/>
-                </svg>
-            </div>
-            
-            <div class="btn-action btn-a" id="btnA">A</div>
-            <div class="btn-action btn-b" id="btnB">B</div>
-            <div class="btn-sys btn-start" id="btnStart">START</div>
-        </div>
-
+    <div class="screen-container" id="screenContainer">
+        <div class="screen-text" id="screenMessage">TAP TO INSERT<br>CARTRIDGE</div>
+        <canvas id="gameScreen" width="256" height="240"></canvas>
+        <input type="file" id="romInput" accept=".nes">
     </div>
+
+    <div class="controls-right">
+        <div class="btn-sys btn-r" id="btnR">R</div>
+        <div class="power-led" id="powerIndicator"></div>
+
+        <div class="btn-sys btn-power" id="powerBtn">
+            <svg viewBox="0 0 24 24" width="14" height="14">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round"/>
+            </svg>
+        </div>
+
+        <div class="btn-action btn-a" id="btnA">A</div>
+        <div class="btn-action btn-b" id="btnB">B</div>
+        <div class="btn-sys btn-start" id="btnStart">START</div>
+    </div>
+</div>
+
 <script>
-        var nes;
-        var frameTimer;
-        var isRunning = false;
-        
-        // --- Audio Variables ---
-        var windowAudioContext = window.AudioContext || window.webkitAudioContext;
-        // Initialize early to grab the hardware's native sample rate (often 48000 on iOS)
-        var audioCtx;
-        try { audioCtx = new windowAudioContext(); } catch(e) {}
-        
-        var scriptNode;
-        var audioQueueL = [];
-        var audioQueueR = [];
-        var audioUnlocked = false;
-        var audioPrebuffered = false; // Helps prevent initial stutter
+var nes = null;
+var frameTimer = null;
+var isRunning = false;
 
-        document.addEventListener('DOMContentLoaded', function() {
-            var powerBtn = document.getElementById('powerBtn');
-            var powerIndicator = document.getElementById('powerIndicator');
-            var screenContainer = document.getElementById('screenContainer');
-            var romInput = document.getElementById('romInput');
-            var screenMessage = document.getElementById('screenMessage');
-            var isPowerOn = false;
-            
-            // --- OPTIMIZED WEBGL CANVAS SETUP ---
-            var canvas = document.getElementById('gameScreen');
-            var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+var AudioCtx = window.AudioContext || window.webkitAudioContext;
+var audioCtx = null;
+var scriptNode = null;
+var audioUnlocked = false;
 
-            var vertexShaderSrc = `
-                attribute vec2 a_position;
-                attribute vec2 a_texCoord;
-                varying vec2 v_texCoord;
-                void main() {
-                    gl_Position = vec4(a_position, 0, 1);
-                    v_texCoord = a_texCoord;
-                }
-            `;
+var RING_SIZE = 65536;
+var audioRingL = null;
+var audioRingR = null;
+var writePos = 0;
+var readPos = 0;
+var bufferedSamples = 0;
 
-            var fragmentShaderSrc = `
-                precision mediump float;
-                uniform sampler2D u_image;
-                varying vec2 v_texCoord;
-                void main() {
-                    gl_FragColor = texture2D(u_image, v_texCoord);
-                }
-            `;
+var nesPixelBuffer = null;
+var nesPixelBuffer32 = null;
+var gl = null;
 
-            function createShader(gl, type, source) {
-                var shader = gl.createShader(type);
-                gl.shaderSource(shader, source);
-                gl.compileShader(shader);
-                return shader;
-            }
+function resetAudioRing() {
+    audioRingL = new Float32Array(RING_SIZE);
+    audioRingR = new Float32Array(RING_SIZE);
+    writePos = 0;
+    readPos = 0;
+    bufferedSamples = 0;
+}
 
-            var program = gl.createProgram();
-            gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vertexShaderSrc));
-            gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSrc));
-            gl.linkProgram(program);
-            gl.useProgram(program);
+function pushSample(left, right) {
+    if (!audioRingL) return;
 
-            var positionBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-                -1.0, -1.0,  1.0, -1.0, -1.0,  1.0,
-                -1.0,  1.0,  1.0, -1.0,  1.0,  1.0
-            ]), gl.STATIC_DRAW);
+    if (bufferedSamples >= RING_SIZE - 1) {
+        readPos = (readPos + 1) & (RING_SIZE - 1);
+        bufferedSamples--;
+    }
 
-            var positionLocation = gl.getAttribLocation(program, "a_position");
-            gl.enableVertexAttribArray(positionLocation);
-            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    audioRingL[writePos] = left;
+    audioRingR[writePos] = right;
+    writePos = (writePos + 1) & (RING_SIZE - 1);
+    bufferedSamples++;
+}
 
-            var texCoordBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-                0.0,  1.0,  1.0,  1.0,  0.0,  0.0,
-                0.0,  0.0,  1.0,  1.0,  1.0,  0.0
-            ]), gl.STATIC_DRAW);
+function popSamples(outL, outR) {
+    var needed = outL.length;
 
-            var texCoordLocation = gl.getAttribLocation(program, "a_texCoord");
-            gl.enableVertexAttribArray(texCoordLocation);
-            gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+    if (bufferedSamples < needed) {
+        for (var i = 0; i < needed; i++) {
+            outL[i] = 0;
+            outR[i] = 0;
+        }
+        return;
+    }
 
-            var texture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    for (var j = 0; j < needed; j++) {
+        outL[j] = Math.max(-1, Math.min(1, audioRingL[readPos] * 0.85));
+        outR[j] = Math.max(-1, Math.min(1, audioRingR[readPos] * 0.85));
+        readPos = (readPos + 1) & (RING_SIZE - 1);
+    }
 
-            var nesPixelBuffer = new Uint8Array(256 * 240 * 4);
-            var nesPixelBuffer32 = new Uint32Array(nesPixelBuffer.buffer);
+    bufferedSamples -= needed;
 
-            // --- THE BULLETPROOF IOS AUDIO UNLOCKER ---
-           // --- THE BULLETPROOF IOS AUDIO UNLOCKER ---
-            function globalAudioUnlock() {
-                if (audioUnlocked || !audioCtx) return;
-                
-                var unlockSource = audioCtx.createBufferSource();
-                unlockSource.buffer = audioCtx.createBuffer(1, 1, 22050);
-                unlockSource.connect(audioCtx.destination);
-                unlockSource.start(0);
+    var maxBuffered = 16384;
+    if (bufferedSamples > maxBuffered) {
+        var drop = bufferedSamples - maxBuffered;
+        readPos = (readPos + drop) & (RING_SIZE - 1);
+        bufferedSamples -= drop;
+    }
+}
 
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
+function setupAudio() {
+    if (audioCtx) return;
 
-                setTimeout(function() {
-                    if (audioCtx && audioCtx.state === 'running') {
-                        audioUnlocked = true;
-                        
-                        // Use a smaller buffer for lower latency, but we'll manage the queue better
-                        scriptNode = audioCtx.createScriptProcessor(2048, 0, 2);
-                        
-                        scriptNode.onaudioprocess = function(e) {
-                            var outL = e.outputBuffer.getChannelData(0);
-                            var outR = e.outputBuffer.getChannelData(1);
-                            
-                            // Check if we have enough samples to play this chunk
-                            if (audioQueueL.length < outL.length) {
-                                // Buffer under-run (starvation). Output silence and let it build up.
-                                for (var j = 0; j < outL.length; j++) { 
-                                    outL[j] = 0; 
-                                    outR[j] = 0; 
-                                }
-                                return;
-                            }
-                            
-                            // If we have way too many samples, fast-forward slightly to catch up
-                            // This prevents the audio from drifting behind the video
-                            if (audioQueueL.length > 8192) {
-                                var dropCount = audioQueueL.length - 8192;
-                                audioQueueL.splice(0, dropCount);
-                                audioQueueR.splice(0, dropCount);
-                            }
+    try {
+        audioCtx = new AudioCtx({
+            sampleRate: 44100,
+            latencyHint: 'interactive'
+        });
+    } catch (e) {
+        try {
+            audioCtx = new AudioCtx();
+        } catch (err) {
+            console.error('AudioContext failed:', err);
+            return;
+        }
+    }
 
-                            // We have enough samples, fill the output buffer
-                            for (var i = 0; i < outL.length; i++) {
-                                outL[i] = audioQueueL.shift() * 1.5; // Apply volume boost
-                                outR[i] = audioQueueR.shift() * 1.5;
-                            }
-                        };
-                        
-                        scriptNode.connect(audioCtx.destination);
+    resetAudioRing();
 
-                        document.removeEventListener('touchstart', globalAudioUnlock, true);
-                        document.removeEventListener('touchend', globalAudioUnlock, true);
-                        document.removeEventListener('click', globalAudioUnlock, true);
+    scriptNode = audioCtx.createScriptProcessor(1024, 0, 2);
+    scriptNode.onaudioprocess = function(e) {
+        var outL = e.outputBuffer.getChannelData(0);
+        var outR = e.outputBuffer.getChannelData(1);
+        popSamples(outL, outR);
+    };
+    scriptNode.connect(audioCtx.destination);
+}
+
+function unlockAudio() {
+    if (audioUnlocked) return;
+
+    setupAudio();
+    if (!audioCtx) return;
+
+    var resumeResult = audioCtx.resume();
+    if (resumeResult && typeof resumeResult.then === 'function') {
+        resumeResult.then(function() {
+            var buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+            var source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+            source.start(0);
+            audioUnlocked = true;
+        }).catch(function(err) {
+            console.error('Audio resume failed:', err);
+        });
+    } else {
+        try {
+            var buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+            var source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+            source.start(0);
+            audioUnlocked = true;
+        } catch (e) {
+            console.error('Audio unlock failed:', e);
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var powerBtn = document.getElementById('powerBtn');
+    var powerIndicator = document.getElementById('powerIndicator');
+    var screenContainer = document.getElementById('screenContainer');
+    var romInput = document.getElementById('romInput');
+    var screenMessage = document.getElementById('screenMessage');
+    var canvas = document.getElementById('gameScreen');
+    var isPowerOn = false;
+
+    gl = canvas.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: false }) ||
+         canvas.getContext('experimental-webgl');
+
+    var vertexShaderSrc = `
+        attribute vec2 a_position;
+        attribute vec2 a_texCoord;
+        varying vec2 v_texCoord;
+        void main() {
+            gl_Position = vec4(a_position, 0.0, 1.0);
+            v_texCoord = a_texCoord;
+        }
+    `;
+
+    var fragmentShaderSrc = `
+        precision mediump float;
+        uniform sampler2D u_image;
+        varying vec2 v_texCoord;
+        void main() {
+            gl_FragColor = texture2D(u_image, v_texCoord);
+        }
+    `;
+
+    function createShader(gl, type, source) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        return shader;
+    }
+
+    var program = gl.createProgram();
+    gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vertexShaderSrc));
+    gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSrc));
+    gl.linkProgram(program);
+    gl.useProgram(program);
+
+    var positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -1.0, -1.0,  1.0, -1.0, -1.0,  1.0,
+        -1.0,  1.0,  1.0, -1.0,  1.0,  1.0
+    ]), gl.STATIC_DRAW);
+
+    var positionLocation = gl.getAttribLocation(program, "a_position");
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    var texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0.0,  1.0,  1.0,  1.0,  0.0,  0.0,
+        0.0,  0.0,  1.0,  1.0,  1.0,  0.0
+    ]), gl.STATIC_DRAW);
+
+    var texCoordLocation = gl.getAttribLocation(program, "a_texCoord");
+    gl.enableVertexAttribArray(texCoordLocation);
+    gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    nesPixelBuffer = new Uint8Array(256 * 240 * 4);
+    nesPixelBuffer32 = new Uint32Array(nesPixelBuffer.buffer);
+
+    function initNES() {
+        if (!audioCtx) setupAudio();
+
+        try {
+            nes = new jsnes.NES({
+                sampleRate: audioCtx ? audioCtx.sampleRate : 44100,
+                onFrame: function(frameBuffer) {
+                    for (var i = 0; i < 61440; i++) {
+                        nesPixelBuffer32[i] = 0xff000000 | frameBuffer[i];
                     }
-                }, 10);
-            }
-
-            document.addEventListener('touchstart', globalAudioUnlock, {capture: true, passive: true});
-            document.addEventListener('touchend', globalAudioUnlock, {capture: true, passive: true});
-            document.addEventListener('click', globalAudioUnlock, {capture: true, passive: true});
-
-            // --- Initialize NES emulator ---
-            function initNES() {
-                try {
-                    nes = new jsnes.NES({
-                        // Force the emulator to match the hardware's native sample rate
-                        sampleRate: audioCtx ? audioCtx.sampleRate : 44100, 
-                        onFrame: function(frameBuffer) {
-                            for (var i = 0; i < 61440; i++) { 
-                                nesPixelBuffer32[i] = 0xff000000 | frameBuffer[i]; 
-                            }
-                            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 240, 0, gl.RGBA, gl.UNSIGNED_BYTE, nesPixelBuffer);
-                            gl.drawArrays(gl.TRIANGLES, 0, 6);
-                        },
-                        onAudioSample: function(left, right) {
-                            audioQueueL.push(left);
-                            audioQueueR.push(right);
-                        }
-                    });
-                } catch (e) {
-                    console.error("NES Engine failed.", e);
-                }
-            }
-            initNES();
-
-            function runFrame() {
-                if (isRunning && nes) {
-                    nes.frame();
-                    frameTimer = requestAnimationFrame(runFrame);
-                }
-            }
-
-            function startNES() {
-                if (!isRunning) {
-                    isRunning = true;
-                    runFrame();
-                }
-            }
-
-            function stopNES() {
-                isRunning = false;
-                if (frameTimer) {
-                    cancelAnimationFrame(frameTimer);
-                    frameTimer = null;
-                }
-                if (nes) {
-                    try { nes.reset(); } catch(e) {}
-                }
-                audioQueueL = [];
-                audioQueueR = [];
-                audioPrebuffered = false;
-            }
-
-            // --- Power Button Logic ---
-            function togglePower(e) {
-                if (e) e.preventDefault(); 
-                
-                isPowerOn = !isPowerOn;
-                powerIndicator.classList.toggle('is-on');
-                screenContainer.classList.toggle('is-on');
-                
-                if (!isPowerOn) {
-                    screenContainer.classList.remove('is-playing');
-                    screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
-                    stopNES();
-                    
-                    if(gl) {
-                        gl.clearColor(0.0, 0.0, 0.0, 1.0);
-                        gl.clear(gl.COLOR_BUFFER_BIT);
-                    }
-                }
-            }
-            
-            powerBtn.addEventListener('click', togglePower);
-            powerBtn.addEventListener('touchstart', togglePower, {passive: false});
-
-            // --- Tap Screen to load ROM ---
-            screenContainer.addEventListener('click', function(e) {
-                if (e.target === canvas) return;
-                if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
-                    romInput.click();
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 240, 0, gl.RGBA, gl.UNSIGNED_BYTE, nesPixelBuffer);
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+                },
+                onAudioSample: function(left, right) {
+                    pushSample(left, right);
                 }
             });
+        } catch (e) {
+            console.error("NES init failed:", e);
+        }
+    }
 
-            // --- ROM LOADING LOGIC ---
-            romInput.addEventListener('change', function(e) {
-                var file = e.target.files[0];
-                if (!file) return;
+    function runFrame() {
+        if (isRunning && nes) {
+            nes.frame();
+            frameTimer = requestAnimationFrame(runFrame);
+        }
+    }
 
-                var fileName = file.name.toLowerCase();
-                if (!fileName.endsWith('.nes')) {
-                    screenMessage.innerHTML = "INVALID FILE<br>NEED .NES";
-                    e.target.value = ''; 
-                    return;
-                }
+    function startNES() {
+        if (!isRunning && nes) {
+            isRunning = true;
+            runFrame();
+        }
+    }
 
-                screenMessage.innerHTML = "LOADING<br>" + file.name.substring(0, 10) + "...";
-                
-                var reader = new FileReader();
-                reader.onload = function(event) {
-                    try {
-                        var romString = event.target.result;
-                        stopNES();
-                        initNES();
-                        nes.loadROM(romString);
-                        startNES();
-                        screenContainer.classList.add('is-playing');
-                    } catch (error) {
-                        screenMessage.innerHTML = "LOAD ERROR<br>TRY ANOTHER ROM";
-                        stopNES();
-                        initNES();
-                    }
-                };
-                reader.onerror = function() { screenMessage.innerHTML = "READ ERROR<br>TRY AGAIN"; };
-                reader.readAsBinaryString(file);
-            });
+    function stopNES() {
+        isRunning = false;
 
-            // --- NES CONTROLLER MAPPING ---
-            const nesButtons = {
-                'btnUp': jsnes.Controller.BUTTON_UP,
-                'btnDown': jsnes.Controller.BUTTON_DOWN,
-                'btnLeft': jsnes.Controller.BUTTON_LEFT,
-                'btnRight': jsnes.Controller.BUTTON_RIGHT,
-                'btnA': jsnes.Controller.BUTTON_A,
-                'btnB': jsnes.Controller.BUTTON_B,
-                'btnStart': jsnes.Controller.BUTTON_START,
-                'btnSelect': jsnes.Controller.BUTTON_SELECT
-            };
+        if (frameTimer) {
+            cancelAnimationFrame(frameTimer);
+            frameTimer = null;
+        }
 
-            const controls = document.querySelectorAll('.d-btn, .btn-action, .btn-sys');
-            controls.forEach(btn => {
-                if(!nesButtons[btn.id] && nesButtons[btn.id] !== 0) return; 
-                
-                function pressButton() { if(nes && isRunning) { nes.buttonDown(1, nesButtons[btn.id]); } }
-                function releaseButton() { if(nes && isRunning) { nes.buttonUp(1, nesButtons[btn.id]); } }
-                
-                btn.addEventListener('touchstart', function(e) {
-                    e.preventDefault(); e.stopPropagation(); pressButton();
-                }, {passive: false});
+        if (nes) {
+            try { nes.reset(); } catch (e) {}
+        }
 
-                btn.addEventListener('touchend', function(e) {
-                    e.preventDefault(); e.stopPropagation(); releaseButton();
-                }, {passive: false});
-                
-                btn.addEventListener('touchcancel', function(e) { e.preventDefault(); releaseButton(); });
-                btn.addEventListener('mousedown', function(e) { e.preventDefault(); pressButton(); });
-                btn.addEventListener('mouseup', function(e) { e.preventDefault(); releaseButton(); });
-                btn.addEventListener('mouseleave', function(e) { releaseButton(); });
-            });
+        resetAudioRing();
+    }
 
-            document.querySelector('.console-body').addEventListener('touchstart', function(e) {
-                if (e.target.closest('.d-btn, .btn-action, .btn-sys') && !e.target.closest('#powerBtn')) {
-                    e.preventDefault();
-                }
-            }, {passive: false});
-            
-            canvas.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    function togglePower(e) {
+        if (e) e.preventDefault();
+
+        unlockAudio();
+
+        isPowerOn = !isPowerOn;
+        powerIndicator.classList.toggle('is-on');
+        screenContainer.classList.toggle('is-on');
+
+        if (!isPowerOn) {
+            screenContainer.classList.remove('is-playing');
+            screenMessage.innerHTML = "TAP TO INSERT<br>CARTRIDGE";
+            stopNES();
+
+            if (gl) {
+                gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+        }
+    }
+
+    powerBtn.addEventListener('click', togglePower);
+    powerBtn.addEventListener('touchstart', togglePower, { passive: false });
+
+    screenContainer.addEventListener('click', function(e) {
+        unlockAudio();
+        if (e.target === canvas) return;
+        if (isPowerOn && !screenContainer.classList.contains('is-playing')) {
+            romInput.click();
+        }
+    });
+
+    screenContainer.addEventListener('touchstart', function() {
+        unlockAudio();
+    }, { passive: true });
+
+    romInput.addEventListener('change', function(e) {
+        unlockAudio();
+
+        var file = e.target.files[0];
+        if (!file) return;
+
+        var fileName = file.name.toLowerCase();
+        if (!fileName.endsWith('.nes')) {
+            screenMessage.innerHTML = "INVALID FILE<br>NEED .NES";
+            e.target.value = '';
+            return;
+        }
+
+        screenMessage.innerHTML = "LOADING<br>" + file.name.substring(0, 10) + "...";
+
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                var romString = event.target.result;
+                stopNES();
+                initNES();
+                nes.loadROM(romString);
+                startNES();
+                screenContainer.classList.add('is-playing');
+            } catch (error) {
+                console.error(error);
+                screenMessage.innerHTML = "LOAD ERROR<br>TRY ANOTHER ROM";
+                stopNES();
+                initNES();
+            }
+        };
+        reader.onerror = function() {
+            screenMessage.innerHTML = "READ ERROR<br>TRY AGAIN";
+        };
+        reader.readAsBinaryString(file);
+    });
+
+    initNES();
+
+    const nesButtons = {
+        'btnUp': jsnes.Controller.BUTTON_UP,
+        'btnDown': jsnes.Controller.BUTTON_DOWN,
+        'btnLeft': jsnes.Controller.BUTTON_LEFT,
+        'btnRight': jsnes.Controller.BUTTON_RIGHT,
+        'btnA': jsnes.Controller.BUTTON_A,
+        'btnB': jsnes.Controller.BUTTON_B,
+        'btnStart': jsnes.Controller.BUTTON_START,
+        'btnSelect': jsnes.Controller.BUTTON_SELECT
+    };
+
+    const controls = document.querySelectorAll('.d-btn, .btn-action, .btn-sys');
+
+    controls.forEach(function(btn) {
+        if (!nesButtons.hasOwnProperty(btn.id)) return;
+
+        function pressButton() {
+            if (nes && isRunning) nes.buttonDown(1, nesButtons[btn.id]);
+        }
+
+        function releaseButton() {
+            if (nes && isRunning) nes.buttonUp(1, nesButtons[btn.id]);
+        }
+
+        btn.addEventListener('touchstart', function(e) {
+            unlockAudio();
+            e.preventDefault();
+            e.stopPropagation();
+            pressButton();
+        }, { passive: false });
+
+        btn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            releaseButton();
+        }, { passive: false });
+
+        btn.addEventListener('touchcancel', function(e) {
+            e.preventDefault();
+            releaseButton();
+        }, { passive: false });
+
+        btn.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            pressButton();
         });
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('sw.js').catch(function(err) {});
-            });
+        btn.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            releaseButton();
+        });
+
+        btn.addEventListener('mouseleave', function() {
+            releaseButton();
+        });
+    });
+
+    document.querySelector('.console-body').addEventListener('touchstart', function(e) {
+        if (e.target.closest('.d-btn, .btn-action, .btn-sys') && !e.target.closest('#powerBtn')) {
+            e.preventDefault();
         }
-    </script>
-            
+    }, { passive: false });
+
+    canvas.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
+
+    document.addEventListener('visibilitychange', function() {
+        if (!audioCtx) return;
+
+        if (document.hidden) {
+            if (audioCtx.state === 'running') {
+                audioCtx.suspend();
+            }
+        } else {
+            audioCtx.resume();
+        }
+    });
+});
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').catch(function() {});
+    });
+}
+</script>
+
 </body>
 </html>
