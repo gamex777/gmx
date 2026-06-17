@@ -12,7 +12,9 @@
         
         body { 
             background-color: #111; display: flex; justify-content: center; align-items: center; 
-            height: 100vh; width: 100vw; overflow: hidden; perspective: 1000px; 
+            /* Lock viewport bounds strictly for iOS */
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden; perspective: 1000px; 
             /* Century Gothic Font */
             font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; 
         }
@@ -167,7 +169,7 @@
             <div id="screen">
                 
                 <div id="boot-logo-container">
-                    <div id="boot-gmx">GMX</div><div id="boot-reg">&reg;</div>
+                    <div id="boot-gmx">GMX</div><div id="boot-reg">®</div>
                 </div>
 
                 <div class="xmb-bg">
@@ -308,12 +310,22 @@
         // --- 2. DYNAMIC SCALING ---
         let currentScale = 1;
         const consoleEl = document.getElementById('gmx-console');
+
         const applyScale = () => {
+            // Abort if the user is holding the phone in portrait mode
             if (window.innerHeight > window.innerWidth) return;
-            const winW = window.innerWidth, winH = window.innerHeight;
-            currentScale = Math.min((winW * 0.95) / 1080, (winH * 0.95) / 500);
+            
+            // Grab the actual horizontal space available
+            const winW = window.innerWidth;
+            
+            // Force the scale! Target exactly 80% (0.80) of the device's screen width.
+            currentScale = (winW * 0.80) / 1080;
+            
+            // Apply the scale. Flexbox on the body handles the dead-center alignment.
             consoleEl.style.transform = `scale(${currentScale})`;
         };
+
+        // Ensure it recalculates if the device is flipped or resized
         window.addEventListener('resize', applyScale);
         applyScale();
 
