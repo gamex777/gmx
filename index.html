@@ -267,8 +267,7 @@
             }
         }
 
-        // ===================== JSNES BRIDGE =====================
-       // ===================== JSNES BRIDGE =====================
+        // ===================== JSNES BRIDGE (LOW-LATENCY) =====================
         class GMXEmulatorBridge {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -276,97 +275,103 @@
                 this.isRunning = false;
                 this.nes = null;
                 this.audio = new GMXAudio();
-                
-                // Pre-allocate the image buffer to prevent iOS garbage collection stutter
+
+                // Pre-allocated frame buffer to avoid GC pauses
                 this.imageData = this.ctx.createImageData(256, 240);
                 this.buf32 = new Uint32Array(this.imageData.data.buffer);
-                
-                // NES controller 1 mapping:
+
+                // NES controller 1 mapping
                 this.nesInputMap = {
-                    'btn-a': 0,
-                    'btn-b': 1,
-                    'btn-select': 2,
-                    'btn-start': 3,
-                    'btn-up': 4,
-                    'btn-down': 5,
-                    'btn-left': 6,
-                    'btn-right': 7
+                    'btn-a': 0, 'btn-b': 1, 'btn-select': 2, 'btn-start': 3,
+                    'btn-up': 4, 'btn-down': 5, 'btn-left': 6, 'btn-right': 7
                 };
+
+                // High-frequency emulation loop variables
+                this._intervalId = null;
+                this._renderReqId = null;
+                this._lastFrameTime = 0;
+                this._frameAccumulator = 0;
+                this._pendingFrame = false;
             }
-            
+
             loadRomData(arrayBuffer, filename) {
                 this._stopCurrent();
-                
+
                 this.nes = new jsnes.NES({
-                    onFrame: (frameBuffer) => { this._renderNESFrame(frameBuffer); },
-                    onAudioSample: (l, r) => { this.audio.pushSample(l, r); },
+                    onFrame: (frameBuffer) => {
+                        // Store the frame and flag it for drawing – don't draw here
+                        for (let i = 0; i < frameBuffer.length; i++) {
+                            this.buf32[i] = 0xFF000000 | frameBuffer[i];
+                        }
+                        this._pendingFrame = true;
+                    },
+                    onAudioSample: (l, r) => {
+                        this.audio.pushSample(l, r);
+                    },
                     sampleRate: this.audio.context.sampleRate
                 });
-                
-                // Convert ArrayBuffer -> Uint8Array -> binary string (JSNES requirement)
+
                 const romBytes = new Uint8Array(arrayBuffer);
                 let romString = '';
                 for (let i = 0; i < romBytes.length; i++) {
                     romString += String.fromCharCode(romBytes[i]);
                 }
-                
+
                 try {
                     this.nes.loadROM(romString);
                 } catch (e) {
                     this.renderError("BOOT FAILURE", "Invalid NES ROM");
                     return;
                 }
-                
+
                 this.isRunning = true;
                 this.canvas.width = 256;
                 this.canvas.height = 240;
                 this._startNESLoop();
             }
-            
+
             _startNESLoop() {
-                let lastTime = performance.now();
-                const frameTime = 1000 / 60; // Target 60 FPS (16.666ms per frame)
-                let accumulator = 0;
+                // Emulation tick – runs as often as possible (1 ms interval)
+                const frameTime = 1000 / 60; // 16.666 ms per NES frame
+                this._lastFrameTime = performance.now();
+                this._frameAccumulator = 0;
 
-                const runFrame = (timestamp) => {
+                const tick = () => {
                     if (!this.isRunning || !this.nes) return;
-                    
-                    this._nesFrameReq = requestAnimationFrame(runFrame);
-                    
-                    let deltaTime = timestamp - lastTime;
-                    lastTime = timestamp;
 
-                    // Cap deltaTime at 100ms. If the user tabs away, we don't want the 
-                    // emulator to try and calculate 5000 frames at once when they return.
-                    if (deltaTime > 100) deltaTime = 100;
+                    const now = performance.now();
+                    let delta = now - this._lastFrameTime;
+                    this._lastFrameTime = now;
 
-                    accumulator += deltaTime;
+                    // Prevent spiral of death after a pause
+                    if (delta > 100) delta = 100;
 
-                    // Run the NES frame logic as many times as necessary to catch up to real-time
-                    while (accumulator >= frameTime) {
-                        this.nes.frame();
-                        accumulator -= frameTime;
+                    this._frameAccumulator += delta;
+                    while (this._frameAccumulator >= frameTime) {
+                        this.nes.frame();          // triggers onFrame & onAudioSample
+                        this._frameAccumulator -= frameTime;
                     }
                 };
-                
-                // Fixed: Pass the runFrame callback so the loop actually starts
-                this._nesFrameReq = requestAnimationFrame(runFrame);
+
+                // High-frequency emulation loop – 1 ms resolution
+                this._intervalId = setInterval(tick, 1);
+
+                // Rendering loop – draws only when a new frame is ready, synced to display
+                const drawFrame = () => {
+                    if (this._pendingFrame) {
+                        this.ctx.putImageData(this.imageData, 0, 0);
+                        this._pendingFrame = false;
+                    }
+                    if (this.isRunning) {
+                        this._renderReqId = requestAnimationFrame(drawFrame);
+                    }
+                };
+                this._renderReqId = requestAnimationFrame(drawFrame);
             }
-            
-            _renderNESFrame(frameBuffer) {
-                // Recycle the pre-allocated buffer instead of creating a new one every frame
-                for (let i = 0; i < frameBuffer.length; i++) {
-                    // Force full alpha (0xFF) on the color data
-                    this.buf32[i] = 0xFF000000 | frameBuffer[i]; 
-                }
-                
-                this.ctx.putImageData(this.imageData, 0, 0);
-            }
-            
+
             handleInput(domId, isPressed) {
                 if (!this.isRunning || !this.nes) return;
                 const nesBtn = this.nesInputMap[domId];
-                
                 if (nesBtn !== undefined) {
                     if (isPressed) {
                         this.nes.buttonDown(1, nesBtn);
@@ -375,7 +380,7 @@
                     }
                 }
             }
-            
+
             handleAnalog(stickId, nx, ny) {
                 if (!this.isRunning) return;
                 const deadzone = 0.4;
@@ -387,19 +392,27 @@
                 if (nx < -deadzone) this.handleInput('btn-left', true);
                 if (nx > deadzone) this.handleInput('btn-right', true);
             }
-            
+
             _stopCurrent() {
                 this.isRunning = false;
-                if (this._nesFrameReq) cancelAnimationFrame(this._nesFrameReq);
+                if (this._intervalId) {
+                    clearInterval(this._intervalId);
+                    this._intervalId = null;
+                }
+                if (this._renderReqId) {
+                    cancelAnimationFrame(this._renderReqId);
+                    this._renderReqId = null;
+                }
                 this.nes = null;
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 if (this.audio) this.audio.stop();
+                this._pendingFrame = false;
             }
-            
+
             stop() {
                 this._stopCurrent();
             }
-            
+
             renderError(title, subtitle) {
                 this._stopCurrent();
                 const w = this.canvas.width || 256, h = this.canvas.height || 240;
@@ -408,6 +421,7 @@
                 this.ctx.fillStyle = '#ffffff'; this.ctx.font = '12px sans-serif'; this.ctx.fillText(subtitle, 40, h/2 + 25);
             }
         }
+
         const gmxBridge = new GMXEmulatorBridge('game-canvas');
 
         // --- IndexedDB, XMB, install popup, controls, power, joysticks, clock ---
