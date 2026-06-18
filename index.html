@@ -188,16 +188,15 @@
         class GMXAudio {
             constructor() {
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
-                // Create a script processor to handle raw audio samples
                 this.scriptNode = this.context.createScriptProcessor(4096, 0, 2);
                 this.scriptNode.connect(this.context.destination);
 
-                // Circular ring buffer to prevent memory leaks/garbage collection stutter
                 this.bufferSize = 8192;
                 this.lBuffer = new Float32Array(this.bufferSize);
                 this.rBuffer = new Float32Array(this.bufferSize);
                 this.readPtr = 0;
                 this.writePtr = 0;
+                this.unlocked = false;
 
                 this.scriptNode.onaudioprocess = (e) => {
                     const left = e.outputBuffer.getChannelData(0);
@@ -231,6 +230,24 @@
                 this.readPtr = 0;
                 this.writePtr = 0;
             }
+
+            unlock() {
+                if (this.unlocked) return;
+                
+                if (this.context.state === 'suspended') {
+                    this.context.resume();
+                }
+                
+                // Force iOS to unlock the audio context by playing a 10ms silent frequency
+                const osc = this.context.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = 0;
+                osc.connect(this.context.destination);
+                osc.start(0);
+                osc.stop(0.01);
+                
+                this.unlocked = true;
+            }
         }
 
         // ===================== CORRECTED JSNES BRIDGE =====================
@@ -258,7 +275,6 @@
             loadRomData(arrayBuffer, filename) {
                 this._stopCurrent();
                 
-                // 1. Properly bind the onFrame and onAudioSample callbacks
                 this.nes = new jsnes.NES({
                     onFrame: (frameBuffer) => { this._renderNESFrame(frameBuffer); },
                     onAudioSample: (l, r) => { this.audio.pushSample(l, r); },
@@ -286,19 +302,31 @@
             }
             
             _startNESLoop() {
-                const runFrame = () => {
+                let lastTime = performance.now();
+                const fpsInterval = 1000 / 60; // Lock to 60 FPS (16.67ms per frame)
+                
+                const runFrame = (timestamp) => {
                     if (!this.isRunning || !this.nes) return;
-                    // 2. this.nes.frame() intrinsically triggers your onFrame callback
-                    this.nes.frame(); 
+                    
+                    // Queue the next frame
                     this._nesFrameReq = requestAnimationFrame(runFrame);
+                    
+                    const elapsed = timestamp - lastTime;
+                    
+                    // Only execute the emulator frame if enough time has passed
+                    if (elapsed > fpsInterval) {
+                        // Adjust lastTime to prevent drift
+                        lastTime = timestamp - (elapsed % fpsInterval);
+                        this.nes.frame(); 
+                    }
                 };
-                this._nesFrameReq = requestAnimationFrame(runFrame);
+                this._nesFrameReq = requestAnimationFrame(performance.now);
             }
             
             _renderNESFrame(frameBuffer) {
                 const ctx = this.ctx;
                 const imageData = ctx.createImageData(256, 240);
-                // 3. JSNES colors are pre-formatted for 32-bit arrays to maximize performance
+                // JSNES colors are pre-formatted for 32-bit arrays to maximize performance
                 const buf32 = new Uint32Array(imageData.data.buffer);
                 
                 for (let i = 0; i < frameBuffer.length; i++) {
@@ -314,7 +342,6 @@
                 const nesBtn = this.nesInputMap[domId];
                 
                 if (nesBtn !== undefined) {
-                    // 4. Use the correct JSNES input API
                     if (isPressed) {
                         this.nes.buttonDown(1, nesBtn);
                     } else {
@@ -531,6 +558,10 @@
         let bootTimers = [];
         const togglePower = (e) => {
             if(e) e.preventDefault();
+            
+            // Unlock iOS Audio on the very first physical tap of the power button
+            gmxBridge.audio.unlock(); 
+            
             isPoweredOn = !isPoweredOn; isOSReady = false;
             bootTimers.forEach(t => clearTimeout(t)); bootTimers = [];
             if(isPoweredOn) {
