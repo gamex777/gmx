@@ -184,11 +184,11 @@
     </div>
 
     <script>
-        // ===================== AUDIO CONTROLLER =====================
+        // ===================== AUDIO CONTROLLER (LAZY CONTEXT FOR IOS) =====================
         class GMXAudio {
             constructor() {
-                this.context = new (window.AudioContext || window.webkitAudioContext)();
-                this.sampleRate = this.context.sampleRate;
+                this.context = null;
+                this.sampleRate = 44100; // default, will be updated on first use
                 this.chunkSize = 2048;
                 this.lBuffer = new Float32Array(this.chunkSize);
                 this.rBuffer = new Float32Array(this.chunkSize);
@@ -197,7 +197,15 @@
                 this.unlocked = false;
             }
 
+            _ensureContext() {
+                if (!this.context) {
+                    this.context = new (window.AudioContext || window.webkitAudioContext)();
+                    this.sampleRate = this.context.sampleRate;
+                }
+            }
+
             pushSample(l, r) {
+                this._ensureContext();
                 this.lBuffer[this.writePtr] = l;
                 this.rBuffer[this.writePtr] = r;
                 this.writePtr++;
@@ -207,26 +215,35 @@
             }
 
             flush() {
+                this._ensureContext();
                 if (this.context.state !== 'running') {
                     this.writePtr = 0;
                     return;
                 }
+
                 const buffer = this.context.createBuffer(2, this.chunkSize, this.sampleRate);
                 buffer.getChannelData(0).set(this.lBuffer);
                 buffer.getChannelData(1).set(this.rBuffer);
+
                 const source = this.context.createBufferSource();
                 source.buffer = buffer;
                 source.connect(this.context.destination);
+
                 const now = this.context.currentTime;
-                if (this.nextPlayTime < now) {
-                    this.nextPlayTime = now + 0.02;
+                const outputLatency = this.context.outputLatency || 0.03; // iOS Safari ~0.02-0.03
+
+                // Safety margin to avoid scheduling in the past
+                if (this.nextPlayTime < now + outputLatency) {
+                    this.nextPlayTime = now + outputLatency + 0.01;
                 }
+
                 source.start(this.nextPlayTime);
                 this.nextPlayTime += buffer.duration;
                 this.writePtr = 0;
             }
 
             resume() {
+                this._ensureContext();
                 if (this.context.state === 'suspended') {
                     this.context.resume();
                 }
@@ -238,10 +255,12 @@
             }
 
             unlock() {
+                this._ensureContext();
                 if (this.unlocked) return;
                 if (this.context.state === 'suspended') {
                     this.context.resume();
                 }
+                // Play a silent sound to fully unlock iOS audio
                 const osc = this.context.createOscillator();
                 osc.type = 'sine';
                 osc.frequency.value = 0;
@@ -252,7 +271,7 @@
             }
         }
 
-        // ===================== JSNES BRIDGE (LOW-LATENCY) =====================
+        // ===================== JSNES BRIDGE (RAF LOOP FOR SMOOTH PLAYBACK) =====================
         class GMXEmulatorBridge {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -266,15 +285,17 @@
                     'btn-a': 0, 'btn-b': 1, 'btn-select': 2, 'btn-start': 3,
                     'btn-up': 4, 'btn-down': 5, 'btn-left': 6, 'btn-right': 7
                 };
-                this._intervalId = null;
                 this._renderReqId = null;
-                this._lastFrameTime = 0;
                 this._frameAccumulator = 0;
                 this._pendingFrame = false;
             }
 
             loadRomData(arrayBuffer, filename) {
                 this._stopCurrent();
+
+                // Ensure audio context exists before creating NES (which needs sampleRate)
+                this.audio._ensureContext();
+
                 this.nes = new jsnes.NES({
                     onFrame: (frameBuffer) => {
                         for (let i = 0; i < frameBuffer.length; i++) {
@@ -285,19 +306,22 @@
                     onAudioSample: (l, r) => {
                         this.audio.pushSample(l, r);
                     },
-                    sampleRate: this.audio.context.sampleRate
+                    sampleRate: this.audio.sampleRate
                 });
+
                 const romBytes = new Uint8Array(arrayBuffer);
                 let romString = '';
                 for (let i = 0; i < romBytes.length; i++) {
                     romString += String.fromCharCode(romBytes[i]);
                 }
+
                 try {
                     this.nes.loadROM(romString);
                 } catch (e) {
                     this.renderError("BOOT FAILURE", "Invalid NES ROM");
                     return;
                 }
+
                 this.isRunning = true;
                 this.canvas.width = 256;
                 this.canvas.height = 240;
@@ -305,35 +329,35 @@
             }
 
             _startNESLoop() {
-                const frameTime = 1000 / 60;
-                this._lastFrameTime = performance.now();
-                this._frameAccumulator = 0;
+                const frameTime = 1000 / 60; // 16.666 ms per NES frame
+                let lastTime = performance.now();
 
-                const tick = () => {
+                const loop = (now) => {
                     if (!this.isRunning || !this.nes) return;
-                    const now = performance.now();
-                    let delta = now - this._lastFrameTime;
-                    this._lastFrameTime = now;
-                    if (delta > 100) delta = 100;
+
+                    let delta = now - lastTime;
+                    lastTime = now;
+                    if (delta > 100) delta = 100; // prevent spiral of death
+
                     this._frameAccumulator += delta;
                     while (this._frameAccumulator >= frameTime) {
-                        this.nes.frame();
+                        this.nes.frame();          // emulates one frame, triggers audio
                         this._frameAccumulator -= frameTime;
                     }
-                };
 
-                this._intervalId = setInterval(tick, 1);
-
-                const drawFrame = () => {
+                    // Draw if a new frame was generated
                     if (this._pendingFrame) {
                         this.ctx.putImageData(this.imageData, 0, 0);
                         this._pendingFrame = false;
                     }
-                    if (this.isRunning) {
-                        this._renderReqId = requestAnimationFrame(drawFrame);
-                    }
+
+                    this._renderReqId = requestAnimationFrame(loop);
                 };
-                this._renderReqId = requestAnimationFrame(drawFrame);
+
+                this._renderReqId = requestAnimationFrame((ts) => {
+                    lastTime = ts;
+                    loop(ts);
+                });
             }
 
             handleInput(domId, isPressed) {
@@ -351,7 +375,7 @@
             handleAnalog(stickId, nx, ny) {
                 if (!this.isRunning) return;
                 const deadzone = 0.4;
-                // Do nothing if the stick is inside the dead zone – let D‑pad state stay unchanged
+                // Do nothing if stick is inside the dead zone – don't touch D‑pad
                 if (Math.abs(nx) < deadzone && Math.abs(ny) < deadzone) return;
 
                 ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => {
@@ -365,10 +389,6 @@
 
             _stopCurrent() {
                 this.isRunning = false;
-                if (this._intervalId) {
-                    clearInterval(this._intervalId);
-                    this._intervalId = null;
-                }
                 if (this._renderReqId) {
                     cancelAnimationFrame(this._renderReqId);
                     this._renderReqId = null;
