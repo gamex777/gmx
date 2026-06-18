@@ -188,36 +188,53 @@
         class GMXAudio {
             constructor() {
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
-                this.scriptNode = this.context.createScriptProcessor(4096, 0, 2);
-                this.scriptNode.connect(this.context.destination);
-
-                this.bufferSize = 8192;
-                this.lBuffer = new Float32Array(this.bufferSize);
-                this.rBuffer = new Float32Array(this.bufferSize);
-                this.readPtr = 0;
+                this.sampleRate = this.context.sampleRate;
+                
+                // Smaller chunk size for lower latency (2048 samples = ~40ms)
+                this.chunkSize = 2048; 
+                this.lBuffer = new Float32Array(this.chunkSize);
+                this.rBuffer = new Float32Array(this.chunkSize);
                 this.writePtr = 0;
+                this.nextPlayTime = 0;
                 this.unlocked = false;
-
-                this.scriptNode.onaudioprocess = (e) => {
-                    const left = e.outputBuffer.getChannelData(0);
-                    const right = e.outputBuffer.getChannelData(1);
-                    for (let i = 0; i < left.length; i++) {
-                        if (this.readPtr !== this.writePtr) {
-                            left[i] = this.lBuffer[this.readPtr];
-                            right[i] = this.rBuffer[this.readPtr];
-                            this.readPtr = (this.readPtr + 1) % this.bufferSize;
-                        } else {
-                            left[i] = 0; 
-                            right[i] = 0;
-                        }
-                    }
-                };
             }
 
             pushSample(l, r) {
                 this.lBuffer[this.writePtr] = l;
                 this.rBuffer[this.writePtr] = r;
-                this.writePtr = (this.writePtr + 1) % this.bufferSize;
+                this.writePtr++;
+
+                // Flush the buffer to the audio context once it's full
+                if (this.writePtr === this.chunkSize) {
+                    this.flush();
+                }
+            }
+
+            flush() {
+                if (this.context.state !== 'running') {
+                    this.writePtr = 0;
+                    return;
+                }
+
+                // Create a static, un-modifiable audio buffer
+                const buffer = this.context.createBuffer(2, this.chunkSize, this.sampleRate);
+                buffer.getChannelData(0).set(this.lBuffer);
+                buffer.getChannelData(1).set(this.rBuffer);
+
+                const source = this.context.createBufferSource();
+                source.buffer = buffer;
+                source.connect(this.context.destination);
+
+                const now = this.context.currentTime;
+                
+                // Maintain a 20ms safety net. If the emulator lags, this prevents a jarring gap.
+                if (this.nextPlayTime < now) {
+                    this.nextPlayTime = now + 0.02; 
+                }
+                
+                source.start(this.nextPlayTime);
+                this.nextPlayTime += buffer.duration;
+                this.writePtr = 0;
             }
 
             resume() {
@@ -227,8 +244,8 @@
             }
 
             stop() {
-                this.readPtr = 0;
                 this.writePtr = 0;
+                this.nextPlayTime = 0;
             }
 
             unlock() {
@@ -250,7 +267,8 @@
             }
         }
 
-        // ===================== CORRECTED JSNES BRIDGE =====================
+        // ===================== JSNES BRIDGE =====================
+       // ===================== JSNES BRIDGE =====================
         class GMXEmulatorBridge {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -258,6 +276,10 @@
                 this.isRunning = false;
                 this.nes = null;
                 this.audio = new GMXAudio();
+                
+                // Pre-allocate the image buffer to prevent iOS garbage collection stutter
+                this.imageData = this.ctx.createImageData(256, 240);
+                this.buf32 = new Uint32Array(this.imageData.data.buffer);
                 
                 // NES controller 1 mapping:
                 this.nesInputMap = {
@@ -303,38 +325,42 @@
             
             _startNESLoop() {
                 let lastTime = performance.now();
-                const fpsInterval = 1000 / 60; // Lock to 60 FPS (16.67ms per frame)
-                
+                const frameTime = 1000 / 60; // Target 60 FPS (16.666ms per frame)
+                let accumulator = 0;
+
                 const runFrame = (timestamp) => {
                     if (!this.isRunning || !this.nes) return;
                     
-                    // Queue the next frame
                     this._nesFrameReq = requestAnimationFrame(runFrame);
                     
-                    const elapsed = timestamp - lastTime;
-                    
-                    // Only execute the emulator frame if enough time has passed
-                    if (elapsed > fpsInterval) {
-                        // Adjust lastTime to prevent drift
-                        lastTime = timestamp - (elapsed % fpsInterval);
-                        this.nes.frame(); 
+                    let deltaTime = timestamp - lastTime;
+                    lastTime = timestamp;
+
+                    // Cap deltaTime at 100ms. If the user tabs away, we don't want the 
+                    // emulator to try and calculate 5000 frames at once when they return.
+                    if (deltaTime > 100) deltaTime = 100;
+
+                    accumulator += deltaTime;
+
+                    // Run the NES frame logic as many times as necessary to catch up to real-time
+                    while (accumulator >= frameTime) {
+                        this.nes.frame();
+                        accumulator -= frameTime;
                     }
                 };
-                this._nesFrameReq = requestAnimationFrame(performance.now);
+                
+                // Fixed: Pass the runFrame callback so the loop actually starts
+                this._nesFrameReq = requestAnimationFrame(runFrame);
             }
             
             _renderNESFrame(frameBuffer) {
-                const ctx = this.ctx;
-                const imageData = ctx.createImageData(256, 240);
-                // JSNES colors are pre-formatted for 32-bit arrays to maximize performance
-                const buf32 = new Uint32Array(imageData.data.buffer);
-                
+                // Recycle the pre-allocated buffer instead of creating a new one every frame
                 for (let i = 0; i < frameBuffer.length; i++) {
                     // Force full alpha (0xFF) on the color data
-                    buf32[i] = 0xFF000000 | frameBuffer[i]; 
+                    this.buf32[i] = 0xFF000000 | frameBuffer[i]; 
                 }
                 
-                ctx.putImageData(imageData, 0, 0);
+                this.ctx.putImageData(this.imageData, 0, 0);
             }
             
             handleInput(domId, isPressed) {
