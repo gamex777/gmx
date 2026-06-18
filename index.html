@@ -81,11 +81,11 @@
         .control-base { position: absolute; top: 32%; width: 17%; aspect-ratio: 1; background: radial-gradient(circle at 30% 30%, #b0b8ff 0%, #909bff 50%, #858eee 100%); border: 3px solid #111; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), inset 0 -2px 10px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.4); }
         .left-base { left: 10%; transform: translateX(-50%); } .right-base { right: 10%; transform: translateX(50%); }
         .d-pad-cross { position: relative; width: 80%; height: 80%; background: linear-gradient(#2d2d2d 0%, #1a1a1a 100%); border-radius: 50%; box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), 0 3px 6px rgba(0,0,0,0.6); }
-        .d-btn { position: absolute; width: 28%; height: 32%; cursor: pointer; background: #1a1a1a; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.8), inset 0 2px 3px rgba(255,255,255,0.05); display: flex; justify-content: center; align-items: center; transition: filter 0.1s; }
+        .d-btn { position: absolute; width: 28%; height: 32%; cursor: pointer; background: #1a1a1a; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.8), inset 0 2px 3px rgba(255,255,255,0.05); display: flex; justify-content: center; align-items: center; transition: filter 0.1s; padding: 4px; }
         .d-btn.pressed { background: #111; filter: brightness(0.7); }
         .d-up { top: 7%; left: 36%; border-radius: 6px 6px 12px 12px; } .d-right { top: 34%; right: 7%; border-radius: 12px 6px 6px 12px; height: 28%; width: 32%;} .d-down { bottom: 7%; left: 36%; border-radius: 12px 12px 6px 6px; } .d-left { top: 34%; left: 7%; border-radius: 6px 12px 12px 6px; height: 28%; width: 32%;}
         .action-pad-cluster { position: relative; width: 85%; height: 85%; }
-        .btn-action { position: absolute; width: 32%; height: 32%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e0e0e0 30%, #b0b0b0 80%, #999999 100%); box-shadow: inset -3px -3px 8px rgba(0,0,0,0.4), inset 2px 2px 6px rgba(255,255,255,0.8), 0 6px 8px rgba(0,0,0,0.6); color: #222; font-weight: 700; font-size: 0.8rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
+        .btn-action { position: absolute; width: 32%; height: 32%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e0e0e0 30%, #b0b0b0 80%, #999999 100%); box-shadow: inset -3px -3px 8px rgba(0,0,0,0.4), inset 2px 2px 6px rgba(255,255,255,0.8), 0 6px 8px rgba(0,0,0,0.6); color: #222; font-weight: 700; font-size: 0.8rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; padding: 4px; }
         .btn-action.pressed { transform: translateY(4px); box-shadow: inset -1px -1px 4px rgba(0,0,0,0.4), inset 1px 1px 4px rgba(255,255,255,0.8), 0 2px 2px rgba(0,0,0,0.6); background: radial-gradient(circle at 35% 35%, #e8e8e8 0%, #c0c0c0 30%, #909090 80%, #777777 100%); }
         .btn-y { top: 4%; left: 34%; } .btn-b { top: 34%; right: 4%; } .btn-a { bottom: 4%; left: 34%; } .btn-x { top: 34%; left: 4%; }
         .analog-stick { position: absolute; width: 8%; aspect-ratio: 1; background: linear-gradient(#0c0c0c 0%, #151515 100%); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 10px 30px rgba(0,0,0,1), inset 0 2px 2px rgba(255,255,255,0.05), 0 2px 5px rgba(0,0,0,0.4); bottom: 9%; z-index: 20; }
@@ -189,9 +189,7 @@
             constructor() {
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
                 this.sampleRate = this.context.sampleRate;
-                
-                // Smaller chunk size for lower latency (2048 samples = ~40ms)
-                this.chunkSize = 2048; 
+                this.chunkSize = 2048;
                 this.lBuffer = new Float32Array(this.chunkSize);
                 this.rBuffer = new Float32Array(this.chunkSize);
                 this.writePtr = 0;
@@ -203,8 +201,6 @@
                 this.lBuffer[this.writePtr] = l;
                 this.rBuffer[this.writePtr] = r;
                 this.writePtr++;
-
-                // Flush the buffer to the audio context once it's full
                 if (this.writePtr === this.chunkSize) {
                     this.flush();
                 }
@@ -215,23 +211,16 @@
                     this.writePtr = 0;
                     return;
                 }
-
-                // Create a static, un-modifiable audio buffer
                 const buffer = this.context.createBuffer(2, this.chunkSize, this.sampleRate);
                 buffer.getChannelData(0).set(this.lBuffer);
                 buffer.getChannelData(1).set(this.rBuffer);
-
                 const source = this.context.createBufferSource();
                 source.buffer = buffer;
                 source.connect(this.context.destination);
-
                 const now = this.context.currentTime;
-                
-                // Maintain a 20ms safety net. If the emulator lags, this prevents a jarring gap.
                 if (this.nextPlayTime < now) {
-                    this.nextPlayTime = now + 0.02; 
+                    this.nextPlayTime = now + 0.02;
                 }
-                
                 source.start(this.nextPlayTime);
                 this.nextPlayTime += buffer.duration;
                 this.writePtr = 0;
@@ -250,19 +239,15 @@
 
             unlock() {
                 if (this.unlocked) return;
-                
                 if (this.context.state === 'suspended') {
                     this.context.resume();
                 }
-                
-                // Force iOS to unlock the audio context by playing a 10ms silent frequency
                 const osc = this.context.createOscillator();
                 osc.type = 'sine';
                 osc.frequency.value = 0;
                 osc.connect(this.context.destination);
                 osc.start(0);
                 osc.stop(0.01);
-                
                 this.unlocked = true;
             }
         }
@@ -275,18 +260,12 @@
                 this.isRunning = false;
                 this.nes = null;
                 this.audio = new GMXAudio();
-
-                // Pre-allocated frame buffer to avoid GC pauses
                 this.imageData = this.ctx.createImageData(256, 240);
                 this.buf32 = new Uint32Array(this.imageData.data.buffer);
-
-                // NES controller 1 mapping
                 this.nesInputMap = {
                     'btn-a': 0, 'btn-b': 1, 'btn-select': 2, 'btn-start': 3,
                     'btn-up': 4, 'btn-down': 5, 'btn-left': 6, 'btn-right': 7
                 };
-
-                // High-frequency emulation loop variables
                 this._intervalId = null;
                 this._renderReqId = null;
                 this._lastFrameTime = 0;
@@ -296,10 +275,8 @@
 
             loadRomData(arrayBuffer, filename) {
                 this._stopCurrent();
-
                 this.nes = new jsnes.NES({
                     onFrame: (frameBuffer) => {
-                        // Store the frame and flag it for drawing – don't draw here
                         for (let i = 0; i < frameBuffer.length; i++) {
                             this.buf32[i] = 0xFF000000 | frameBuffer[i];
                         }
@@ -310,20 +287,17 @@
                     },
                     sampleRate: this.audio.context.sampleRate
                 });
-
                 const romBytes = new Uint8Array(arrayBuffer);
                 let romString = '';
                 for (let i = 0; i < romBytes.length; i++) {
                     romString += String.fromCharCode(romBytes[i]);
                 }
-
                 try {
                     this.nes.loadROM(romString);
                 } catch (e) {
                     this.renderError("BOOT FAILURE", "Invalid NES ROM");
                     return;
                 }
-
                 this.isRunning = true;
                 this.canvas.width = 256;
                 this.canvas.height = 240;
@@ -331,32 +305,25 @@
             }
 
             _startNESLoop() {
-                // Emulation tick – runs as often as possible (1 ms interval)
-                const frameTime = 1000 / 60; // 16.666 ms per NES frame
+                const frameTime = 1000 / 60;
                 this._lastFrameTime = performance.now();
                 this._frameAccumulator = 0;
 
                 const tick = () => {
                     if (!this.isRunning || !this.nes) return;
-
                     const now = performance.now();
                     let delta = now - this._lastFrameTime;
                     this._lastFrameTime = now;
-
-                    // Prevent spiral of death after a pause
                     if (delta > 100) delta = 100;
-
                     this._frameAccumulator += delta;
                     while (this._frameAccumulator >= frameTime) {
-                        this.nes.frame();          // triggers onFrame & onAudioSample
+                        this.nes.frame();
                         this._frameAccumulator -= frameTime;
                     }
                 };
 
-                // High-frequency emulation loop – 1 ms resolution
                 this._intervalId = setInterval(tick, 1);
 
-                // Rendering loop – draws only when a new frame is ready, synced to display
                 const drawFrame = () => {
                     if (this._pendingFrame) {
                         this.ctx.putImageData(this.imageData, 0, 0);
@@ -384,6 +351,9 @@
             handleAnalog(stickId, nx, ny) {
                 if (!this.isRunning) return;
                 const deadzone = 0.4;
+                // Do nothing if the stick is inside the dead zone – let D‑pad state stay unchanged
+                if (Math.abs(nx) < deadzone && Math.abs(ny) < deadzone) return;
+
                 ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => {
                     this.handleInput(btn, false);
                 });
@@ -484,8 +454,7 @@
             const activeItem = document.querySelector('.active-col .active-item.dynamic-game img');
             if (activeItem) { gameBgLayer.style.backgroundImage = `linear-gradient(to right, rgba(30,31,58,0.95) 0%, rgba(30,31,58,0.4) 60%, rgba(0,0,0,0) 100%), url('${activeItem.src}')`; gameBgLayer.style.opacity = 1; }
             else gameBgLayer.style.opacity = 0;
-            
-            // Show "(X) Delete Game" when a game is selected
+
             const gameItems = document.querySelectorAll('.dynamic-game');
             if (colIdx === 1 && rowIdx > 0 && rowIdx <= gameItems.length) {
                 sysMsg.innerText = "(X) Delete Game";
@@ -547,13 +516,11 @@
         bindInput('btn-y', null);
         bindInput('btn-l1', null); bindInput('btn-l2', null); bindInput('btn-r1', null); bindInput('btn-r2', null);
         bindInput('btn-start', null); bindInput('btn-select', null);
-        
+
         bindInput('btn-a', async () => {
             if(!isOSReady || popup.classList.contains('visible')) return;
-            
-            // Resume audio context on user interaction to bypass autoplay blockers
             gmxBridge.audio.resume();
-            
+
             if (colIdx === 1) {
                 const games = document.querySelectorAll('.dynamic-game');
                 if (rowIdx > 0 && rowIdx <= games.length) {
@@ -571,22 +538,21 @@
             } else { sysMsg.innerText = "Module offline."; sysMsg.style.opacity = 1; }
         });
 
-        // Delete game function
         async function deleteSelectedGame() {
             if (!isOSReady || popup.classList.contains('visible') || screen.classList.contains('game-running')) return;
             if (colIdx !== 1) return;
             const gameItems = document.querySelectorAll('.dynamic-game');
             if (rowIdx < 1 || rowIdx > gameItems.length) return;
-            
+
             const selectedTitle = gameItems[rowIdx - 1].querySelector('.game-title').innerText;
             sysMsg.innerText = `Deleting ${selectedTitle}...`;
             sysMsg.style.opacity = 1;
-            
+
             const db = await initDB();
             const tx = db.transaction(STORE_NAME, "readwrite");
             tx.objectStore(STORE_NAME).delete(selectedTitle);
             await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
-            
+
             await buildXMB();
             rowIdx = Math.min(rowIdx, maxRows[1] - 1);
             updateXMB();
@@ -598,10 +564,8 @@
         let bootTimers = [];
         const togglePower = (e) => {
             if(e) e.preventDefault();
-            
-            // Unlock iOS Audio on the very first physical tap of the power button
             gmxBridge.audio.unlock(); 
-            
+
             isPoweredOn = !isPoweredOn; isOSReady = false;
             bootTimers.forEach(t => clearTimeout(t)); bootTimers = [];
             if(isPoweredOn) {
@@ -615,7 +579,8 @@
                 document.getElementById('power-led').classList.remove('is-on');
                 screen.className = ''; bootContainer.classList.remove('do-drop', 'do-fade-out');
                 document.getElementById('boot-gmx').classList.remove('do-glint'); document.getElementById('boot-reg').classList.remove('do-fade-in');
-                sysMsg.style.opacity = 0; gmxBridge.stop(); closeInstallPopup();
+                sysMsg.style.opacity = 0; 
+                gmxBridge.stop(); closeInstallPopup();
             }
         };
         btnPower.addEventListener('click', togglePower); btnPower.addEventListener('touchstart', togglePower, {passive: false});
@@ -631,14 +596,20 @@
                 let dx = (e.clientX - originX) / currentScale, dy = (e.clientY - originY) / currentScale; const dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist > maxRad) { dx *= maxRad/dist; dy *= maxRad/dist; }
                 cap.style.transform = `translate(${dx}px, ${dy}px) rotateX(${dy/maxRad*-15}deg) rotateY(${dx/maxRad*15}deg)`;
-                if (screen.classList.contains('game-running')) gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', dx/maxRad, dy/maxRad);
-                else if (isOSReady && !popup.classList.contains('visible')) {
+                const deadzone = 0.4;
+                if (screen.classList.contains('game-running') && dist > maxRad * deadzone) {
+                    gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', dx/maxRad, dy/maxRad);
+                }
+                if (isOSReady && !popup.classList.contains('visible')) {
                     if (dist > maxRad * 0.6) { const ang = Math.atan2(dy, dx) * (180/Math.PI); trigNav(ang >= -45 && ang <= 45 ? 'right' : ang > 45 && ang < 135 ? 'down' : ang < -45 && ang > -135 ? 'up' : 'left'); }
                     else if (dist < maxRad * 0.2) stopNav();
                 }
             };
             const handleDrag = (e) => { if (!isDragging) return; if (e.type === 'touchmove') { for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === touchId) { move(e.changedTouches[i]); break; } } else move(e); };
-            const stopDrag = () => { isDragging = false; touchId = null; stopNav(); cap.style.transition = 'transform 0.1s linear'; cap.style.transform = 'translate(0px, 0px)'; if (screen.classList.contains('game-running')) gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', 0, 0); };
+            const stopDrag = () => {
+                isDragging = false; touchId = null; stopNav();
+                cap.style.transition = 'transform 0.1s linear'; cap.style.transform = 'translate(0px, 0px)';
+            };
             cap.addEventListener('mousedown', startDrag); cap.addEventListener('touchstart', startDrag, {passive: false});
             window.addEventListener('mousemove', handleDrag); window.addEventListener('touchmove', handleDrag, {passive: false});
             window.addEventListener('mouseup', stopDrag); window.addEventListener('touchend', stopDrag); window.addEventListener('mouseleave', stopDrag);
