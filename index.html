@@ -184,6 +184,55 @@
     </div>
 
     <script>
+        // ===================== AUDIO CONTROLLER =====================
+        class GMXAudio {
+            constructor() {
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+                // Create a script processor to handle raw audio samples
+                this.scriptNode = this.context.createScriptProcessor(4096, 0, 2);
+                this.scriptNode.connect(this.context.destination);
+
+                // Circular ring buffer to prevent memory leaks/garbage collection stutter
+                this.bufferSize = 8192;
+                this.lBuffer = new Float32Array(this.bufferSize);
+                this.rBuffer = new Float32Array(this.bufferSize);
+                this.readPtr = 0;
+                this.writePtr = 0;
+
+                this.scriptNode.onaudioprocess = (e) => {
+                    const left = e.outputBuffer.getChannelData(0);
+                    const right = e.outputBuffer.getChannelData(1);
+                    for (let i = 0; i < left.length; i++) {
+                        if (this.readPtr !== this.writePtr) {
+                            left[i] = this.lBuffer[this.readPtr];
+                            right[i] = this.rBuffer[this.readPtr];
+                            this.readPtr = (this.readPtr + 1) % this.bufferSize;
+                        } else {
+                            left[i] = 0; 
+                            right[i] = 0;
+                        }
+                    }
+                };
+            }
+
+            pushSample(l, r) {
+                this.lBuffer[this.writePtr] = l;
+                this.rBuffer[this.writePtr] = r;
+                this.writePtr = (this.writePtr + 1) % this.bufferSize;
+            }
+
+            resume() {
+                if (this.context.state === 'suspended') {
+                    this.context.resume();
+                }
+            }
+
+            stop() {
+                this.readPtr = 0;
+                this.writePtr = 0;
+            }
+        }
+
         // ===================== CORRECTED JSNES BRIDGE =====================
         class GMXEmulatorBridge {
             constructor(canvasId) {
@@ -191,6 +240,7 @@
                 this.ctx = this.canvas.getContext('2d');
                 this.isRunning = false;
                 this.nes = null;
+                this.audio = new GMXAudio();
                 
                 // NES controller 1 mapping:
                 this.nesInputMap = {
@@ -208,10 +258,11 @@
             loadRomData(arrayBuffer, filename) {
                 this._stopCurrent();
                 
-                // 1. Properly bind the onFrame callback to capture the pixel data
+                // 1. Properly bind the onFrame and onAudioSample callbacks
                 this.nes = new jsnes.NES({
                     onFrame: (frameBuffer) => { this._renderNESFrame(frameBuffer); },
-                    onAudioSample: () => {}
+                    onAudioSample: (l, r) => { this.audio.pushSample(l, r); },
+                    sampleRate: this.audio.context.sampleRate
                 });
                 
                 // Convert ArrayBuffer -> Uint8Array -> binary string (JSNES requirement)
@@ -289,6 +340,7 @@
                 if (this._nesFrameReq) cancelAnimationFrame(this._nesFrameReq);
                 this.nes = null;
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                if (this.audio) this.audio.stop();
             }
             
             stop() {
@@ -428,8 +480,13 @@
         bindInput('btn-y', null);
         bindInput('btn-l1', null); bindInput('btn-l2', null); bindInput('btn-r1', null); bindInput('btn-r2', null);
         bindInput('btn-start', null); bindInput('btn-select', null);
+        
         bindInput('btn-a', async () => {
             if(!isOSReady || popup.classList.contains('visible')) return;
+            
+            // Resume audio context on user interaction to bypass autoplay blockers
+            gmxBridge.audio.resume();
+            
             if (colIdx === 1) {
                 const games = document.querySelectorAll('.dynamic-game');
                 if (rowIdx > 0 && rowIdx <= games.length) {
