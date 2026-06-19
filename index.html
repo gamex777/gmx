@@ -148,7 +148,7 @@
                                 <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                                 <span>About</span>
                             </div>
-                            <div class="xmb-sub">Version 1.2 (Offline)</div>
+                            <div class="xmb-sub">Version 1.3 (Offline)</div>
                         </div>
                     </div>
                     <div id="sys-msg">Press 'A' to execute</div>
@@ -192,7 +192,6 @@
                 this.bufferSize = 4096;
                 this.scriptNode = this.context.createScriptProcessor(this.bufferSize, 0, 2);
 
-                // High-performance circular Float32 ring buffer to prevent browser lag.
                 this.ringSize = this.sampleRate * 2; 
                 this.ringL = new Float32Array(this.ringSize);
                 this.ringR = new Float32Array(this.ringSize);
@@ -221,35 +220,20 @@
                 this.ringL[this.writePtr] = l;
                 this.ringR[this.writePtr] = r;
                 this.writePtr = (this.writePtr + 1) % this.ringSize;
-                
-                // If write laps read, force read to jump forward to prevent glitching
                 if (this.writePtr === this.readPtr) {
                     this.readPtr = (this.readPtr + 1) % this.ringSize;
                 }
             }
 
-            resume() {
-                if (this.context.state === 'suspended') {
-                    this.context.resume();
-                }
-            }
-
-            stop() {
-                this.writePtr = 0;
-                this.readPtr = 0;
-            }
-
+            resume() { if (this.context.state === 'suspended') this.context.resume(); }
+            stop() { this.writePtr = 0; this.readPtr = 0; }
             unlock() {
                 if (this.unlocked) return;
-                if (this.context.state === 'suspended') {
-                    this.context.resume();
-                }
+                if (this.context.state === 'suspended') this.context.resume();
                 const osc = this.context.createOscillator();
-                osc.type = 'sine';
-                osc.frequency.value = 0;
+                osc.type = 'sine'; osc.frequency.value = 0;
                 osc.connect(this.context.destination);
-                osc.start(0);
-                osc.stop(0.01);
+                osc.start(0); osc.stop(0.01);
                 this.unlocked = true;
             }
         }
@@ -288,28 +272,19 @@
                         }
                         this._pendingFrame = true;
                     },
-                    onAudioSample: (l, r) => {
-                        this.audio.pushSample(l, r);
-                    },
+                    onAudioSample: (l, r) => { this.audio.pushSample(l, r); },
                     sampleRate: this.audio.context.sampleRate
                 });
 
                 const romBytes = new Uint8Array(arrayBuffer);
                 let romString = '';
-                for (let i = 0; i < romBytes.length; i++) {
-                    romString += String.fromCharCode(romBytes[i]);
-                }
+                for (let i = 0; i < romBytes.length; i++) { romString += String.fromCharCode(romBytes[i]); }
 
-                try {
-                    this.nes.loadROM(romString);
-                } catch (e) {
-                    this.renderError("BOOT FAILURE", "Invalid NES ROM");
-                    return;
-                }
+                try { this.nes.loadROM(romString); } 
+                catch (e) { this.renderError("BOOT FAILURE", "Invalid NES ROM"); return; }
 
                 this.isRunning = true;
-                this.canvas.width = 256;
-                this.canvas.height = 240;
+                this.canvas.width = 256; this.canvas.height = 240;
                 this._startNESLoop();
             }
 
@@ -323,7 +298,7 @@
                     const now = performance.now();
                     let delta = now - this._lastFrameTime;
                     this._lastFrameTime = now;
-                    if (delta > 100) delta = 100; // Prevent death-spiral on tab unfocus
+                    if (delta > 100) delta = 100;
 
                     this._frameAccumulator += delta;
                     while (this._frameAccumulator >= this._frameDuration) {
@@ -335,7 +310,6 @@
                         this.ctx.putImageData(this.imageData, 0, 0);
                         this._pendingFrame = false;
                     }
-
                     this._renderReqId = requestAnimationFrame(tickLoop);
                 };
                 this._renderReqId = requestAnimationFrame(tickLoop);
@@ -345,21 +319,15 @@
                 if (!this.isRunning || !this.nes) return;
                 const nesBtn = this.nesInputMap[domId];
                 if (nesBtn !== undefined) {
-                    if (isPressed) {
-                        this.nes.buttonDown(1, nesBtn);
-                    } else {
-                        this.nes.buttonUp(1, nesBtn);
-                    }
+                    if (isPressed) this.nes.buttonDown(1, nesBtn);
+                    else this.nes.buttonUp(1, nesBtn);
                 }
             }
 
             handleAnalog(stickId, nx, ny) {
                 if (!this.isRunning || !this.nes) return;
                 const deadzone = 0.4;
-
-                ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => {
-                    this.nes.buttonUp(1, this.nesInputMap[btn]);
-                });
+                ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => { this.nes.buttonUp(1, this.nesInputMap[btn]); });
 
                 if (ny < -deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-up']);
                 if (ny > deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-down']);
@@ -369,19 +337,14 @@
 
             _stopCurrent() {
                 this.isRunning = false;
-                if (this._renderReqId) {
-                    cancelAnimationFrame(this._renderReqId);
-                    this._renderReqId = null;
-                }
+                if (this._renderReqId) { cancelAnimationFrame(this._renderReqId); this._renderReqId = null; }
                 this.nes = null;
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 if (this.audio) this.audio.stop();
                 this._pendingFrame = false;
             }
 
-            stop() {
-                this._stopCurrent();
-            }
+            stop() { this._stopCurrent(); }
 
             renderError(title, subtitle) {
                 this._stopCurrent();
@@ -394,9 +357,8 @@
 
         const gmxBridge = new GMXEmulatorBridge('game-canvas');
 
-        // --- IndexedDB, XMB, install popup, controls, power, joysticks, clock ---
-        const DB_NAME = "GMX_Storage";
-        const STORE_NAME = "library";
+        // --- IndexedDB & OS Build ---
+        const DB_NAME = "GMX_Storage", STORE_NAME = "library";
         
         function initDB() { 
             return new Promise((resolve, reject) => { 
@@ -425,14 +387,10 @@
 
         let isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0;
         const maxRows = [1, 1, 1];
-        const grid = document.getElementById('xmb-grid');
-        const cols = document.querySelectorAll('.xmb-col');
-        const sysMsg = document.getElementById('sys-msg');
-        const screen = document.getElementById('screen');
+        const grid = document.getElementById('xmb-grid'), cols = document.querySelectorAll('.xmb-col'), sysMsg = document.getElementById('sys-msg'), screen = document.getElementById('screen');
 
         async function buildXMB() {
             try {
-                // Wrap in Promise.race to prevent infinite hang on local file execution
                 const dbPromise = initDB();
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Storage Timeout")), 1000));
                 const db = await Promise.race([dbPromise, timeoutPromise]);
@@ -459,8 +417,8 @@
                     req.onerror = () => reject(req.error);
                 });
             } catch(e) {
-                console.warn("Storage failed or skipped. Booting without saved data.", e);
-                return Promise.resolve(); // Force resolve so OS boots anyway
+                console.warn("Storage skipped. Booting OS.", e);
+                return Promise.resolve(); 
             }
         }
         
@@ -477,21 +435,11 @@
             else gameBgLayer.style.opacity = 0;
 
             const gameItems = document.querySelectorAll('.dynamic-game');
-            if (colIdx === 1 && rowIdx > 0 && rowIdx <= gameItems.length) {
-                sysMsg.innerText = "(X) Delete Game";
-                sysMsg.style.opacity = 1;
-            } else {
-                sysMsg.innerText = "";
-                sysMsg.style.opacity = 0;
-            }
+            if (colIdx === 1 && rowIdx > 0 && rowIdx <= gameItems.length) { sysMsg.innerText = "(X) Delete Game"; sysMsg.style.opacity = 1; } 
+            else { sysMsg.innerText = ""; sysMsg.style.opacity = 0; }
         };
 
-        const popup = document.getElementById('install-popup');
-        const romInput = document.getElementById('install-rom-upload');
-        const coverInput = document.getElementById('install-cover-upload');
-        const romNameEl = document.getElementById('popup-rom-name');
-        const coverNameEl = document.getElementById('popup-cover-name');
-        const installBtn = document.getElementById('popup-install');
+        const popup = document.getElementById('install-popup'), romInput = document.getElementById('install-rom-upload'), coverInput = document.getElementById('install-cover-upload'), romNameEl = document.getElementById('popup-rom-name'), coverNameEl = document.getElementById('popup-cover-name'), installBtn = document.getElementById('popup-install');
         let selectedRomFile = null, selectedCoverFile = null;
         function openInstallPopup() { popup.classList.add('visible'); selectedRomFile = null; selectedCoverFile = null; romInput.value = ''; coverInput.value = ''; romNameEl.textContent = ''; coverNameEl.textContent = ''; installBtn.disabled = true; sysMsg.style.opacity = 0; }
         function closeInstallPopup() { popup.classList.remove('visible'); }
@@ -499,51 +447,38 @@
         document.getElementById('popup-select-cover').addEventListener('click', () => coverInput.click());
         romInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (file && file.name.toLowerCase().endsWith('.nes')) {
-                selectedRomFile = file;
-                romNameEl.textContent = file.name;
-                installBtn.disabled = false;
-            } else {
-                alert('Please select a .nes file.');
-                romInput.value = '';
-            }
+            if (file && file.name.toLowerCase().endsWith('.nes')) { selectedRomFile = file; romNameEl.textContent = file.name; installBtn.disabled = false; } 
+            else { alert('Please select a .nes file.'); romInput.value = ''; }
         });
-        coverInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) { selectedCoverFile = file; coverNameEl.textContent = file.name; }
-        });
+        coverInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { selectedCoverFile = file; coverNameEl.textContent = file.name; } });
         
         document.getElementById('popup-install').addEventListener('click', async () => {
             if (!selectedRomFile) return;
             sysMsg.innerText = `Installing ${selectedRomFile.name}...`; sysMsg.style.opacity = 1;
             closeInstallPopup();
-            try {
-                await saveGameToDB(selectedRomFile, selectedCoverFile);
-                sysMsg.innerText = "Install Complete!";
-            } catch (err) {
-                sysMsg.innerText = "Install Failed (Storage Disabled)";
-            }
+            try { await saveGameToDB(selectedRomFile, selectedCoverFile); sysMsg.innerText = "Install Complete!"; } 
+            catch (err) { sysMsg.innerText = "Install Failed (Storage Disabled)"; }
             setTimeout(() => { sysMsg.style.opacity = 0; buildXMB().then(() => updateXMB()); }, 1500);
         });
 
-        const bindInput = (id, navAction) => {
-            const el = document.getElementById(id);
-            const trigger = (e) => { e.preventDefault(); el.classList.add('pressed'); if (screen.classList.contains('game-running')) gmxBridge.handleInput(id, true); else if (navAction) navAction(); };
-            const release = (e) => { e.preventDefault(); el.classList.remove('pressed'); if (screen.classList.contains('game-running')) gmxBridge.handleInput(id, false); };
-            el.addEventListener('mousedown', trigger); el.addEventListener('touchstart', trigger, {passive: false});
-            el.addEventListener('mouseup', release); el.addEventListener('touchend', release); el.addEventListener('mouseleave', release);
-        };
+        // =========================================================================
+        // === CENTRALIZED, FLAWLESS VIRTUAL GAMEPAD MANAGER (NO MORE BUTTON DROPS) ===
+        // =========================================================================
+        
         const navLeft = () => { if(colIdx > 0 && isOSReady && !popup.classList.contains('visible')) { colIdx--; rowIdx = 0; updateXMB(); } };
         const navRight = () => { if(colIdx < 2 && isOSReady && !popup.classList.contains('visible')) { colIdx++; rowIdx = 0; updateXMB(); } };
         const navUp = () => { if(rowIdx > 0 && isOSReady && !popup.classList.contains('visible')) { rowIdx--; updateXMB(); } };
         const navDown = () => { if(rowIdx < maxRows[colIdx] && isOSReady && !popup.classList.contains('visible')) { rowIdx++; updateXMB(); } };
-        bindInput('btn-left', navLeft); bindInput('btn-right', navRight); bindInput('btn-up', navUp); bindInput('btn-down', navDown);
-        bindInput('btn-b', () => { if (popup.classList.contains('visible')) closeInstallPopup(); });
-        bindInput('btn-y', null);
-        bindInput('btn-l1', null); bindInput('btn-l2', null); bindInput('btn-r1', null); bindInput('btn-r2', null);
-        bindInput('btn-start', null); bindInput('btn-select', null);
 
-        bindInput('btn-a', async () => {
+        const interactableButtons = [
+            'btn-up', 'btn-down', 'btn-left', 'btn-right',
+            'btn-a', 'btn-b', 'btn-x', 'btn-y',
+            'btn-select', 'btn-start', 
+            'btn-l1', 'btn-l2', 'btn-r1', 'btn-r2'
+        ];
+        const activeButtons = new Set();
+        
+        const triggerA = async () => {
             if(!isOSReady || popup.classList.contains('visible')) return;
             gmxBridge.audio.resume();
             if (colIdx === 1) {
@@ -563,14 +498,14 @@
                                 gmxBridge.loadRomData(req.result.rom, selectedTitle + '.nes');
                             }, 800);
                         };
-                    } catch(e) {
-                        sysMsg.innerText = "Error loading game.";
-                    }
+                    } catch(e) { sysMsg.innerText = "Error loading game."; }
                 } else if (rowIdx === games.length + 1) { openInstallPopup(); }
             } else { sysMsg.innerText = "Module offline."; sysMsg.style.opacity = 1; }
-        });
+        };
 
-        async function deleteSelectedGame() {
+        const triggerB = () => { if (popup.classList.contains('visible')) closeInstallPopup(); };
+
+        const triggerX = async () => {
             if (!isOSReady || popup.classList.contains('visible') || screen.classList.contains('game-running')) return;
             if (colIdx !== 1) return;
             const gameItems = document.querySelectorAll('.dynamic-game');
@@ -584,16 +519,88 @@
                 const tx = db.transaction(STORE_NAME, "readwrite");
                 tx.objectStore(STORE_NAME).delete(selectedTitle);
                 await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
-            } catch (e) {
-                console.warn("Delete failed", e);
-            }
+            } catch (e) { console.warn("Delete failed", e); }
             
-            await buildXMB();
-            rowIdx = Math.min(rowIdx, maxRows[1] - 1);
-            updateXMB();
-            sysMsg.style.opacity = 0;
-        }
-        bindInput('btn-x', deleteSelectedGame);
+            await buildXMB(); rowIdx = Math.min(rowIdx, maxRows[1] - 1); updateXMB(); sysMsg.style.opacity = 0;
+        };
+
+        // This replaces the old buggy individual event listeners. It scans the screen globally for active touch points.
+        const processInputs = (touches, mouse) => {
+            const nowPressed = new Set();
+            
+            // Log active finger locations
+            if (touches) {
+                for (let i = 0; i < touches.length; i++) {
+                    const el = document.elementFromPoint(touches[i].clientX, touches[i].clientY);
+                    if (el && el.id && interactableButtons.includes(el.id)) nowPressed.add(el.id);
+                }
+            }
+
+            // Log active mouse location
+            if (mouse && mouse.isDown) {
+                const el = document.elementFromPoint(mouse.x, mouse.y);
+                if (el && el.id && interactableButtons.includes(el.id)) nowPressed.add(el.id);
+            }
+
+            // Diff the current state against the previous frame to fire perfect up/down events
+            for (const id of interactableButtons) {
+                const isNow = nowPressed.has(id);
+                const was = activeButtons.has(id);
+                const el = document.getElementById(id);
+                
+                if (isNow && !was) {
+                    activeButtons.add(id);
+                    if (el) el.classList.add('pressed');
+                    
+                    if (screen.classList.contains('game-running')) {
+                        if (gmxBridge.nesInputMap[id] !== undefined) gmxBridge.handleInput(id, true);
+                    } else {
+                        if (id === 'btn-left') navLeft();
+                        if (id === 'btn-right') navRight();
+                        if (id === 'btn-up') navUp();
+                        if (id === 'btn-down') navDown();
+                        if (id === 'btn-b') triggerB();
+                        if (id === 'btn-a') triggerA();
+                        if (id === 'btn-x') triggerX();
+                    }
+                } else if (!isNow && was) {
+                    activeButtons.delete(id);
+                    if (el) el.classList.remove('pressed');
+                    if (screen.classList.contains('game-running')) {
+                        if (gmxBridge.nesInputMap[id] !== undefined) gmxBridge.handleInput(id, false);
+                    }
+                }
+            }
+        };
+
+        let currentTouches = [];
+        let mouseState = { isDown: false, x: 0, y: 0 };
+
+        const handleTouch = (e) => {
+            if (e.target.tagName !== 'INPUT') e.preventDefault(); 
+            currentTouches = e.touches; 
+            processInputs(currentTouches, mouseState);
+        };
+
+        // Attach globally to the window so your thumbs never drop inputs, even if sliding between buttons
+        window.addEventListener('touchstart', handleTouch, {passive: false});
+        window.addEventListener('touchmove', handleTouch, {passive: false});
+        window.addEventListener('touchend', handleTouch, {passive: false});
+        window.addEventListener('touchcancel', handleTouch, {passive: false});
+
+        window.addEventListener('mousedown', e => { 
+            if (e.target.tagName !== 'INPUT') e.preventDefault();
+            mouseState.isDown = true; mouseState.x = e.clientX; mouseState.y = e.clientY; 
+            processInputs(currentTouches, mouseState); 
+        });
+        window.addEventListener('mousemove', e => { 
+            if (mouseState.isDown) { mouseState.x = e.clientX; mouseState.y = e.clientY; processInputs(currentTouches, mouseState); }
+        });
+        window.addEventListener('mouseup', e => { mouseState.isDown = false; processInputs(currentTouches, mouseState); });
+        window.addEventListener('mouseleave', e => { mouseState.isDown = false; processInputs(currentTouches, mouseState); });
+
+
+        // ===================== POWER AND JOYSTICKS =====================
 
         const btnPower = document.getElementById('btn-power'), bootContainer = document.getElementById('boot-logo-container');
         let bootTimers = [];
@@ -609,13 +616,9 @@
                 bootTimers.push(setTimeout(() => bootContainer.classList.add('do-drop'), 200));
                 bootTimers.push(setTimeout(() => { document.getElementById('boot-gmx').classList.add('do-glint'); document.getElementById('boot-reg').classList.add('do-fade-in'); }, 1000));
                 bootTimers.push(setTimeout(() => bootContainer.classList.add('do-fade-out'), 3000));
-                
-                // Bulletproof final boot wrap: Forces class removal even if storage is entirely broken
                 bootTimers.push(setTimeout(() => { 
                     buildXMB().finally(() => { 
-                        screen.classList.remove('boot-white'); 
-                        screen.classList.add('os-ready'); 
-                        isOSReady = true; colIdx = 1; rowIdx = 0; updateXMB(); 
+                        screen.classList.remove('boot-white'); screen.classList.add('os-ready'); isOSReady = true; colIdx = 1; rowIdx = 0; updateXMB(); 
                     }); 
                 }, 3500));
             } else {
@@ -646,13 +649,14 @@
             };
             const handleDrag = (e) => { if (!isDragging) return; if (e.type === 'touchmove') { for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === touchId) { move(e.changedTouches[i]); break; } } else move(e); };
             const stopDrag = () => { isDragging = false; touchId = null; stopNav(); cap.style.transition = 'transform 0.1s linear'; cap.style.transform = 'translate(0px, 0px)'; if (screen.classList.contains('game-running')) gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', 0, 0); };
+            
+            // Joystick continues to use dedicated handlers since it must track movement deltas independently of button hits
             cap.addEventListener('mousedown', startDrag); cap.addEventListener('touchstart', startDrag, {passive: false});
             window.addEventListener('mousemove', handleDrag); window.addEventListener('touchmove', handleDrag, {passive: false});
             window.addEventListener('mouseup', stopDrag); window.addEventListener('touchend', stopDrag); window.addEventListener('mouseleave', stopDrag);
         };
         initJoystick('joystick-socket-left', 'joystick-cap-left', true);
         initJoystick('joystick-socket-right', 'joystick-cap-right', false);
-        document.addEventListener('touchmove', e => { if(e.target.tagName !== 'INPUT') e.preventDefault(); }, {passive: false});
 
         const updateClock = () => {
             const now = new Date(); const month = now.getMonth() + 1, date = now.getDate();
