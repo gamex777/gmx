@@ -100,8 +100,9 @@
     </style>
 </head>
 <body>
-    <input type="file" id="install-rom-upload" accept=".nes" style="display: none;">
-    <input type="file" id="install-cover-upload" accept="image/*" style="display: none;">
+    <input type="file" id="install-rom-upload" accept=".nes" style="position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 1px; height: 1px;">
+    <input type="file" id="install-cover-upload" accept="image/*" style="position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 1px; height: 1px;">
+    
     <div id="rotate-message">PLEASE ROTATE DEVICE</div>
     <div id="gmx-console">
         <div id="left-controls">
@@ -148,7 +149,7 @@
                                 <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                                 <span>About</span>
                             </div>
-                            <div class="xmb-sub">Version 1.3 (Offline)</div>
+                            <div class="xmb-sub">Version 1.4 (Offline)</div>
                         </div>
                     </div>
                     <div id="sys-msg">Press 'A' to execute</div>
@@ -156,9 +157,9 @@
                 <div id="install-popup">
                     <div class="popup-box">
                         <h3>Install to Memory Stick</h3>
-                        <button class="popup-btn" id="popup-select-rom">Select .NES ROM</button>
+                        <label for="install-rom-upload" class="popup-btn" style="cursor: pointer;">Select .NES ROM</label>
                         <div class="file-name" id="popup-rom-name"></div>
-                        <button class="popup-btn" id="popup-select-cover">Select Cover Art</button>
+                        <label for="install-cover-upload" class="popup-btn" style="cursor: pointer;">Select Cover Art</label>
                         <div class="file-name" id="popup-cover-name"></div>
                         <button class="popup-btn install-btn" id="popup-install" disabled>Install</button>
                     </div>
@@ -443,8 +444,9 @@
         let selectedRomFile = null, selectedCoverFile = null;
         function openInstallPopup() { popup.classList.add('visible'); selectedRomFile = null; selectedCoverFile = null; romInput.value = ''; coverInput.value = ''; romNameEl.textContent = ''; coverNameEl.textContent = ''; installBtn.disabled = true; sysMsg.style.opacity = 0; }
         function closeInstallPopup() { popup.classList.remove('visible'); }
-        document.getElementById('popup-select-rom').addEventListener('click', () => romInput.click());
-        document.getElementById('popup-select-cover').addEventListener('click', () => coverInput.click());
+
+        // Notice the JS click handlers have been removed completely. The HTML <label> handles it natively.
+
         romInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.name.toLowerCase().endsWith('.nes')) { selectedRomFile = file; romNameEl.textContent = file.name; installBtn.disabled = false; } 
@@ -524,11 +526,9 @@
             await buildXMB(); rowIdx = Math.min(rowIdx, maxRows[1] - 1); updateXMB(); sysMsg.style.opacity = 0;
         };
 
-        // This replaces the old buggy individual event listeners. It scans the screen globally for active touch points.
         const processInputs = (touches, mouse) => {
             const nowPressed = new Set();
             
-            // Log active finger locations
             if (touches) {
                 for (let i = 0; i < touches.length; i++) {
                     const el = document.elementFromPoint(touches[i].clientX, touches[i].clientY);
@@ -536,13 +536,11 @@
                 }
             }
 
-            // Log active mouse location
             if (mouse && mouse.isDown) {
                 const el = document.elementFromPoint(mouse.x, mouse.y);
                 if (el && el.id && interactableButtons.includes(el.id)) nowPressed.add(el.id);
             }
 
-            // Diff the current state against the previous frame to fire perfect up/down events
             for (const id of interactableButtons) {
                 const isNow = nowPressed.has(id);
                 const was = activeButtons.has(id);
@@ -582,7 +580,6 @@
             processInputs(currentTouches, mouseState);
         };
 
-        // Attach globally to the window so your thumbs never drop inputs, even if sliding between buttons
         window.addEventListener('touchstart', handleTouch, {passive: false});
         window.addEventListener('touchmove', handleTouch, {passive: false});
         window.addEventListener('touchend', handleTouch, {passive: false});
@@ -650,7 +647,6 @@
             const handleDrag = (e) => { if (!isDragging) return; if (e.type === 'touchmove') { for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === touchId) { move(e.changedTouches[i]); break; } } else move(e); };
             const stopDrag = () => { isDragging = false; touchId = null; stopNav(); cap.style.transition = 'transform 0.1s linear'; cap.style.transform = 'translate(0px, 0px)'; if (screen.classList.contains('game-running')) gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', 0, 0); };
             
-            // Joystick continues to use dedicated handlers since it must track movement deltas independently of button hits
             cap.addEventListener('mousedown', startDrag); cap.addEventListener('touchstart', startDrag, {passive: false});
             window.addEventListener('mousemove', handleDrag); window.addEventListener('touchmove', handleDrag, {passive: false});
             window.addEventListener('mouseup', stopDrag); window.addEventListener('touchend', stopDrag); window.addEventListener('mouseleave', stopDrag);
