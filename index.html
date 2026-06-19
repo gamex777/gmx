@@ -102,7 +102,7 @@
 <body>
     <input type="file" id="install-rom-upload" accept=".nes" style="display: none;">
     <input type="file" id="install-cover-upload" accept="image/*" style="display: none;">
-    <div id="rotate-message">PLEASE ROTATE DEVICE <br> 🔄</div>
+    <div id="rotate-message">PLEASE ROTATE DEVICE</div>
     <div id="gmx-console">
         <div id="left-controls">
             <div class="shoulder-group left-shoulder"><div class="btn-shoulder" id="btn-l1">L1</div><div class="btn-shoulder" id="btn-l2">L2</div></div>
@@ -189,21 +189,28 @@
             constructor() {
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
                 this.sampleRate = this.context.sampleRate;
-                this.chunkSize = 2048; 
+                this.chunkSize = 2048;
                 this.lBuffer = new Float32Array(this.chunkSize);
                 this.rBuffer = new Float32Array(this.chunkSize);
                 this.writePtr = 0;
                 this.nextPlayTime = 0;
                 this.unlocked = false;
             }
+
             pushSample(l, r) {
                 this.lBuffer[this.writePtr] = l;
                 this.rBuffer[this.writePtr] = r;
                 this.writePtr++;
-                if (this.writePtr === this.chunkSize) this.flush();
+                if (this.writePtr === this.chunkSize) {
+                    this.flush();
+                }
             }
+
             flush() {
-                if (this.context.state !== 'running') { this.writePtr = 0; return; }
+                if (this.context.state !== 'running') {
+                    this.writePtr = 0;
+                    return;
+                }
                 const buffer = this.context.createBuffer(2, this.chunkSize, this.sampleRate);
                 buffer.getChannelData(0).set(this.lBuffer);
                 buffer.getChannelData(1).set(this.rBuffer);
@@ -211,24 +218,41 @@
                 source.buffer = buffer;
                 source.connect(this.context.destination);
                 const now = this.context.currentTime;
-                if (this.nextPlayTime < now) this.nextPlayTime = now + 0.02; 
+                if (this.nextPlayTime < now) {
+                    this.nextPlayTime = now + 0.02;
+                }
                 source.start(this.nextPlayTime);
                 this.nextPlayTime += buffer.duration;
                 this.writePtr = 0;
             }
-            resume() { if (this.context.state === 'suspended') this.context.resume(); }
-            stop() { this.writePtr = 0; this.nextPlayTime = 0; }
+
+            resume() {
+                if (this.context.state === 'suspended') {
+                    this.context.resume();
+                }
+            }
+
+            stop() {
+                this.writePtr = 0;
+                this.nextPlayTime = 0;
+            }
+
             unlock() {
                 if (this.unlocked) return;
-                if (this.context.state === 'suspended') this.context.resume();
+                if (this.context.state === 'suspended') {
+                    this.context.resume();
+                }
                 const osc = this.context.createOscillator();
-                osc.type = 'sine'; osc.frequency.value = 0; osc.connect(this.context.destination);
-                osc.start(0); osc.stop(0.01);
+                osc.type = 'sine';
+                osc.frequency.value = 0;
+                osc.connect(this.context.destination);
+                osc.start(0);
+                osc.stop(0.01);
                 this.unlocked = true;
             }
         }
 
-        // ===================== JSNES BRIDGE =====================
+        // ===================== JSNES BRIDGE (SNAPPY BUTTONS, SMOOTH STICKS, GLITCH-FREE AUDIO) =====================
         class GMXEmulatorBridge {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -236,86 +260,159 @@
                 this.isRunning = false;
                 this.nes = null;
                 this.audio = new GMXAudio();
+
                 this.imageData = this.ctx.createImageData(256, 240);
                 this.buf32 = new Uint32Array(this.imageData.data.buffer);
+
                 this.nesInputMap = {
                     'btn-a': 0, 'btn-b': 1, 'btn-select': 2, 'btn-start': 3,
                     'btn-up': 4, 'btn-down': 5, 'btn-left': 6, 'btn-right': 7
                 };
-                this._intervalId = null;
-                this._renderReqId = null;
+
+                this._frameDuration = 1000 / 60;   // ~16.667 ms
                 this._lastFrameTime = 0;
                 this._frameAccumulator = 0;
+                this._renderReqId = null;
                 this._pendingFrame = false;
+                this._immediateTickPending = false;   // true after a digital-input immediate frame
             }
+
             loadRomData(arrayBuffer, filename) {
                 this._stopCurrent();
+
                 this.nes = new jsnes.NES({
                     onFrame: (frameBuffer) => {
-                        for (let i = 0; i < frameBuffer.length; i++) this.buf32[i] = 0xFF000000 | frameBuffer[i];
+                        for (let i = 0; i < frameBuffer.length; i++) {
+                            this.buf32[i] = 0xFF000000 | frameBuffer[i];
+                        }
                         this._pendingFrame = true;
                     },
-                    onAudioSample: (l, r) => this.audio.pushSample(l, r),
+                    onAudioSample: (l, r) => {
+                        this.audio.pushSample(l, r);
+                    },
                     sampleRate: this.audio.context.sampleRate
                 });
+
                 const romBytes = new Uint8Array(arrayBuffer);
                 let romString = '';
-                for (let i = 0; i < romBytes.length; i++) romString += String.fromCharCode(romBytes[i]);
-                try { this.nes.loadROM(romString); } catch (e) { this.renderError("BOOT FAILURE", "Invalid NES ROM"); return; }
+                for (let i = 0; i < romBytes.length; i++) {
+                    romString += String.fromCharCode(romBytes[i]);
+                }
+
+                try {
+                    this.nes.loadROM(romString);
+                } catch (e) {
+                    this.renderError("BOOT FAILURE", "Invalid NES ROM");
+                    return;
+                }
+
                 this.isRunning = true;
-                this.canvas.width = 256; this.canvas.height = 240;
+                this.canvas.width = 256;
+                this.canvas.height = 240;
                 this._startNESLoop();
             }
+
             _startNESLoop() {
-                const frameTime = 1000 / 60;
                 this._lastFrameTime = performance.now();
                 this._frameAccumulator = 0;
-                const tick = () => {
+                this._immediateTickPending = false;
+
+                const tickLoop = () => {
                     if (!this.isRunning || !this.nes) return;
+
                     const now = performance.now();
                     let delta = now - this._lastFrameTime;
                     this._lastFrameTime = now;
                     if (delta > 100) delta = 100;
+
                     this._frameAccumulator += delta;
-                    while (this._frameAccumulator >= frameTime) {
+                    while (this._frameAccumulator >= this._frameDuration) {
+                        // If an immediate frame was already processed this cycle, skip one to keep 60 FPS
+                        if (this._immediateTickPending) {
+                            this._frameAccumulator -= this._frameDuration;
+                            this._immediateTickPending = false;
+                            continue;
+                        }
                         this.nes.frame();
-                        this._frameAccumulator -= frameTime;
+                        this._frameAccumulator -= this._frameDuration;
                     }
+
+                    // Repaint if needed
+                    if (this._pendingFrame) {
+                        this.ctx.putImageData(this.imageData, 0, 0);
+                        this._pendingFrame = false;
+                    }
+
+                    this._renderReqId = requestAnimationFrame(tickLoop);
                 };
-                this._intervalId = setInterval(tick, 1);
-                const drawFrame = () => {
-                    if (this._pendingFrame) { this.ctx.putImageData(this.imageData, 0, 0); this._pendingFrame = false; }
-                    if (this.isRunning) this._renderReqId = requestAnimationFrame(drawFrame);
-                };
-                this._renderReqId = requestAnimationFrame(drawFrame);
+                this._renderReqId = requestAnimationFrame(tickLoop);
             }
+
+            // Called instantly after a digital button press (A, B, etc.)
+            immediateTick() {
+                if (!this.isRunning || !this.nes || this._immediateTickPending) return;
+                // Process exactly one frame right now – the rAF loop will skip its next frame
+                this.nes.frame();
+                this._immediateTickPending = true;
+
+                // Repaint immediately
+                if (this._pendingFrame) {
+                    this.ctx.putImageData(this.imageData, 0, 0);
+                    this._pendingFrame = false;
+                }
+            }
+
             handleInput(domId, isPressed) {
                 if (!this.isRunning || !this.nes) return;
                 const nesBtn = this.nesInputMap[domId];
                 if (nesBtn !== undefined) {
-                    if (isPressed) this.nes.buttonDown(1, nesBtn);
-                    else this.nes.buttonUp(1, nesBtn);
+                    if (isPressed) {
+                        this.nes.buttonDown(1, nesBtn);
+                    } else {
+                        this.nes.buttonUp(1, nesBtn);
+                    }
+                    // Digital input → instant response
+                    this.immediateTick();
                 }
             }
+
+            // Analog sticks update the NES directional state but do NOT force an immediate frame.
+            // This prevents audio glitching when the stick is moved rapidly.
             handleAnalog(stickId, nx, ny) {
                 if (!this.isRunning) return;
                 const deadzone = 0.4;
-                ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => this.handleInput(btn, false));
-                if (ny < -deadzone) this.handleInput('btn-up', true);
-                if (ny > deadzone) this.handleInput('btn-down', true);
-                if (nx < -deadzone) this.handleInput('btn-left', true);
-                if (nx > deadzone) this.handleInput('btn-right', true);
+
+                // Clear all digital directions first
+                ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => {
+                    this.nes.buttonUp(1, this.nesInputMap[btn]);
+                });
+
+                // Apply new directions based on stick position
+                if (ny < -deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-up']);
+                if (ny > deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-down']);
+                if (nx < -deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-left']);
+                if (nx > deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-right']);
+
+                // Note: no immediateTick() here – the regular rAF loop will pick up the input
             }
+
             _stopCurrent() {
                 this.isRunning = false;
-                if (this._intervalId) { clearInterval(this._intervalId); this._intervalId = null; }
-                if (this._renderReqId) { cancelAnimationFrame(this._renderReqId); this._renderReqId = null; }
+                if (this._renderReqId) {
+                    cancelAnimationFrame(this._renderReqId);
+                    this._renderReqId = null;
+                }
                 this.nes = null;
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 if (this.audio) this.audio.stop();
                 this._pendingFrame = false;
+                this._immediateTickPending = false;
             }
-            stop() { this._stopCurrent(); }
+
+            stop() {
+                this._stopCurrent();
+            }
+
             renderError(title, subtitle) {
                 this._stopCurrent();
                 const w = this.canvas.width || 256, h = this.canvas.height || 240;
@@ -324,40 +421,54 @@
                 this.ctx.fillStyle = '#ffffff'; this.ctx.font = '12px sans-serif'; this.ctx.fillText(subtitle, 40, h/2 + 25);
             }
         }
+
         const gmxBridge = new GMXEmulatorBridge('game-canvas');
 
-        // ===================== DATABASE & XMB =====================
-        const DB_NAME = "GMX_Storage"; const STORE_NAME = "library";
+        // --- IndexedDB, XMB, install popup, controls, power, joysticks, clock ---
+        const DB_NAME = "GMX_Storage";
+        const STORE_NAME = "library";
         function initDB() { return new Promise((resolve, reject) => { const req = indexedDB.open(DB_NAME, 1); req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME, { keyPath: "id" }); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
         async function saveGameToDB(romFile, imgFile) {
-            const db = await initDB(); const romBuffer = await romFile.arrayBuffer();
-            let coverDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="; 
+            const db = await initDB();
+            const romBuffer = await romFile.arrayBuffer();
+            let coverDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
             if (imgFile) { coverDataUrl = await new Promise(res => { const reader = new FileReader(); reader.onload = e => res(e.target.result); reader.readAsDataURL(imgFile); }); }
-            const gameId = romFile.name.replace(/\.[^/.]+$/, ""); 
+            const gameId = romFile.name.replace(/\.[^/.]+$/, "");
             const record = { id: gameId, title: gameId, rom: romBuffer, cover: coverDataUrl };
             return new Promise((resolve, reject) => { const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).put(record); tx.oncomplete = resolve; tx.onerror = reject; });
         }
 
-        let isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0; 
+        let currentScale = 1;
+        const consoleEl = document.getElementById('gmx-console');
+        const applyScale = () => { if (window.innerHeight > window.innerWidth) return; currentScale = Math.min((window.innerWidth * 0.95) / 735, (window.innerHeight * 0.95) / 350, 1); consoleEl.style.transform = `scale(${currentScale})`; };
+        window.addEventListener('resize', applyScale); applyScale();
+
+        let isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0;
         const maxRows = [1, 1, 1];
-        const grid = document.getElementById('xmb-grid'), cols = document.querySelectorAll('.xmb-col');
-        const sysMsg = document.getElementById('sys-msg'), screen = document.getElementById('screen');
+        const grid = document.getElementById('xmb-grid');
+        const cols = document.querySelectorAll('.xmb-col');
+        const sysMsg = document.getElementById('sys-msg');
+        const screen = document.getElementById('screen');
 
         async function buildXMB() {
             const db = await initDB();
             return new Promise((resolve) => {
-                const tx = db.transaction(STORE_NAME, "readonly"); const req = tx.objectStore(STORE_NAME).getAll();
+                const tx = db.transaction(STORE_NAME, "readonly");
+                const req = tx.objectStore(STORE_NAME).getAll();
                 req.onsuccess = () => {
-                    const games = req.result, gameCol = document.getElementById('game-column'), memStick = document.getElementById('memory-stick');
+                    const games = req.result;
+                    const gameCol = document.getElementById('game-column');
+                    const memStick = document.getElementById('memory-stick');
                     document.querySelectorAll('.dynamic-game').forEach(el => el.remove());
-                    let newMaxRows = 1; 
+                    let newMaxRows = 1;
                     games.forEach(game => {
-                        const div = document.createElement('div'); div.className = 'xmb-sub game-item dynamic-game';
+                        const div = document.createElement('div');
+                        div.className = 'xmb-sub game-item dynamic-game';
                         div.innerHTML = `<img src="${game.cover}" class="box-art" crossorigin="anonymous"><div class="game-details"><span class="game-title">${game.title}</span></div>`;
                         gameCol.insertBefore(div, memStick);
                         newMaxRows++;
                     });
-                    maxRows[1] = newMaxRows; 
+                    maxRows[1] = newMaxRows;
                     resolve();
                 };
             });
@@ -369,129 +480,73 @@
                 if (c === colIdx) { col.classList.add('active-col'); Array.from(col.children).forEach((item, r) => item.classList.toggle('active-item', r === rowIdx)); }
                 else { col.classList.remove('active-col'); Array.from(col.children).forEach(item => item.classList.remove('active-item')); }
             });
-            const gameBgLayer = document.getElementById('game-bg-layer'), activeItem = document.querySelector('.active-col .active-item.dynamic-game img');
+            const gameBgLayer = document.getElementById('game-bg-layer');
+            const activeItem = document.querySelector('.active-col .active-item.dynamic-game img');
             if (activeItem) { gameBgLayer.style.backgroundImage = `linear-gradient(to right, rgba(30,31,58,0.95) 0%, rgba(30,31,58,0.4) 60%, rgba(0,0,0,0) 100%), url('${activeItem.src}')`; gameBgLayer.style.opacity = 1; }
             else gameBgLayer.style.opacity = 0;
+
             const gameItems = document.querySelectorAll('.dynamic-game');
-            if (colIdx === 1 && rowIdx > 0 && rowIdx <= gameItems.length) { sysMsg.innerText = "(X) Delete Game"; sysMsg.style.opacity = 1; } 
-            else { sysMsg.innerText = ""; sysMsg.style.opacity = 0; }
+            if (colIdx === 1 && rowIdx > 0 && rowIdx <= gameItems.length) {
+                sysMsg.innerText = "(X) Delete Game";
+                sysMsg.style.opacity = 1;
+            } else {
+                sysMsg.innerText = "";
+                sysMsg.style.opacity = 0;
+            }
         };
 
-        const popup = document.getElementById('install-popup'), romInput = document.getElementById('install-rom-upload'), coverInput = document.getElementById('install-cover-upload');
-        const romNameEl = document.getElementById('popup-rom-name'), coverNameEl = document.getElementById('popup-cover-name'), installBtn = document.getElementById('popup-install');
+        const popup = document.getElementById('install-popup');
+        const romInput = document.getElementById('install-rom-upload');
+        const coverInput = document.getElementById('install-cover-upload');
+        const romNameEl = document.getElementById('popup-rom-name');
+        const coverNameEl = document.getElementById('popup-cover-name');
+        const installBtn = document.getElementById('popup-install');
         let selectedRomFile = null, selectedCoverFile = null;
         function openInstallPopup() { popup.classList.add('visible'); selectedRomFile = null; selectedCoverFile = null; romInput.value = ''; coverInput.value = ''; romNameEl.textContent = ''; coverNameEl.textContent = ''; installBtn.disabled = true; sysMsg.style.opacity = 0; }
         function closeInstallPopup() { popup.classList.remove('visible'); }
         document.getElementById('popup-select-rom').addEventListener('click', () => romInput.click());
         document.getElementById('popup-select-cover').addEventListener('click', () => coverInput.click());
-        romInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file && file.name.toLowerCase().endsWith('.nes')) { selectedRomFile = file; romNameEl.textContent = file.name; installBtn.disabled = false; } else { alert('Please select a .nes file.'); romInput.value = ''; } });
-        coverInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { selectedCoverFile = file; coverNameEl.textContent = file.name; } });
+        romInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.name.toLowerCase().endsWith('.nes')) {
+                selectedRomFile = file;
+                romNameEl.textContent = file.name;
+                installBtn.disabled = false;
+            } else {
+                alert('Please select a .nes file.');
+                romInput.value = '';
+            }
+        });
+        coverInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) { selectedCoverFile = file; coverNameEl.textContent = file.name; }
+        });
         document.getElementById('popup-install').addEventListener('click', async () => {
             if (!selectedRomFile) return;
-            sysMsg.innerText = `Installing ${selectedRomFile.name}...`; sysMsg.style.opacity = 1; closeInstallPopup();
+            sysMsg.innerText = `Installing ${selectedRomFile.name}...`; sysMsg.style.opacity = 1;
+            closeInstallPopup();
             await saveGameToDB(selectedRomFile, selectedCoverFile);
             sysMsg.innerText = "Install Complete!";
             setTimeout(() => { sysMsg.style.opacity = 0; buildXMB().then(() => updateXMB()); }, 1500);
         });
 
-        // ===================== NEW LAYOUT-AWARE TOUCH SYSTEM =====================
-        const navActions = {};
-
-        const handleButtonPress = (id) => {
-            const el = document.getElementById(id);
-            if (!el || el.classList.contains('pressed')) return;
-            el.classList.add('pressed');
-            if (screen.classList.contains('game-running')) { gmxBridge.handleInput(id, true); } 
-            else if (navActions[id]) { navActions[id](); }
-        };
-
-        const handleButtonRelease = (id) => {
-            const el = document.getElementById(id);
-            if (!el || !el.classList.contains('pressed')) return;
-            el.classList.remove('pressed');
-            if (screen.classList.contains('game-running')) { gmxBridge.handleInput(id, false); }
-        };
-
         const bindInput = (id, navAction) => {
-            navActions[id] = navAction;
             const el = document.getElementById(id);
-            if (!el) return;
-            const trigger = (e) => { e.preventDefault(); handleButtonPress(id); };
-            const release = (e) => { e.preventDefault(); handleButtonRelease(id); };
-            el.addEventListener('mousedown', trigger);
-            el.addEventListener('mouseup', release);
-            el.addEventListener('mouseleave', release);
+            const trigger = (e) => { e.preventDefault(); el.classList.add('pressed'); if (screen.classList.contains('game-running')) gmxBridge.handleInput(id, true); else if (navAction) navAction(); };
+            const release = (e) => { e.preventDefault(); el.classList.remove('pressed'); if (screen.classList.contains('game-running')) gmxBridge.handleInput(id, false); };
+            el.addEventListener('mousedown', trigger); el.addEventListener('touchstart', trigger, {passive: false});
+            el.addEventListener('mouseup', release); el.addEventListener('touchend', release); el.addEventListener('mouseleave', release);
         };
-
-        let buttonRects = [];
-        const updateButtonRects = () => {
-            const els = document.querySelectorAll('.d-btn, .btn-action, .select-btn, .start-btn, .btn-shoulder');
-            buttonRects = Array.from(els).map(el => {
-                const rect = el.getBoundingClientRect();
-                // 1.8x Multiplier creates overlapping hitboxes so a thumb between B and A triggers both
-                let multiplier = (el.classList.contains('btn-action') || el.classList.contains('d-btn')) ? 1.8 : 1.2;
-                return {
-                    id: el.id,
-                    cx: rect.left + rect.width / 2,
-                    cy: rect.top + rect.height / 2,
-                    radius: (Math.max(rect.width, rect.height) / 2) * multiplier
-                };
-            });
-        };
-
-        const activeTouchButtons = new Set();
-        const handleGlobalTouch = (e) => {
-            // Ignore touches on joysticks so they process independently
-            const validTouches = Array.from(e.touches).filter(t => !t.target.closest('.analog-stick'));
-            if (validTouches.length === 0 && e.touches.length > 0) return;
-
-            const currentlyTouched = new Set();
-            validTouches.forEach(t => {
-                buttonRects.forEach(b => {
-                    const dx = t.clientX - b.cx;
-                    const dy = t.clientY - b.cy;
-                    if (Math.sqrt(dx * dx + dy * dy) <= b.radius) {
-                        currentlyTouched.add(b.id);
-                    }
-                });
-            });
-
-            currentlyTouched.forEach(id => {
-                if (!activeTouchButtons.has(id)) { activeTouchButtons.add(id); handleButtonPress(id); }
-            });
-
-            activeTouchButtons.forEach(id => {
-                if (!currentlyTouched.has(id)) { activeTouchButtons.delete(id); handleButtonRelease(id); }
-            });
-        };
-
-        // Attach global listeners for touch routing
-        document.addEventListener('touchstart', handleGlobalTouch, { passive: false });
-        document.addEventListener('touchmove', handleGlobalTouch, { passive: false });
-        document.addEventListener('touchend', handleGlobalTouch, { passive: false });
-        document.addEventListener('touchcancel', handleGlobalTouch, { passive: false });
-
-        // Screen resizing & bounding box tracking
-        let currentScale = 1;
-        const consoleEl = document.getElementById('gmx-console');
-        const applyScale = () => { 
-            if (window.innerHeight > window.innerWidth) return; 
-            currentScale = Math.min((window.innerWidth * 0.95) / 735, (window.innerHeight * 0.95) / 350, 1); 
-            consoleEl.style.transform = `scale(${currentScale})`; 
-            setTimeout(updateButtonRects, 100); 
-        };
-        window.addEventListener('resize', applyScale); applyScale();
-
-        // ===================== INPUT BINDINGS =====================
         const navLeft = () => { if(colIdx > 0 && isOSReady && !popup.classList.contains('visible')) { colIdx--; rowIdx = 0; updateXMB(); } };
         const navRight = () => { if(colIdx < 2 && isOSReady && !popup.classList.contains('visible')) { colIdx++; rowIdx = 0; updateXMB(); } };
         const navUp = () => { if(rowIdx > 0 && isOSReady && !popup.classList.contains('visible')) { rowIdx--; updateXMB(); } };
         const navDown = () => { if(rowIdx < maxRows[colIdx] && isOSReady && !popup.classList.contains('visible')) { rowIdx++; updateXMB(); } };
         bindInput('btn-left', navLeft); bindInput('btn-right', navRight); bindInput('btn-up', navUp); bindInput('btn-down', navDown);
         bindInput('btn-b', () => { if (popup.classList.contains('visible')) closeInstallPopup(); });
-        bindInput('btn-y', null); bindInput('btn-l1', null); bindInput('btn-l2', null); bindInput('btn-r1', null); bindInput('btn-r2', null);
+        bindInput('btn-y', null);
+        bindInput('btn-l1', null); bindInput('btn-l2', null); bindInput('btn-r1', null); bindInput('btn-r2', null);
         bindInput('btn-start', null); bindInput('btn-select', null);
-        
+
         bindInput('btn-a', async () => {
             if(!isOSReady || popup.classList.contains('visible')) return;
             gmxBridge.audio.resume();
@@ -503,7 +558,8 @@
                     const db = await initDB(); const tx = db.transaction(STORE_NAME, "readonly"); const req = tx.objectStore(STORE_NAME).get(selectedTitle);
                     req.onsuccess = () => {
                         setTimeout(() => {
-                            screen.classList.add('game-running'); screen.classList.remove('os-ready');
+                            screen.classList.add('game-running');
+                            screen.classList.remove('os-ready');
                             gmxBridge.loadRomData(req.result.rom, selectedTitle + '.nes');
                         }, 800);
                     };
@@ -512,28 +568,34 @@
         });
 
         async function deleteSelectedGame() {
-            if (!isOSReady || popup.classList.contains('visible') || screen.classList.contains('game-running') || colIdx !== 1) return;
+            if (!isOSReady || popup.classList.contains('visible') || screen.classList.contains('game-running')) return;
+            if (colIdx !== 1) return;
             const gameItems = document.querySelectorAll('.dynamic-game');
             if (rowIdx < 1 || rowIdx > gameItems.length) return;
             const selectedTitle = gameItems[rowIdx - 1].querySelector('.game-title').innerText;
-            sysMsg.innerText = `Deleting ${selectedTitle}...`; sysMsg.style.opacity = 1;
-            const db = await initDB(); const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).delete(selectedTitle);
+            sysMsg.innerText = `Deleting ${selectedTitle}...`;
+            sysMsg.style.opacity = 1;
+            const db = await initDB();
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            tx.objectStore(STORE_NAME).delete(selectedTitle);
             await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
-            await buildXMB(); rowIdx = Math.min(rowIdx, maxRows[1] - 1); updateXMB(); sysMsg.style.opacity = 0;
+            await buildXMB();
+            rowIdx = Math.min(rowIdx, maxRows[1] - 1);
+            updateXMB();
+            sysMsg.style.opacity = 0;
         }
         bindInput('btn-x', deleteSelectedGame);
 
-        // ===================== POWER CONTROLS & JOYSTICKS =====================
         const btnPower = document.getElementById('btn-power'), bootContainer = document.getElementById('boot-logo-container');
         let bootTimers = [];
         const togglePower = (e) => {
             if(e) e.preventDefault();
-            gmxBridge.audio.unlock(); 
+            gmxBridge.audio.unlock();
             isPoweredOn = !isPoweredOn; isOSReady = false;
             bootTimers.forEach(t => clearTimeout(t)); bootTimers = [];
             if(isPoweredOn) {
                 document.getElementById('power-led').classList.add('is-on');
-                screen.classList.add('boot-white'); 
+                screen.classList.add('boot-white');
                 bootTimers.push(setTimeout(() => bootContainer.classList.add('do-drop'), 200));
                 bootTimers.push(setTimeout(() => { document.getElementById('boot-gmx').classList.add('do-glint'); document.getElementById('boot-reg').classList.add('do-fade-in'); }, 1000));
                 bootTimers.push(setTimeout(() => bootContainer.classList.add('do-fade-out'), 3000));
@@ -570,12 +632,13 @@
             window.addEventListener('mousemove', handleDrag); window.addEventListener('touchmove', handleDrag, {passive: false});
             window.addEventListener('mouseup', stopDrag); window.addEventListener('touchend', stopDrag); window.addEventListener('mouseleave', stopDrag);
         };
-        initJoystick('joystick-socket-left', 'joystick-cap-left', true); initJoystick('joystick-socket-right', 'joystick-cap-right', false);
+        initJoystick('joystick-socket-left', 'joystick-cap-left', true);
+        initJoystick('joystick-socket-right', 'joystick-cap-right', false);
         document.addEventListener('touchmove', e => { if(e.target.tagName !== 'INPUT') e.preventDefault(); }, {passive: false});
 
         const updateClock = () => {
             const now = new Date(); const month = now.getMonth() + 1, date = now.getDate();
-            let hours = now.getHours(); const ampm = hours >= 12 ? 'PM' : 'AM'; hours = hours % 12 || 12; 
+            let hours = now.getHours(); const ampm = hours >= 12 ? 'PM' : 'AM'; hours = hours % 12 || 12;
             const minutes = now.getMinutes().toString().padStart(2, '0');
             const clockEl = document.getElementById('xmb-clock'); if (clockEl) clockEl.innerText = `${month}/${date} ${hours}:${minutes}${ampm}`;
         };
