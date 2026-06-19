@@ -184,11 +184,12 @@
     </div>
 
     <script>
-        // ===================== AUDIO CONTROLLER (LAZY CONTEXT FOR IOS) =====================
+        // ===================== AUDIO CONTROLLER (EAGER CONTEXT, IOS SAFE) =====================
         class GMXAudio {
             constructor() {
-                this.context = null;
-                this.sampleRate = 44100; // default, will be updated on first use
+                // Create context immediately (suspended until user gesture resumes it)
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+                this.sampleRate = this.context.sampleRate;
                 this.chunkSize = 2048;
                 this.lBuffer = new Float32Array(this.chunkSize);
                 this.rBuffer = new Float32Array(this.chunkSize);
@@ -197,15 +198,7 @@
                 this.unlocked = false;
             }
 
-            _ensureContext() {
-                if (!this.context) {
-                    this.context = new (window.AudioContext || window.webkitAudioContext)();
-                    this.sampleRate = this.context.sampleRate;
-                }
-            }
-
             pushSample(l, r) {
-                this._ensureContext();
                 this.lBuffer[this.writePtr] = l;
                 this.rBuffer[this.writePtr] = r;
                 this.writePtr++;
@@ -215,7 +208,6 @@
             }
 
             flush() {
-                this._ensureContext();
                 if (this.context.state !== 'running') {
                     this.writePtr = 0;
                     return;
@@ -230,9 +222,9 @@
                 source.connect(this.context.destination);
 
                 const now = this.context.currentTime;
-                const outputLatency = this.context.outputLatency || 0.03; // iOS Safari ~0.02-0.03
+                const outputLatency = this.context.outputLatency || 0.03; // iOS typical: ~0.02-0.03s
 
-                // Safety margin to avoid scheduling in the past
+                // Never schedule in the past – use a small safety margin
                 if (this.nextPlayTime < now + outputLatency) {
                     this.nextPlayTime = now + outputLatency + 0.01;
                 }
@@ -243,7 +235,6 @@
             }
 
             resume() {
-                this._ensureContext();
                 if (this.context.state === 'suspended') {
                     this.context.resume();
                 }
@@ -255,12 +246,11 @@
             }
 
             unlock() {
-                this._ensureContext();
                 if (this.unlocked) return;
                 if (this.context.state === 'suspended') {
                     this.context.resume();
                 }
-                // Play a silent sound to fully unlock iOS audio
+                // Silent buffer to fully activate iOS audio
                 const osc = this.context.createOscillator();
                 osc.type = 'sine';
                 osc.frequency.value = 0;
@@ -271,7 +261,7 @@
             }
         }
 
-        // ===================== JSNES BRIDGE (RAF LOOP FOR SMOOTH PLAYBACK) =====================
+        // ===================== JSNES BRIDGE (rAF LOOP + POINTER INPUTS) =====================
         class GMXEmulatorBridge {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -292,9 +282,6 @@
 
             loadRomData(arrayBuffer, filename) {
                 this._stopCurrent();
-
-                // Ensure audio context exists before creating NES (which needs sampleRate)
-                this.audio._ensureContext();
 
                 this.nes = new jsnes.NES({
                     onFrame: (frameBuffer) => {
@@ -329,7 +316,7 @@
             }
 
             _startNESLoop() {
-                const frameTime = 1000 / 60; // 16.666 ms per NES frame
+                const frameTime = 1000 / 60;
                 let lastTime = performance.now();
 
                 const loop = (now) => {
@@ -337,15 +324,14 @@
 
                     let delta = now - lastTime;
                     lastTime = now;
-                    if (delta > 100) delta = 100; // prevent spiral of death
+                    if (delta > 100) delta = 100;
 
                     this._frameAccumulator += delta;
                     while (this._frameAccumulator >= frameTime) {
-                        this.nes.frame();          // emulates one frame, triggers audio
+                        this.nes.frame();
                         this._frameAccumulator -= frameTime;
                     }
 
-                    // Draw if a new frame was generated
                     if (this._pendingFrame) {
                         this.ctx.putImageData(this.imageData, 0, 0);
                         this._pendingFrame = false;
@@ -375,7 +361,6 @@
             handleAnalog(stickId, nx, ny) {
                 if (!this.isRunning) return;
                 const deadzone = 0.4;
-                // Do nothing if stick is inside the dead zone – don't touch D‑pad
                 if (Math.abs(nx) < deadzone && Math.abs(ny) < deadzone) return;
 
                 ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => {
@@ -520,13 +505,42 @@
             setTimeout(() => { sysMsg.style.opacity = 0; buildXMB().then(() => updateXMB()); }, 1500);
         });
 
+        // Improved bindInput with pointer events (iOS reliable)
         const bindInput = (id, navAction) => {
             const el = document.getElementById(id);
-            const trigger = (e) => { e.preventDefault(); el.classList.add('pressed'); if (screen.classList.contains('game-running')) gmxBridge.handleInput(id, true); else if (navAction) navAction(); };
-            const release = (e) => { e.preventDefault(); el.classList.remove('pressed'); if (screen.classList.contains('game-running')) gmxBridge.handleInput(id, false); };
-            el.addEventListener('mousedown', trigger); el.addEventListener('touchstart', trigger, {passive: false});
-            el.addEventListener('mouseup', release); el.addEventListener('touchend', release); el.addEventListener('mouseleave', release);
+            const trigger = (e) => {
+                e.preventDefault();
+                el.classList.add('pressed');
+                if (screen.classList.contains('game-running')) {
+                    gmxBridge.handleInput(id, true);
+                } else if (navAction) {
+                    navAction();
+                }
+                // Capture pointer so we always get the up event
+                if (e.target.hasPointerCapture) {
+                    e.target.setPointerCapture(e.pointerId);
+                }
+            };
+            const release = (e) => {
+                e.preventDefault();
+                el.classList.remove('pressed');
+                if (screen.classList.contains('game-running')) {
+                    gmxBridge.handleInput(id, false);
+                }
+            };
+
+            // Pointer events (works on iOS 13+)
+            el.addEventListener('pointerdown', trigger);
+            el.addEventListener('pointerup', release);
+            el.addEventListener('pointerleave', release);
+            el.addEventListener('pointercancel', release);
+
+            // Fallback mouse events for desktop / old browsers
+            el.addEventListener('mousedown', trigger);
+            el.addEventListener('mouseup', release);
+            el.addEventListener('mouseleave', release);
         };
+
         const navLeft = () => { if(colIdx > 0 && isOSReady && !popup.classList.contains('visible')) { colIdx--; rowIdx = 0; updateXMB(); } };
         const navRight = () => { if(colIdx < 2 && isOSReady && !popup.classList.contains('visible')) { colIdx++; rowIdx = 0; updateXMB(); } };
         const navUp = () => { if(rowIdx > 0 && isOSReady && !popup.classList.contains('visible')) { rowIdx--; updateXMB(); } };
@@ -584,7 +598,7 @@
         let bootTimers = [];
         const togglePower = (e) => {
             if(e) e.preventDefault();
-            gmxBridge.audio.unlock(); 
+            gmxBridge.audio.unlock();   // unlocks iOS audio (context already exists)
 
             isPoweredOn = !isPoweredOn; isOSReady = false;
             bootTimers.forEach(t => clearTimeout(t)); bootTimers = [];
@@ -603,7 +617,8 @@
                 gmxBridge.stop(); closeInstallPopup();
             }
         };
-        btnPower.addEventListener('click', togglePower); btnPower.addEventListener('touchstart', togglePower, {passive: false});
+        btnPower.addEventListener('pointerdown', togglePower);
+        btnPower.addEventListener('mousedown', togglePower);
 
         const initJoystick = (socketId, capId, isLeftStick) => {
             const socket = document.getElementById(socketId), cap = document.getElementById(capId);
@@ -611,9 +626,10 @@
             const executeNav = (dir) => { if (screen.classList.contains('game-running') || popup.classList.contains('visible')) return; if (isOSReady) { if (dir === 'left') navLeft(); if (dir === 'right') navRight(); if (dir === 'up') navUp(); if (dir === 'down') navDown(); } };
             const trigNav = (dir) => { if (curDir === dir) return; curDir = dir; clearInterval(navInt); executeNav(dir); navInt = setInterval(() => executeNav(dir), 200); };
             const stopNav = () => { clearInterval(navInt); navInt = null; curDir = null; };
-            const startDrag = (e) => { isDragging = true; cap.style.transition = 'none'; const r = socket.getBoundingClientRect(); originX = r.left + r.width/2; originY = r.top + r.height/2; maxRad = (socket.offsetWidth/2) - (cap.offsetWidth/2) + 5; if (e.type === 'touchstart') { touchId = e.changedTouches[0].identifier; move(e.changedTouches[0]); } else move(e); };
+            const startDrag = (e) => { isDragging = true; cap.style.transition = 'none'; const r = socket.getBoundingClientRect(); originX = r.left + r.width/2; originY = r.top + r.height/2; maxRad = (socket.offsetWidth/2) - (cap.offsetWidth/2) + 5; move(e); };
             const move = (e) => {
-                let dx = (e.clientX - originX) / currentScale, dy = (e.clientY - originY) / currentScale; const dist = Math.sqrt(dx*dx + dy*dy);
+                let dx = (e.clientX - originX) / currentScale, dy = (e.clientY - originY) / currentScale;
+                const dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist > maxRad) { dx *= maxRad/dist; dy *= maxRad/dist; }
                 cap.style.transform = `translate(${dx}px, ${dy}px) rotateX(${dy/maxRad*-15}deg) rotateY(${dx/maxRad*15}deg)`;
                 const deadzone = 0.4;
@@ -621,18 +637,25 @@
                     gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', dx/maxRad, dy/maxRad);
                 }
                 if (isOSReady && !popup.classList.contains('visible')) {
-                    if (dist > maxRad * 0.6) { const ang = Math.atan2(dy, dx) * (180/Math.PI); trigNav(ang >= -45 && ang <= 45 ? 'right' : ang > 45 && ang < 135 ? 'down' : ang < -45 && ang > -135 ? 'up' : 'left'); }
-                    else if (dist < maxRad * 0.2) stopNav();
+                    if (dist > maxRad * 0.6) {
+                        const ang = Math.atan2(dy, dx) * (180/Math.PI);
+                        trigNav(ang >= -45 && ang <= 45 ? 'right' : ang > 45 && ang < 135 ? 'down' : ang < -45 && ang > -135 ? 'up' : 'left');
+                    } else if (dist < maxRad * 0.2) stopNav();
                 }
             };
-            const handleDrag = (e) => { if (!isDragging) return; if (e.type === 'touchmove') { for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === touchId) { move(e.changedTouches[i]); break; } } else move(e); };
+            const handleDrag = (e) => { if (!isDragging) return; move(e); };
             const stopDrag = () => {
-                isDragging = false; touchId = null; stopNav();
+                isDragging = false; stopNav();
                 cap.style.transition = 'transform 0.1s linear'; cap.style.transform = 'translate(0px, 0px)';
             };
-            cap.addEventListener('mousedown', startDrag); cap.addEventListener('touchstart', startDrag, {passive: false});
-            window.addEventListener('mousemove', handleDrag); window.addEventListener('touchmove', handleDrag, {passive: false});
-            window.addEventListener('mouseup', stopDrag); window.addEventListener('touchend', stopDrag); window.addEventListener('mouseleave', stopDrag);
+            cap.addEventListener('pointerdown', startDrag);
+            cap.addEventListener('mousedown', startDrag);
+            window.addEventListener('pointermove', handleDrag);
+            window.addEventListener('mousemove', handleDrag);
+            window.addEventListener('pointerup', stopDrag);
+            window.addEventListener('mouseup', stopDrag);
+            window.addEventListener('pointerleave', stopDrag);
+            window.addEventListener('mouseleave', stopDrag);
         };
         initJoystick('joystick-socket-left', 'joystick-cap-left', true);
         initJoystick('joystick-socket-right', 'joystick-cap-right', false);
