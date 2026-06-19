@@ -148,7 +148,7 @@
                                 <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                                 <span>About</span>
                             </div>
-                            <div class="xmb-sub">Version 1.1 (Offline)</div>
+                            <div class="xmb-sub">Version 1.2 (Offline)</div>
                         </div>
                     </div>
                     <div id="sys-msg">Press 'A' to execute</div>
@@ -189,41 +189,43 @@
             constructor() {
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
                 this.sampleRate = this.context.sampleRate;
-                this.chunkSize = 2048;
-                this.lBuffer = new Float32Array(this.chunkSize);
-                this.rBuffer = new Float32Array(this.chunkSize);
+                this.bufferSize = 4096;
+                this.scriptNode = this.context.createScriptProcessor(this.bufferSize, 0, 2);
+
+                // High-performance circular Float32 ring buffer to prevent browser lag.
+                this.ringSize = this.sampleRate * 2; 
+                this.ringL = new Float32Array(this.ringSize);
+                this.ringR = new Float32Array(this.ringSize);
                 this.writePtr = 0;
-                this.nextPlayTime = 0;
+                this.readPtr = 0;
+
+                this.scriptNode.onaudioprocess = (e) => {
+                    const outL = e.outputBuffer.getChannelData(0);
+                    const outR = e.outputBuffer.getChannelData(1);
+                    for (let i = 0; i < this.bufferSize; i++) {
+                        if (this.readPtr !== this.writePtr) {
+                            outL[i] = this.ringL[this.readPtr];
+                            outR[i] = this.ringR[this.readPtr];
+                            this.readPtr = (this.readPtr + 1) % this.ringSize;
+                        } else {
+                            outL[i] = 0;
+                            outR[i] = 0;
+                        }
+                    }
+                };
+                this.scriptNode.connect(this.context.destination);
                 this.unlocked = false;
             }
 
             pushSample(l, r) {
-                this.lBuffer[this.writePtr] = l;
-                this.rBuffer[this.writePtr] = r;
-                this.writePtr++;
-                if (this.writePtr === this.chunkSize) {
-                    this.flush();
+                this.ringL[this.writePtr] = l;
+                this.ringR[this.writePtr] = r;
+                this.writePtr = (this.writePtr + 1) % this.ringSize;
+                
+                // If write laps read, force read to jump forward to prevent glitching
+                if (this.writePtr === this.readPtr) {
+                    this.readPtr = (this.readPtr + 1) % this.ringSize;
                 }
-            }
-
-            flush() {
-                if (this.context.state !== 'running') {
-                    this.writePtr = 0;
-                    return;
-                }
-                const buffer = this.context.createBuffer(2, this.chunkSize, this.sampleRate);
-                buffer.getChannelData(0).set(this.lBuffer);
-                buffer.getChannelData(1).set(this.rBuffer);
-                const source = this.context.createBufferSource();
-                source.buffer = buffer;
-                source.connect(this.context.destination);
-                const now = this.context.currentTime;
-                if (this.nextPlayTime < now) {
-                    this.nextPlayTime = now + 0.02;
-                }
-                source.start(this.nextPlayTime);
-                this.nextPlayTime += buffer.duration;
-                this.writePtr = 0;
             }
 
             resume() {
@@ -234,7 +236,7 @@
 
             stop() {
                 this.writePtr = 0;
-                this.nextPlayTime = 0;
+                this.readPtr = 0;
             }
 
             unlock() {
@@ -252,7 +254,7 @@
             }
         }
 
-        // ===================== JSNES BRIDGE (SNAPPY BUTTONS, SMOOTH STICKS, GLITCH-FREE AUDIO) =====================
+        // ===================== JSNES BRIDGE =====================
         class GMXEmulatorBridge {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -269,12 +271,11 @@
                     'btn-up': 4, 'btn-down': 5, 'btn-left': 6, 'btn-right': 7
                 };
 
-                this._frameDuration = 1000 / 60;   // ~16.667 ms
+                this._frameDuration = 1000 / 60;   
                 this._lastFrameTime = 0;
                 this._frameAccumulator = 0;
                 this._renderReqId = null;
                 this._pendingFrame = false;
-                this._immediateTickPending = false;   // true after a digital-input immediate frame
             }
 
             loadRomData(arrayBuffer, filename) {
@@ -315,7 +316,6 @@
             _startNESLoop() {
                 this._lastFrameTime = performance.now();
                 this._frameAccumulator = 0;
-                this._immediateTickPending = false;
 
                 const tickLoop = () => {
                     if (!this.isRunning || !this.nes) return;
@@ -323,21 +323,14 @@
                     const now = performance.now();
                     let delta = now - this._lastFrameTime;
                     this._lastFrameTime = now;
-                    if (delta > 100) delta = 100;
+                    if (delta > 100) delta = 100; // Prevent death-spiral on tab unfocus
 
                     this._frameAccumulator += delta;
                     while (this._frameAccumulator >= this._frameDuration) {
-                        // If an immediate frame was already processed this cycle, skip one to keep 60 FPS
-                        if (this._immediateTickPending) {
-                            this._frameAccumulator -= this._frameDuration;
-                            this._immediateTickPending = false;
-                            continue;
-                        }
                         this.nes.frame();
                         this._frameAccumulator -= this._frameDuration;
                     }
 
-                    // Repaint if needed
                     if (this._pendingFrame) {
                         this.ctx.putImageData(this.imageData, 0, 0);
                         this._pendingFrame = false;
@@ -346,20 +339,6 @@
                     this._renderReqId = requestAnimationFrame(tickLoop);
                 };
                 this._renderReqId = requestAnimationFrame(tickLoop);
-            }
-
-            // Called instantly after a digital button press (A, B, etc.)
-            immediateTick() {
-                if (!this.isRunning || !this.nes || this._immediateTickPending) return;
-                // Process exactly one frame right now – the rAF loop will skip its next frame
-                this.nes.frame();
-                this._immediateTickPending = true;
-
-                // Repaint immediately
-                if (this._pendingFrame) {
-                    this.ctx.putImageData(this.imageData, 0, 0);
-                    this._pendingFrame = false;
-                }
             }
 
             handleInput(domId, isPressed) {
@@ -371,29 +350,21 @@
                     } else {
                         this.nes.buttonUp(1, nesBtn);
                     }
-                    // Digital input → instant response
-                    this.immediateTick();
                 }
             }
 
-            // Analog sticks update the NES directional state but do NOT force an immediate frame.
-            // This prevents audio glitching when the stick is moved rapidly.
             handleAnalog(stickId, nx, ny) {
-                if (!this.isRunning) return;
+                if (!this.isRunning || !this.nes) return;
                 const deadzone = 0.4;
 
-                // Clear all digital directions first
                 ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => {
                     this.nes.buttonUp(1, this.nesInputMap[btn]);
                 });
 
-                // Apply new directions based on stick position
                 if (ny < -deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-up']);
                 if (ny > deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-down']);
                 if (nx < -deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-left']);
                 if (nx > deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-right']);
-
-                // Note: no immediateTick() here – the regular rAF loop will pick up the input
             }
 
             _stopCurrent() {
@@ -406,7 +377,6 @@
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 if (this.audio) this.audio.stop();
                 this._pendingFrame = false;
-                this._immediateTickPending = false;
             }
 
             stop() {
@@ -427,7 +397,17 @@
         // --- IndexedDB, XMB, install popup, controls, power, joysticks, clock ---
         const DB_NAME = "GMX_Storage";
         const STORE_NAME = "library";
-        function initDB() { return new Promise((resolve, reject) => { const req = indexedDB.open(DB_NAME, 1); req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME, { keyPath: "id" }); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
+        
+        function initDB() { 
+            return new Promise((resolve, reject) => { 
+                if (!window.indexedDB) return reject(new Error("IndexedDB not supported"));
+                const req = indexedDB.open(DB_NAME, 1); 
+                req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME, { keyPath: "id" }); 
+                req.onsuccess = () => resolve(req.result); 
+                req.onerror = () => reject(req.error); 
+            }); 
+        }
+        
         async function saveGameToDB(romFile, imgFile) {
             const db = await initDB();
             const romBuffer = await romFile.arrayBuffer();
@@ -451,28 +431,39 @@
         const screen = document.getElementById('screen');
 
         async function buildXMB() {
-            const db = await initDB();
-            return new Promise((resolve) => {
-                const tx = db.transaction(STORE_NAME, "readonly");
-                const req = tx.objectStore(STORE_NAME).getAll();
-                req.onsuccess = () => {
-                    const games = req.result;
-                    const gameCol = document.getElementById('game-column');
-                    const memStick = document.getElementById('memory-stick');
-                    document.querySelectorAll('.dynamic-game').forEach(el => el.remove());
-                    let newMaxRows = 1;
-                    games.forEach(game => {
-                        const div = document.createElement('div');
-                        div.className = 'xmb-sub game-item dynamic-game';
-                        div.innerHTML = `<img src="${game.cover}" class="box-art" crossorigin="anonymous"><div class="game-details"><span class="game-title">${game.title}</span></div>`;
-                        gameCol.insertBefore(div, memStick);
-                        newMaxRows++;
-                    });
-                    maxRows[1] = newMaxRows;
-                    resolve();
-                };
-            });
+            try {
+                // Wrap in Promise.race to prevent infinite hang on local file execution
+                const dbPromise = initDB();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Storage Timeout")), 1000));
+                const db = await Promise.race([dbPromise, timeoutPromise]);
+
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(STORE_NAME, "readonly");
+                    const req = tx.objectStore(STORE_NAME).getAll();
+                    req.onsuccess = () => {
+                        const games = req.result || [];
+                        const gameCol = document.getElementById('game-column');
+                        const memStick = document.getElementById('memory-stick');
+                        document.querySelectorAll('.dynamic-game').forEach(el => el.remove());
+                        let newMaxRows = 1;
+                        games.forEach(game => {
+                            const div = document.createElement('div');
+                            div.className = 'xmb-sub game-item dynamic-game';
+                            div.innerHTML = `<img src="${game.cover}" class="box-art" crossorigin="anonymous"><div class="game-details"><span class="game-title">${game.title}</span></div>`;
+                            gameCol.insertBefore(div, memStick);
+                            newMaxRows++;
+                        });
+                        maxRows[1] = newMaxRows;
+                        resolve();
+                    };
+                    req.onerror = () => reject(req.error);
+                });
+            } catch(e) {
+                console.warn("Storage failed or skipped. Booting without saved data.", e);
+                return Promise.resolve(); // Force resolve so OS boots anyway
+            }
         }
+        
         const updateXMB = () => {
             if(!isOSReady) return;
             grid.style.transform = `translate(calc(-50% + ${(1 - colIdx) * 100}px), ${-rowIdx * 60}px)`;
@@ -521,12 +512,17 @@
             const file = e.target.files[0];
             if (file) { selectedCoverFile = file; coverNameEl.textContent = file.name; }
         });
+        
         document.getElementById('popup-install').addEventListener('click', async () => {
             if (!selectedRomFile) return;
             sysMsg.innerText = `Installing ${selectedRomFile.name}...`; sysMsg.style.opacity = 1;
             closeInstallPopup();
-            await saveGameToDB(selectedRomFile, selectedCoverFile);
-            sysMsg.innerText = "Install Complete!";
+            try {
+                await saveGameToDB(selectedRomFile, selectedCoverFile);
+                sysMsg.innerText = "Install Complete!";
+            } catch (err) {
+                sysMsg.innerText = "Install Failed (Storage Disabled)";
+            }
             setTimeout(() => { sysMsg.style.opacity = 0; buildXMB().then(() => updateXMB()); }, 1500);
         });
 
@@ -555,14 +551,21 @@
                 if (rowIdx > 0 && rowIdx <= games.length) {
                     const selectedTitle = games[rowIdx - 1].querySelector('.game-title').innerText;
                     sysMsg.innerText = "BOOTING: " + selectedTitle; sysMsg.style.opacity = 1;
-                    const db = await initDB(); const tx = db.transaction(STORE_NAME, "readonly"); const req = tx.objectStore(STORE_NAME).get(selectedTitle);
-                    req.onsuccess = () => {
-                        setTimeout(() => {
-                            screen.classList.add('game-running');
-                            screen.classList.remove('os-ready');
-                            gmxBridge.loadRomData(req.result.rom, selectedTitle + '.nes');
-                        }, 800);
-                    };
+                    
+                    try {
+                        const db = await initDB(); 
+                        const tx = db.transaction(STORE_NAME, "readonly"); 
+                        const req = tx.objectStore(STORE_NAME).get(selectedTitle);
+                        req.onsuccess = () => {
+                            setTimeout(() => {
+                                screen.classList.add('game-running');
+                                screen.classList.remove('os-ready');
+                                gmxBridge.loadRomData(req.result.rom, selectedTitle + '.nes');
+                            }, 800);
+                        };
+                    } catch(e) {
+                        sysMsg.innerText = "Error loading game.";
+                    }
                 } else if (rowIdx === games.length + 1) { openInstallPopup(); }
             } else { sysMsg.innerText = "Module offline."; sysMsg.style.opacity = 1; }
         });
@@ -575,10 +578,16 @@
             const selectedTitle = gameItems[rowIdx - 1].querySelector('.game-title').innerText;
             sysMsg.innerText = `Deleting ${selectedTitle}...`;
             sysMsg.style.opacity = 1;
-            const db = await initDB();
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            tx.objectStore(STORE_NAME).delete(selectedTitle);
-            await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
+            
+            try {
+                const db = await initDB();
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).delete(selectedTitle);
+                await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
+            } catch (e) {
+                console.warn("Delete failed", e);
+            }
+            
             await buildXMB();
             rowIdx = Math.min(rowIdx, maxRows[1] - 1);
             updateXMB();
@@ -593,13 +602,22 @@
             gmxBridge.audio.unlock();
             isPoweredOn = !isPoweredOn; isOSReady = false;
             bootTimers.forEach(t => clearTimeout(t)); bootTimers = [];
+            
             if(isPoweredOn) {
                 document.getElementById('power-led').classList.add('is-on');
                 screen.classList.add('boot-white');
                 bootTimers.push(setTimeout(() => bootContainer.classList.add('do-drop'), 200));
                 bootTimers.push(setTimeout(() => { document.getElementById('boot-gmx').classList.add('do-glint'); document.getElementById('boot-reg').classList.add('do-fade-in'); }, 1000));
                 bootTimers.push(setTimeout(() => bootContainer.classList.add('do-fade-out'), 3000));
-                bootTimers.push(setTimeout(() => { buildXMB().then(() => { screen.classList.remove('boot-white'); screen.classList.add('os-ready'); isOSReady = true; colIdx = 1; rowIdx = 0; updateXMB(); }); }, 3500));
+                
+                // Bulletproof final boot wrap: Forces class removal even if storage is entirely broken
+                bootTimers.push(setTimeout(() => { 
+                    buildXMB().finally(() => { 
+                        screen.classList.remove('boot-white'); 
+                        screen.classList.add('os-ready'); 
+                        isOSReady = true; colIdx = 1; rowIdx = 0; updateXMB(); 
+                    }); 
+                }, 3500));
             } else {
                 document.getElementById('power-led').classList.remove('is-on');
                 screen.className = ''; bootContainer.classList.remove('do-drop', 'do-fade-out');
