@@ -76,16 +76,16 @@
         }
         .shoulder-group { position: absolute; top: 7%; display: flex; gap: 10px; }
         .left-shoulder { left: 10%; transform: translateX(-50%); } .right-shoulder { right: 10%; transform: translateX(50%); }
-        .btn-shoulder { background: linear-gradient(#2a2a2a 0%, #1a1a1a 100%); color: #c0c0c0; border-radius: 12px; padding: 8px 20px; font-size: 0.7rem; font-weight: 700; box-shadow: inset 0 2px 2px rgba(255,255,255,0.1), inset 0 -2px 3px rgba(0,0,0,0.7), 0 4px 6px rgba(0,0,0,0.3), 0 1px 1px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.1s ease-out; }
+        .btn-shoulder { background: linear-gradient(#2a2a2a 0%, #1a1a1a 100%); color: #c0c0c0; border-radius: 12px; padding: 6px 18px; font-size: 0.7rem; font-weight: 700; box-shadow: inset 0 2px 2px rgba(255,255,255,0.1), inset 0 -2px 3px rgba(0,0,0,0.7), 0 4px 6px rgba(0,0,0,0.3), 0 1px 1px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.1s ease-out; }
         .btn-shoulder:active, .btn-shoulder.pressed { background: linear-gradient(#151515 0%, #0a0a0a 100%); transform: translateY(2px); box-shadow: inset 0 2px 5px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(255,255,255,0.05), 0 1px 2px rgba(0,0,0,0.3); color: #909090; }
         .control-base { position: absolute; top: 32%; width: 17%; aspect-ratio: 1; background: radial-gradient(circle at 30% 30%, #b0b8ff 0%, #909bff 50%, #858eee 100%); border: 3px solid #111; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), inset 0 -2px 10px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.4); }
         .left-base { left: 10%; transform: translateX(-50%); } .right-base { right: 10%; transform: translateX(50%); }
         .d-pad-cross { position: relative; width: 80%; height: 80%; background: linear-gradient(#2d2d2d 0%, #1a1a1a 100%); border-radius: 50%; box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), 0 3px 6px rgba(0,0,0,0.6); }
-        .d-btn { position: absolute; width: 28%; height: 32%; cursor: pointer; background: #1a1a1a; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.8), inset 0 2px 3px rgba(255,255,255,0.05); display: flex; justify-content: center; align-items: center; transition: filter 0.1s; padding: 6px; }
+        .d-btn { position: absolute; width: 28%; height: 32%; cursor: pointer; background: #1a1a1a; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.8), inset 0 2px 3px rgba(255,255,255,0.05); display: flex; justify-content: center; align-items: center; transition: filter 0.1s; }
         .d-btn.pressed { background: #111; filter: brightness(0.7); }
         .d-up { top: 7%; left: 36%; border-radius: 6px 6px 12px 12px; } .d-right { top: 34%; right: 7%; border-radius: 12px 6px 6px 12px; height: 28%; width: 32%;} .d-down { bottom: 7%; left: 36%; border-radius: 12px 12px 6px 6px; } .d-left { top: 34%; left: 7%; border-radius: 6px 12px 12px 6px; height: 28%; width: 32%;}
         .action-pad-cluster { position: relative; width: 85%; height: 85%; }
-        .btn-action { position: absolute; width: 32%; height: 32%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e0e0e0 30%, #b0b0b0 80%, #999999 100%); box-shadow: inset -3px -3px 8px rgba(0,0,0,0.4), inset 2px 2px 6px rgba(255,255,255,0.8), 0 6px 8px rgba(0,0,0,0.6); color: #222; font-weight: 700; font-size: 0.8rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; padding: 6px; }
+        .btn-action { position: absolute; width: 32%; height: 32%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e0e0e0 30%, #b0b0b0 80%, #999999 100%); box-shadow: inset -3px -3px 8px rgba(0,0,0,0.4), inset 2px 2px 6px rgba(255,255,255,0.8), 0 6px 8px rgba(0,0,0,0.6); color: #222; font-weight: 700; font-size: 0.8rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
         .btn-action.pressed { transform: translateY(4px); box-shadow: inset -1px -1px 4px rgba(0,0,0,0.4), inset 1px 1px 4px rgba(255,255,255,0.8), 0 2px 2px rgba(0,0,0,0.6); background: radial-gradient(circle at 35% 35%, #e8e8e8 0%, #c0c0c0 30%, #909090 80%, #777777 100%); }
         .btn-y { top: 4%; left: 34%; } .btn-b { top: 34%; right: 4%; } .btn-a { bottom: 4%; left: 34%; } .btn-x { top: 34%; left: 4%; }
         .analog-stick { position: absolute; width: 8%; aspect-ratio: 1; background: linear-gradient(#0c0c0c 0%, #151515 100%); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 10px 30px rgba(0,0,0,1), inset 0 2px 2px rgba(255,255,255,0.05), 0 2px 5px rgba(0,0,0,0.4); bottom: 9%; z-index: 20; }
@@ -184,84 +184,51 @@
     </div>
 
     <script>
-        // ===================== AUDIO CONTROLLER (EAGER CONTEXT, IOS SAFE) =====================
+        // ===================== AUDIO CONTROLLER =====================
         class GMXAudio {
             constructor() {
-                // Create context immediately (suspended until user gesture resumes it)
                 this.context = new (window.AudioContext || window.webkitAudioContext)();
                 this.sampleRate = this.context.sampleRate;
-                this.chunkSize = 2048;
+                this.chunkSize = 2048; 
                 this.lBuffer = new Float32Array(this.chunkSize);
                 this.rBuffer = new Float32Array(this.chunkSize);
                 this.writePtr = 0;
                 this.nextPlayTime = 0;
                 this.unlocked = false;
             }
-
             pushSample(l, r) {
                 this.lBuffer[this.writePtr] = l;
                 this.rBuffer[this.writePtr] = r;
                 this.writePtr++;
-                if (this.writePtr === this.chunkSize) {
-                    this.flush();
-                }
+                if (this.writePtr === this.chunkSize) this.flush();
             }
-
             flush() {
-                if (this.context.state !== 'running') {
-                    this.writePtr = 0;
-                    return;
-                }
-
+                if (this.context.state !== 'running') { this.writePtr = 0; return; }
                 const buffer = this.context.createBuffer(2, this.chunkSize, this.sampleRate);
                 buffer.getChannelData(0).set(this.lBuffer);
                 buffer.getChannelData(1).set(this.rBuffer);
-
                 const source = this.context.createBufferSource();
                 source.buffer = buffer;
                 source.connect(this.context.destination);
-
                 const now = this.context.currentTime;
-                const outputLatency = this.context.outputLatency || 0.03; // iOS typical: ~0.02-0.03s
-
-                // Never schedule in the past – use a small safety margin
-                if (this.nextPlayTime < now + outputLatency) {
-                    this.nextPlayTime = now + outputLatency + 0.01;
-                }
-
+                if (this.nextPlayTime < now) this.nextPlayTime = now + 0.02; 
                 source.start(this.nextPlayTime);
                 this.nextPlayTime += buffer.duration;
                 this.writePtr = 0;
             }
-
-            resume() {
-                if (this.context.state === 'suspended') {
-                    this.context.resume();
-                }
-            }
-
-            stop() {
-                this.writePtr = 0;
-                this.nextPlayTime = 0;
-            }
-
+            resume() { if (this.context.state === 'suspended') this.context.resume(); }
+            stop() { this.writePtr = 0; this.nextPlayTime = 0; }
             unlock() {
                 if (this.unlocked) return;
-                if (this.context.state === 'suspended') {
-                    this.context.resume();
-                }
-                // Silent buffer to fully activate iOS audio
+                if (this.context.state === 'suspended') this.context.resume();
                 const osc = this.context.createOscillator();
-                osc.type = 'sine';
-                osc.frequency.value = 0;
-                osc.connect(this.context.destination);
-                osc.start(0);
-                osc.stop(0.01);
+                osc.type = 'sine'; osc.frequency.value = 0; osc.connect(this.context.destination);
+                osc.start(0); osc.stop(0.01);
                 this.unlocked = true;
             }
         }
 
-        // ===================== JSNES BRIDGE (rAF LOOP + POINTER INPUTS) =====================
+        // ===================== JSNES BRIDGE =====================
         class GMXEmulatorBridge {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -275,119 +242,80 @@
                     'btn-a': 0, 'btn-b': 1, 'btn-select': 2, 'btn-start': 3,
                     'btn-up': 4, 'btn-down': 5, 'btn-left': 6, 'btn-right': 7
                 };
+                this._intervalId = null;
                 this._renderReqId = null;
+                this._lastFrameTime = 0;
                 this._frameAccumulator = 0;
                 this._pendingFrame = false;
             }
-
             loadRomData(arrayBuffer, filename) {
                 this._stopCurrent();
-
                 this.nes = new jsnes.NES({
                     onFrame: (frameBuffer) => {
-                        for (let i = 0; i < frameBuffer.length; i++) {
-                            this.buf32[i] = 0xFF000000 | frameBuffer[i];
-                        }
+                        for (let i = 0; i < frameBuffer.length; i++) this.buf32[i] = 0xFF000000 | frameBuffer[i];
                         this._pendingFrame = true;
                     },
-                    onAudioSample: (l, r) => {
-                        this.audio.pushSample(l, r);
-                    },
-                    sampleRate: this.audio.sampleRate
+                    onAudioSample: (l, r) => this.audio.pushSample(l, r),
+                    sampleRate: this.audio.context.sampleRate
                 });
-
                 const romBytes = new Uint8Array(arrayBuffer);
                 let romString = '';
-                for (let i = 0; i < romBytes.length; i++) {
-                    romString += String.fromCharCode(romBytes[i]);
-                }
-
-                try {
-                    this.nes.loadROM(romString);
-                } catch (e) {
-                    this.renderError("BOOT FAILURE", "Invalid NES ROM");
-                    return;
-                }
-
+                for (let i = 0; i < romBytes.length; i++) romString += String.fromCharCode(romBytes[i]);
+                try { this.nes.loadROM(romString); } catch (e) { this.renderError("BOOT FAILURE", "Invalid NES ROM"); return; }
                 this.isRunning = true;
-                this.canvas.width = 256;
-                this.canvas.height = 240;
+                this.canvas.width = 256; this.canvas.height = 240;
                 this._startNESLoop();
             }
-
             _startNESLoop() {
                 const frameTime = 1000 / 60;
-                let lastTime = performance.now();
-
-                const loop = (now) => {
+                this._lastFrameTime = performance.now();
+                this._frameAccumulator = 0;
+                const tick = () => {
                     if (!this.isRunning || !this.nes) return;
-
-                    let delta = now - lastTime;
-                    lastTime = now;
+                    const now = performance.now();
+                    let delta = now - this._lastFrameTime;
+                    this._lastFrameTime = now;
                     if (delta > 100) delta = 100;
-
                     this._frameAccumulator += delta;
                     while (this._frameAccumulator >= frameTime) {
                         this.nes.frame();
                         this._frameAccumulator -= frameTime;
                     }
-
-                    if (this._pendingFrame) {
-                        this.ctx.putImageData(this.imageData, 0, 0);
-                        this._pendingFrame = false;
-                    }
-
-                    this._renderReqId = requestAnimationFrame(loop);
                 };
-
-                this._renderReqId = requestAnimationFrame((ts) => {
-                    lastTime = ts;
-                    loop(ts);
-                });
+                this._intervalId = setInterval(tick, 1);
+                const drawFrame = () => {
+                    if (this._pendingFrame) { this.ctx.putImageData(this.imageData, 0, 0); this._pendingFrame = false; }
+                    if (this.isRunning) this._renderReqId = requestAnimationFrame(drawFrame);
+                };
+                this._renderReqId = requestAnimationFrame(drawFrame);
             }
-
             handleInput(domId, isPressed) {
                 if (!this.isRunning || !this.nes) return;
                 const nesBtn = this.nesInputMap[domId];
                 if (nesBtn !== undefined) {
-                    if (isPressed) {
-                        this.nes.buttonDown(1, nesBtn);
-                    } else {
-                        this.nes.buttonUp(1, nesBtn);
-                    }
+                    if (isPressed) this.nes.buttonDown(1, nesBtn);
+                    else this.nes.buttonUp(1, nesBtn);
                 }
             }
-
             handleAnalog(stickId, nx, ny) {
                 if (!this.isRunning) return;
-                const deadzone = 0.3;  // reduced from 0.4 for better sensitivity
-                if (Math.abs(nx) < deadzone && Math.abs(ny) < deadzone) return;
-
-                ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => {
-                    this.handleInput(btn, false);
-                });
+                const deadzone = 0.4;
+                ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => this.handleInput(btn, false));
                 if (ny < -deadzone) this.handleInput('btn-up', true);
                 if (ny > deadzone) this.handleInput('btn-down', true);
                 if (nx < -deadzone) this.handleInput('btn-left', true);
                 if (nx > deadzone) this.handleInput('btn-right', true);
             }
-
             _stopCurrent() {
                 this.isRunning = false;
-                if (this._renderReqId) {
-                    cancelAnimationFrame(this._renderReqId);
-                    this._renderReqId = null;
-                }
+                if (this._intervalId) { clearInterval(this._intervalId); this._intervalId = null; }
+                if (this._renderReqId) { cancelAnimationFrame(this._renderReqId); this._renderReqId = null; }
                 this.nes = null;
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 if (this.audio) this.audio.stop();
                 this._pendingFrame = false;
             }
-
-            stop() {
-                this._stopCurrent();
-            }
-
+            stop() { this._stopCurrent(); }
             renderError(title, subtitle) {
                 this._stopCurrent();
                 const w = this.canvas.width || 256, h = this.canvas.height || 240;
@@ -396,16 +324,13 @@
                 this.ctx.fillStyle = '#ffffff'; this.ctx.font = '12px sans-serif'; this.ctx.fillText(subtitle, 40, h/2 + 25);
             }
         }
-
         const gmxBridge = new GMXEmulatorBridge('game-canvas');
 
-        // --- IndexedDB, XMB, install popup, controls, power, joysticks, clock ---
-        const DB_NAME = "GMX_Storage";
-        const STORE_NAME = "library";
+        // ===================== DATABASE & XMB =====================
+        const DB_NAME = "GMX_Storage"; const STORE_NAME = "library";
         function initDB() { return new Promise((resolve, reject) => { const req = indexedDB.open(DB_NAME, 1); req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME, { keyPath: "id" }); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
         async function saveGameToDB(romFile, imgFile) {
-            const db = await initDB();
-            const romBuffer = await romFile.arrayBuffer();
+            const db = await initDB(); const romBuffer = await romFile.arrayBuffer();
             let coverDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="; 
             if (imgFile) { coverDataUrl = await new Promise(res => { const reader = new FileReader(); reader.onload = e => res(e.target.result); reader.readAsDataURL(imgFile); }); }
             const gameId = romFile.name.replace(/\.[^/.]+$/, ""); 
@@ -413,32 +338,21 @@
             return new Promise((resolve, reject) => { const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).put(record); tx.oncomplete = resolve; tx.onerror = reject; });
         }
 
-        let currentScale = 1;
-        const consoleEl = document.getElementById('gmx-console');
-        const applyScale = () => { if (window.innerHeight > window.innerWidth) return; currentScale = Math.min((window.innerWidth * 0.95) / 735, (window.innerHeight * 0.95) / 350, 1); consoleEl.style.transform = `scale(${currentScale})`; };
-        window.addEventListener('resize', applyScale); applyScale();
-
         let isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0; 
         const maxRows = [1, 1, 1];
-        const grid = document.getElementById('xmb-grid');
-        const cols = document.querySelectorAll('.xmb-col');
-        const sysMsg = document.getElementById('sys-msg');
-        const screen = document.getElementById('screen');
+        const grid = document.getElementById('xmb-grid'), cols = document.querySelectorAll('.xmb-col');
+        const sysMsg = document.getElementById('sys-msg'), screen = document.getElementById('screen');
 
         async function buildXMB() {
             const db = await initDB();
             return new Promise((resolve) => {
-                const tx = db.transaction(STORE_NAME, "readonly");
-                const req = tx.objectStore(STORE_NAME).getAll();
+                const tx = db.transaction(STORE_NAME, "readonly"); const req = tx.objectStore(STORE_NAME).getAll();
                 req.onsuccess = () => {
-                    const games = req.result;
-                    const gameCol = document.getElementById('game-column');
-                    const memStick = document.getElementById('memory-stick');
+                    const games = req.result, gameCol = document.getElementById('game-column'), memStick = document.getElementById('memory-stick');
                     document.querySelectorAll('.dynamic-game').forEach(el => el.remove());
                     let newMaxRows = 1; 
                     games.forEach(game => {
-                        const div = document.createElement('div');
-                        div.className = 'xmb-sub game-item dynamic-game';
+                        const div = document.createElement('div'); div.className = 'xmb-sub game-item dynamic-game';
                         div.innerHTML = `<img src="${game.cover}" class="box-art" crossorigin="anonymous"><div class="game-details"><span class="game-title">${game.title}</span></div>`;
                         gameCol.insertBefore(div, memStick);
                         newMaxRows++;
@@ -455,106 +369,132 @@
                 if (c === colIdx) { col.classList.add('active-col'); Array.from(col.children).forEach((item, r) => item.classList.toggle('active-item', r === rowIdx)); }
                 else { col.classList.remove('active-col'); Array.from(col.children).forEach(item => item.classList.remove('active-item')); }
             });
-            const gameBgLayer = document.getElementById('game-bg-layer');
-            const activeItem = document.querySelector('.active-col .active-item.dynamic-game img');
+            const gameBgLayer = document.getElementById('game-bg-layer'), activeItem = document.querySelector('.active-col .active-item.dynamic-game img');
             if (activeItem) { gameBgLayer.style.backgroundImage = `linear-gradient(to right, rgba(30,31,58,0.95) 0%, rgba(30,31,58,0.4) 60%, rgba(0,0,0,0) 100%), url('${activeItem.src}')`; gameBgLayer.style.opacity = 1; }
             else gameBgLayer.style.opacity = 0;
-
             const gameItems = document.querySelectorAll('.dynamic-game');
-            if (colIdx === 1 && rowIdx > 0 && rowIdx <= gameItems.length) {
-                sysMsg.innerText = "(X) Delete Game";
-                sysMsg.style.opacity = 1;
-            } else {
-                sysMsg.innerText = "";
-                sysMsg.style.opacity = 0;
-            }
+            if (colIdx === 1 && rowIdx > 0 && rowIdx <= gameItems.length) { sysMsg.innerText = "(X) Delete Game"; sysMsg.style.opacity = 1; } 
+            else { sysMsg.innerText = ""; sysMsg.style.opacity = 0; }
         };
 
-        const popup = document.getElementById('install-popup');
-        const romInput = document.getElementById('install-rom-upload');
-        const coverInput = document.getElementById('install-cover-upload');
-        const romNameEl = document.getElementById('popup-rom-name');
-        const coverNameEl = document.getElementById('popup-cover-name');
-        const installBtn = document.getElementById('popup-install');
+        const popup = document.getElementById('install-popup'), romInput = document.getElementById('install-rom-upload'), coverInput = document.getElementById('install-cover-upload');
+        const romNameEl = document.getElementById('popup-rom-name'), coverNameEl = document.getElementById('popup-cover-name'), installBtn = document.getElementById('popup-install');
         let selectedRomFile = null, selectedCoverFile = null;
         function openInstallPopup() { popup.classList.add('visible'); selectedRomFile = null; selectedCoverFile = null; romInput.value = ''; coverInput.value = ''; romNameEl.textContent = ''; coverNameEl.textContent = ''; installBtn.disabled = true; sysMsg.style.opacity = 0; }
         function closeInstallPopup() { popup.classList.remove('visible'); }
         document.getElementById('popup-select-rom').addEventListener('click', () => romInput.click());
         document.getElementById('popup-select-cover').addEventListener('click', () => coverInput.click());
-        romInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file && file.name.toLowerCase().endsWith('.nes')) {
-                selectedRomFile = file;
-                romNameEl.textContent = file.name;
-                installBtn.disabled = false;
-            } else {
-                alert('Please select a .nes file.');
-                romInput.value = '';
-            }
-        });
-        coverInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) { selectedCoverFile = file; coverNameEl.textContent = file.name; }
-        });
+        romInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file && file.name.toLowerCase().endsWith('.nes')) { selectedRomFile = file; romNameEl.textContent = file.name; installBtn.disabled = false; } else { alert('Please select a .nes file.'); romInput.value = ''; } });
+        coverInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { selectedCoverFile = file; coverNameEl.textContent = file.name; } });
         document.getElementById('popup-install').addEventListener('click', async () => {
             if (!selectedRomFile) return;
-            sysMsg.innerText = `Installing ${selectedRomFile.name}...`; sysMsg.style.opacity = 1;
-            closeInstallPopup();
+            sysMsg.innerText = `Installing ${selectedRomFile.name}...`; sysMsg.style.opacity = 1; closeInstallPopup();
             await saveGameToDB(selectedRomFile, selectedCoverFile);
             sysMsg.innerText = "Install Complete!";
             setTimeout(() => { sysMsg.style.opacity = 0; buildXMB().then(() => updateXMB()); }, 1500);
         });
 
-        // Improved bindInput with pointer events (iOS reliable) + larger touch targets
-        const bindInput = (id, navAction) => {
+        // ===================== NEW LAYOUT-AWARE TOUCH SYSTEM =====================
+        const navActions = {};
+
+        const handleButtonPress = (id) => {
             const el = document.getElementById(id);
-            const trigger = (e) => {
-                e.preventDefault();
-                el.classList.add('pressed');
-                if (screen.classList.contains('game-running')) {
-                    gmxBridge.handleInput(id, true);
-                } else if (navAction) {
-                    navAction();
-                }
-                // Capture pointer so we always get the up event
-                if (el.hasPointerCapture && e.pointerId !== undefined) {
-                    el.setPointerCapture(e.pointerId);
-                }
-            };
-            const release = (e) => {
-                e.preventDefault();
-                el.classList.remove('pressed');
-                if (screen.classList.contains('game-running')) {
-                    gmxBridge.handleInput(id, false);
-                }
-            };
+            if (!el || el.classList.contains('pressed')) return;
+            el.classList.add('pressed');
+            if (screen.classList.contains('game-running')) { gmxBridge.handleInput(id, true); } 
+            else if (navActions[id]) { navActions[id](); }
+        };
 
-            // Pointer events (works on iOS 13+)
-            el.addEventListener('pointerdown', trigger);
-            el.addEventListener('pointerup', release);
-            el.addEventListener('pointerleave', release);
-            el.addEventListener('pointercancel', release);
+        const handleButtonRelease = (id) => {
+            const el = document.getElementById(id);
+            if (!el || !el.classList.contains('pressed')) return;
+            el.classList.remove('pressed');
+            if (screen.classList.contains('game-running')) { gmxBridge.handleInput(id, false); }
+        };
 
-            // Fallback mouse events for desktop / old browsers
+        const bindInput = (id, navAction) => {
+            navActions[id] = navAction;
+            const el = document.getElementById(id);
+            if (!el) return;
+            const trigger = (e) => { e.preventDefault(); handleButtonPress(id); };
+            const release = (e) => { e.preventDefault(); handleButtonRelease(id); };
             el.addEventListener('mousedown', trigger);
             el.addEventListener('mouseup', release);
             el.addEventListener('mouseleave', release);
         };
 
+        let buttonRects = [];
+        const updateButtonRects = () => {
+            const els = document.querySelectorAll('.d-btn, .btn-action, .select-btn, .start-btn, .btn-shoulder');
+            buttonRects = Array.from(els).map(el => {
+                const rect = el.getBoundingClientRect();
+                // 1.8x Multiplier creates overlapping hitboxes so a thumb between B and A triggers both
+                let multiplier = (el.classList.contains('btn-action') || el.classList.contains('d-btn')) ? 1.8 : 1.2;
+                return {
+                    id: el.id,
+                    cx: rect.left + rect.width / 2,
+                    cy: rect.top + rect.height / 2,
+                    radius: (Math.max(rect.width, rect.height) / 2) * multiplier
+                };
+            });
+        };
+
+        const activeTouchButtons = new Set();
+        const handleGlobalTouch = (e) => {
+            // Ignore touches on joysticks so they process independently
+            const validTouches = Array.from(e.touches).filter(t => !t.target.closest('.analog-stick'));
+            if (validTouches.length === 0 && e.touches.length > 0) return;
+
+            const currentlyTouched = new Set();
+            validTouches.forEach(t => {
+                buttonRects.forEach(b => {
+                    const dx = t.clientX - b.cx;
+                    const dy = t.clientY - b.cy;
+                    if (Math.sqrt(dx * dx + dy * dy) <= b.radius) {
+                        currentlyTouched.add(b.id);
+                    }
+                });
+            });
+
+            currentlyTouched.forEach(id => {
+                if (!activeTouchButtons.has(id)) { activeTouchButtons.add(id); handleButtonPress(id); }
+            });
+
+            activeTouchButtons.forEach(id => {
+                if (!currentlyTouched.has(id)) { activeTouchButtons.delete(id); handleButtonRelease(id); }
+            });
+        };
+
+        // Attach global listeners for touch routing
+        document.addEventListener('touchstart', handleGlobalTouch, { passive: false });
+        document.addEventListener('touchmove', handleGlobalTouch, { passive: false });
+        document.addEventListener('touchend', handleGlobalTouch, { passive: false });
+        document.addEventListener('touchcancel', handleGlobalTouch, { passive: false });
+
+        // Screen resizing & bounding box tracking
+        let currentScale = 1;
+        const consoleEl = document.getElementById('gmx-console');
+        const applyScale = () => { 
+            if (window.innerHeight > window.innerWidth) return; 
+            currentScale = Math.min((window.innerWidth * 0.95) / 735, (window.innerHeight * 0.95) / 350, 1); 
+            consoleEl.style.transform = `scale(${currentScale})`; 
+            setTimeout(updateButtonRects, 100); 
+        };
+        window.addEventListener('resize', applyScale); applyScale();
+
+        // ===================== INPUT BINDINGS =====================
         const navLeft = () => { if(colIdx > 0 && isOSReady && !popup.classList.contains('visible')) { colIdx--; rowIdx = 0; updateXMB(); } };
         const navRight = () => { if(colIdx < 2 && isOSReady && !popup.classList.contains('visible')) { colIdx++; rowIdx = 0; updateXMB(); } };
         const navUp = () => { if(rowIdx > 0 && isOSReady && !popup.classList.contains('visible')) { rowIdx--; updateXMB(); } };
         const navDown = () => { if(rowIdx < maxRows[colIdx] && isOSReady && !popup.classList.contains('visible')) { rowIdx++; updateXMB(); } };
         bindInput('btn-left', navLeft); bindInput('btn-right', navRight); bindInput('btn-up', navUp); bindInput('btn-down', navDown);
         bindInput('btn-b', () => { if (popup.classList.contains('visible')) closeInstallPopup(); });
-        bindInput('btn-y', null);
-        bindInput('btn-l1', null); bindInput('btn-l2', null); bindInput('btn-r1', null); bindInput('btn-r2', null);
+        bindInput('btn-y', null); bindInput('btn-l1', null); bindInput('btn-l2', null); bindInput('btn-r1', null); bindInput('btn-r2', null);
         bindInput('btn-start', null); bindInput('btn-select', null);
-
+        
         bindInput('btn-a', async () => {
             if(!isOSReady || popup.classList.contains('visible')) return;
             gmxBridge.audio.resume();
-
             if (colIdx === 1) {
                 const games = document.querySelectorAll('.dynamic-game');
                 if (rowIdx > 0 && rowIdx <= games.length) {
@@ -563,8 +503,7 @@
                     const db = await initDB(); const tx = db.transaction(STORE_NAME, "readonly"); const req = tx.objectStore(STORE_NAME).get(selectedTitle);
                     req.onsuccess = () => {
                         setTimeout(() => {
-                            screen.classList.add('game-running');
-                            screen.classList.remove('os-ready');
+                            screen.classList.add('game-running'); screen.classList.remove('os-ready');
                             gmxBridge.loadRomData(req.result.rom, selectedTitle + '.nes');
                         }, 800);
                     };
@@ -573,33 +512,23 @@
         });
 
         async function deleteSelectedGame() {
-            if (!isOSReady || popup.classList.contains('visible') || screen.classList.contains('game-running')) return;
-            if (colIdx !== 1) return;
+            if (!isOSReady || popup.classList.contains('visible') || screen.classList.contains('game-running') || colIdx !== 1) return;
             const gameItems = document.querySelectorAll('.dynamic-game');
             if (rowIdx < 1 || rowIdx > gameItems.length) return;
-
             const selectedTitle = gameItems[rowIdx - 1].querySelector('.game-title').innerText;
-            sysMsg.innerText = `Deleting ${selectedTitle}...`;
-            sysMsg.style.opacity = 1;
-
-            const db = await initDB();
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            tx.objectStore(STORE_NAME).delete(selectedTitle);
+            sysMsg.innerText = `Deleting ${selectedTitle}...`; sysMsg.style.opacity = 1;
+            const db = await initDB(); const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).delete(selectedTitle);
             await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
-
-            await buildXMB();
-            rowIdx = Math.min(rowIdx, maxRows[1] - 1);
-            updateXMB();
-            sysMsg.style.opacity = 0;
+            await buildXMB(); rowIdx = Math.min(rowIdx, maxRows[1] - 1); updateXMB(); sysMsg.style.opacity = 0;
         }
         bindInput('btn-x', deleteSelectedGame);
 
+        // ===================== POWER CONTROLS & JOYSTICKS =====================
         const btnPower = document.getElementById('btn-power'), bootContainer = document.getElementById('boot-logo-container');
         let bootTimers = [];
         const togglePower = (e) => {
             if(e) e.preventDefault();
-            gmxBridge.audio.unlock();   // unlocks iOS audio (context already exists)
-
+            gmxBridge.audio.unlock(); 
             isPoweredOn = !isPoweredOn; isOSReady = false;
             bootTimers.forEach(t => clearTimeout(t)); bootTimers = [];
             if(isPoweredOn) {
@@ -613,12 +542,10 @@
                 document.getElementById('power-led').classList.remove('is-on');
                 screen.className = ''; bootContainer.classList.remove('do-drop', 'do-fade-out');
                 document.getElementById('boot-gmx').classList.remove('do-glint'); document.getElementById('boot-reg').classList.remove('do-fade-in');
-                sysMsg.style.opacity = 0; 
-                gmxBridge.stop(); closeInstallPopup();
+                sysMsg.style.opacity = 0; gmxBridge.stop(); closeInstallPopup();
             }
         };
-        btnPower.addEventListener('pointerdown', togglePower);
-        btnPower.addEventListener('mousedown', togglePower);
+        btnPower.addEventListener('click', togglePower); btnPower.addEventListener('touchstart', togglePower, {passive: false});
 
         const initJoystick = (socketId, capId, isLeftStick) => {
             const socket = document.getElementById(socketId), cap = document.getElementById(capId);
@@ -626,39 +553,24 @@
             const executeNav = (dir) => { if (screen.classList.contains('game-running') || popup.classList.contains('visible')) return; if (isOSReady) { if (dir === 'left') navLeft(); if (dir === 'right') navRight(); if (dir === 'up') navUp(); if (dir === 'down') navDown(); } };
             const trigNav = (dir) => { if (curDir === dir) return; curDir = dir; clearInterval(navInt); executeNav(dir); navInt = setInterval(() => executeNav(dir), 200); };
             const stopNav = () => { clearInterval(navInt); navInt = null; curDir = null; };
-            const startDrag = (e) => { isDragging = true; cap.style.transition = 'none'; const r = socket.getBoundingClientRect(); originX = r.left + r.width/2; originY = r.top + r.height/2; maxRad = (socket.offsetWidth/2) - (cap.offsetWidth/2) + 5; move(e); };
+            const startDrag = (e) => { isDragging = true; cap.style.transition = 'none'; const r = socket.getBoundingClientRect(); originX = r.left + r.width/2; originY = r.top + r.height/2; maxRad = (socket.offsetWidth/2) - (cap.offsetWidth/2) + 5; if (e.type === 'touchstart') { touchId = e.changedTouches[0].identifier; move(e.changedTouches[0]); } else move(e); };
             const move = (e) => {
-                let dx = (e.clientX - originX) / currentScale, dy = (e.clientY - originY) / currentScale;
-                const dist = Math.sqrt(dx*dx + dy*dy);
+                let dx = (e.clientX - originX) / currentScale, dy = (e.clientY - originY) / currentScale; const dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist > maxRad) { dx *= maxRad/dist; dy *= maxRad/dist; }
                 cap.style.transform = `translate(${dx}px, ${dy}px) rotateX(${dy/maxRad*-15}deg) rotateY(${dx/maxRad*15}deg)`;
-                const deadzone = 0.3;  // reduced for joystick sensitivity
-                if (screen.classList.contains('game-running') && dist > maxRad * deadzone) {
-                    gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', dx/maxRad, dy/maxRad);
-                }
-                if (isOSReady && !popup.classList.contains('visible')) {
-                    if (dist > maxRad * 0.5) {  // reduced from 0.6 to 0.5 for easier menu nav
-                        const ang = Math.atan2(dy, dx) * (180/Math.PI);
-                        trigNav(ang >= -45 && ang <= 45 ? 'right' : ang > 45 && ang < 135 ? 'down' : ang < -45 && ang > -135 ? 'up' : 'left');
-                    } else if (dist < maxRad * 0.2) stopNav();
+                if (screen.classList.contains('game-running')) gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', dx/maxRad, dy/maxRad);
+                else if (isOSReady && !popup.classList.contains('visible')) {
+                    if (dist > maxRad * 0.6) { const ang = Math.atan2(dy, dx) * (180/Math.PI); trigNav(ang >= -45 && ang <= 45 ? 'right' : ang > 45 && ang < 135 ? 'down' : ang < -45 && ang > -135 ? 'up' : 'left'); }
+                    else if (dist < maxRad * 0.2) stopNav();
                 }
             };
-            const handleDrag = (e) => { if (!isDragging) return; move(e); };
-            const stopDrag = () => {
-                isDragging = false; stopNav();
-                cap.style.transition = 'transform 0.1s linear'; cap.style.transform = 'translate(0px, 0px)';
-            };
-            cap.addEventListener('pointerdown', startDrag);
-            cap.addEventListener('mousedown', startDrag);
-            window.addEventListener('pointermove', handleDrag);
-            window.addEventListener('mousemove', handleDrag);
-            window.addEventListener('pointerup', stopDrag);
-            window.addEventListener('mouseup', stopDrag);
-            window.addEventListener('pointerleave', stopDrag);
-            window.addEventListener('mouseleave', stopDrag);
+            const handleDrag = (e) => { if (!isDragging) return; if (e.type === 'touchmove') { for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === touchId) { move(e.changedTouches[i]); break; } } else move(e); };
+            const stopDrag = () => { isDragging = false; touchId = null; stopNav(); cap.style.transition = 'transform 0.1s linear'; cap.style.transform = 'translate(0px, 0px)'; if (screen.classList.contains('game-running')) gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', 0, 0); };
+            cap.addEventListener('mousedown', startDrag); cap.addEventListener('touchstart', startDrag, {passive: false});
+            window.addEventListener('mousemove', handleDrag); window.addEventListener('touchmove', handleDrag, {passive: false});
+            window.addEventListener('mouseup', stopDrag); window.addEventListener('touchend', stopDrag); window.addEventListener('mouseleave', stopDrag);
         };
-        initJoystick('joystick-socket-left', 'joystick-cap-left', true);
-        initJoystick('joystick-socket-right', 'joystick-cap-right', false);
+        initJoystick('joystick-socket-left', 'joystick-cap-left', true); initJoystick('joystick-socket-right', 'joystick-cap-right', false);
         document.addEventListener('touchmove', e => { if(e.target.tagName !== 'INPUT') e.preventDefault(); }, {passive: false});
 
         const updateClock = () => {
