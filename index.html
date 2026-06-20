@@ -12,7 +12,7 @@
         #rotate-message { display: none; color: #fff; font-size: 1.5rem; text-align: center; font-weight: bold; letter-spacing: 2px; }
         @media (orientation: portrait) { #gmx-console { display: none !important; } #rotate-message { display: block; } }
         @media (orientation: landscape) {
-            #gmx-console { position: relative; display: flex; justify-content: center; align-items: center; width: 735px; height: 350px; background: #40D0D0; border-radius: 36px; box-shadow: inset 0 0 4px rgba(255,255,255,0.05), inset 2px 2px 10px rgba(255,255,255,0.08), inset -3px -3px 15px rgba(0,0,0,0.6), -10px -10px 25px rgba(0,0,0,0.4), 15px 15px 45px rgba(0,0,0,0.8); overflow: hidden; transform-origin: center center; border: 1px solid #353942; }
+            #gmx-console { position: relative; display: flex; justify-content: center; align-items: center; width: 735px; height: 350px; background: #40D0D0; border-radius: 36px; box-shadow: inset 0 0 4px rgba(255,255,255,0.05), inset 2px 2px 10px rgba(255,255,255,0.08), inset -3px -3px 15px rgba(0,0,0,0.6), -10px -10px 25px rgba(0,0,0,0.4), 15px 15px 45px rgba(0,0,0,0.8); overflow: hidden; transform-origin: center center; border: 1px solid #353942; will-change: transform; }
             #screen-bezel { position: absolute; width: 60%; height: 84%; background: linear-gradient(180deg, #020202 0%, #0a0a0c 100%); border-radius: 12px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.15), inset 0 0 20px rgba(0,0,0,1), 0 12px 25px rgba(0,0,0,0.6); z-index: 10; padding: 4px; border: 1px solid #111; }
             #screen { position: relative; width: 100%; height: 100%; background: #030303; border-radius: 10px; box-shadow: inset 0 0 35px rgba(0,0,0,1), 0 0 0 1px rgba(255,255,255,0.03); transition: background 0.5s ease; overflow: hidden; display: flex; justify-content: center; align-items: center; }
             #screen.boot-white { background: #ffffff; box-shadow: inset 0 0 15px rgba(0,0,0,0.2); }
@@ -39,7 +39,7 @@
             .battery-icon { width: 22px; height: 10px; border: 1.5px solid #fff; border-radius: 2px; position: relative; }
             .battery-icon::after { content: ''; position: absolute; right: -4px; top: 1.5px; width: 2px; height: 4px; background: #fff; border-radius: 0 2px 2px 0; }
             .battery-fill { width: 100%; height: 100%; background: #fff; border: 1px solid transparent; background-clip: content-box; }
-            #xmb-grid { position: absolute; top: 40%; left: 50%; display: flex; gap: 80px; transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1); }
+            #xmb-grid { position: absolute; top: 40%; left: 50%; display: flex; gap: 80px; transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1); will-change: transform; }
             .xmb-col { display: flex; flex-direction: column; align-items: center; gap: 40px; transition: opacity 0.25s, transform 0.25s; opacity: 0.3; transform: scale(0.85); }
             .xmb-col.active-col { opacity: 1; transform: scale(1); }
             .xmb-main { position: relative; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
@@ -61,7 +61,7 @@
             #screen.game-running #game-area { opacity: 1; pointer-events: auto; }
             #screen.game-running #xmb-ui { opacity: 0; pointer-events: none; }
             #screen.game-running .xmb-bg { opacity: 0; }
-            #game-canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
+            #game-canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; will-change: contents; }
             #install-popup { position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0,0,0,0.9); z-index: 60; display: none; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
             #install-popup.visible { display: flex; }
             .popup-box { width: 80%; max-width: 280px; background: linear-gradient(135deg, #1c1d26, #0d0e14); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; color: #fff; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.05); font-family: inherit; }
@@ -113,7 +113,6 @@
         <div style="font-size:0.9rem;font-weight:700;letter-spacing:2px;">LOADING...</div>
     </div>
 
-    <!-- File inputs are now inside their labels; no separate off‑screen elements -->
     <div id="rotate-message">PLEASE ROTATE DEVICE</div>
     <div id="gmx-console">
         <div class="shoulder-group left-shoulder"><div class="btn-shoulder" id="btn-l">L</div></div>
@@ -217,9 +216,7 @@
 
     <script>
     // ===================================================================
-    // GBA JoyPad bit indices — passed to JoyPad.keyPress(n)/keyRelease(n)
-    // JoyPad register: keyInput &= ~(1<<n) on press, |= (1<<n) on release
-    // 0=A  1=B  2=Select  3=Start  4=Right  5=Left  6=Up  7=Down  8=R  9=L
+    // GBA JoyPad bit indices
     // ===================================================================
     var GBA_BTN = {
         'btn-a':0, 'btn-b':1, 'btn-select':2, 'btn-start':3,
@@ -227,7 +224,6 @@
         'btn-r':8, 'btn-l':9
     };
 
-    // Keyboard → button id (no duplicate keys)
     var KEY_MAP = {
         'ArrowUp':'btn-up', 'ArrowDown':'btn-down',
         'ArrowLeft':'btn-left', 'ArrowRight':'btn-right',
@@ -240,8 +236,47 @@
 
     var BTNS = ['btn-up','btn-down','btn-left','btn-right','btn-a','btn-b','btn-select','btn-start','btn-l','btn-r'];
 
+    // ===================================================================
+    // Pre-cache button elements & build hit-test rects
+    // ===================================================================
+    var btnElements = {};
+    var btnRects = [];       // [{id, x, y, w, h, el}]
+    var rectsDirty = true;
+
+    function cacheElements() {
+        BTNS.forEach(function(id) { btnElements[id] = document.getElementById(id); });
+    }
+
+    function rebuildRects() {
+        btnRects = [];
+        BTNS.forEach(function(id) {
+            var el = btnElements[id];
+            if (!el) return;
+            var r = el.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0) {
+                btnRects.push({ id: id, x: r.left, y: r.top, w: r.width, h: r.height });
+            }
+        });
+        rectsDirty = false;
+    }
+
+    // Fast rect hit-test instead of document.elementFromPoint
+    function btnAtPoint(cx, cy) {
+        if (rectsDirty) rebuildRects();
+        for (var i = 0; i < btnRects.length; i++) {
+            var r = btnRects[i];
+            if (cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h) return r.id;
+        }
+        return null;
+    }
+
+    // Rebuild rects on resize/orientation change
+    function markRectsDirty() { rectsDirty = true; }
+
+    // ===================================================================
     // Emulator state
-    var emu = { iodine: null, blitter: null, timer: null, running: false, startTime: 0 };
+    // ===================================================================
+    var emu = { iodine: null, blitter: null, rafId: null, running: false, startTime: 0 };
     var scriptsLoaded = false;
 
     function loadScripts(cb) {
@@ -286,10 +321,11 @@
 
     function stopEmu() {
         emu.running = false;
-        if (emu.timer) { clearInterval(emu.timer); emu.timer = null; }
+        if (emu.rafId) { cancelAnimationFrame(emu.rafId); emu.rafId = null; }
         if (emu.iodine) { try { emu.iodine.pause(); } catch(e) {} emu.iodine = null; }
         emu.blitter = null;
-        var ctx = document.getElementById('game-canvas').getContext('2d');
+        var canvas = document.getElementById('game-canvas');
+        var ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, 240, 160);
     }
 
@@ -312,7 +348,6 @@
     function startIodine(biosData, romData) {
         try {
             emu.iodine = new GameBoyAdvanceEmulator();
-            // Must attach these before play() or emulator crashes calling null callbacks
             emu.iodine.attachPlayStatusHandler(function() {});
             emu.iodine.attachSpeedHandler(function() {});
             emu.iodine.attachBIOS(new Uint8Array(biosData));
@@ -320,19 +355,26 @@
             emu.blitter = new GfxGlueCode(240, 160);
             emu.blitter.attachCanvas(document.getElementById('game-canvas'));
             emu.iodine.attachGraphicsFrameHandler(emu.blitter);
-            emu.iodine.setIntervalRate(8);
-            emu.startTime = Date.now();
-            emu.timer = setInterval(function() {
-                emu.iodine.timerCallback((Date.now() - emu.startTime) >>> 0);
-            }, 8);
-            emu.iodine.play();
+
+            // Use rAF-based loop instead of setInterval for iOS perf
+            // IodineGBA expects timerCallback with elapsed ms
+            emu.iodine.setIntervalRate(16);  // tell it we tick ~16ms
+            emu.startTime = performance.now();
             emu.running = true;
+
+            function rafLoop(now) {
+                if (!emu.running) return;
+                var elapsed = (now - emu.startTime) >>> 0;
+                emu.iodine.timerCallback(elapsed);
+                emu.rafId = requestAnimationFrame(rafLoop);
+            }
+            emu.rafId = requestAnimationFrame(rafLoop);
+            emu.iodine.play();
         } catch(e) {
             renderError('BOOT FAILED', String(e));
         }
     }
 
-    // Send input directly to IodineGBA's joypad register (correct bit indices 0-9)
     function sendInput(btnId, isDown) {
         if (!emu.running || !emu.iodine) return;
         var bit = GBA_BTN[btnId];
@@ -415,7 +457,7 @@
                 ? new Promise(function(res) { var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.readAsDataURL(imgFile); })
                 : Promise.resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
             return coverP.then(function(cover) {
-                var id = romFile.name.replace(/\.[^/.]+$/, '');
+                var id = romFile.name.replace(/\\.[^/.]+$/, '');
                 var rec = { id: id, title: id, rom: romBuf, cover: cover };
                 return initDB().then(function(db) {
                     if (!db) { memStore.games[id] = rec; return; }
@@ -588,15 +630,15 @@
     });
 
     // ===================================================================
-    // Input handler
+    // Input handler — optimized for iOS
     // ===================================================================
-    var held = new Set();   // currently held button ids
-    var osHeld = new Set(); // OS: track keys to fire only once per hold
+    var held = {};          // id -> true (plain object faster than Set on old WebKit)
+    var osHeld = {};
 
     function pressButton(id) {
-        if (held.has(id)) return;
-        held.add(id);
-        var el = document.getElementById(id); if (el) el.classList.add('pressed');
+        if (held[id]) return;
+        held[id] = true;
+        var el = btnElements[id]; if (el) el.classList.add('pressed');
         if (emu.running) {
             sendInput(id, true);
         } else {
@@ -607,14 +649,15 @@
     }
 
     function releaseButton(id) {
-        if (!held.has(id)) return;
-        held.delete(id);
-        var el = document.getElementById(id); if (el) el.classList.remove('pressed');
+        if (!held[id]) return;
+        delete held[id];
+        var el = btnElements[id]; if (el) el.classList.remove('pressed');
         if (emu.running) sendInput(id, false);
     }
 
+    // Legacy btnAt for mouse (rare on iOS, keep simple)
     function btnAt(el) {
-        while (el) { if (el.id && BTNS.indexOf(el.id) !== -1) return el.id; el = el.parentElement; }
+        while (el) { if (el.id && btnElements[el.id]) return el.id; el = el.parentElement; }
         return null;
     }
 
@@ -625,39 +668,56 @@
         if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(key) > -1) e.preventDefault();
         var id = KEY_MAP[key]; if (!id) return;
         if (emu.running) {
-            var el = document.getElementById(id); if (el && !held.has(id)) { held.add(id); el.classList.add('pressed'); }
-            sendInput(id, true);  // always relay — games need continuous input
+            if (!held[id]) { held[id] = true; var el = btnElements[id]; if (el) el.classList.add('pressed'); }
+            sendInput(id, true);
         } else {
-            if (!osHeld.has(id)) { osHeld.add(id); pressButton(id); }
+            if (!osHeld[id]) { osHeld[id] = true; pressButton(id); }
         }
     });
     window.addEventListener('keyup', function(e) {
         var id = KEY_MAP[e.key]; if (!id) return;
-        osHeld.delete(id);
+        delete osHeld[id];
         releaseButton(id);
     });
 
-    // Touch
+    // ===================================================================
+    // Touch — rect-based hit testing, no elementFromPoint
+    // ===================================================================
     var touchMap = {};
+
     window.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
     window.addEventListener('touchstart', function(e) {
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') e.preventDefault();
+        // Allow file inputs to work
+        var tag = e.target.tagName;
+        if (tag !== 'INPUT' && tag !== 'LABEL') e.preventDefault();
+
+        // Rebuild rects on first touch interaction (lazy, avoids layout thrash on boot)
+        if (rectsDirty) rebuildRects();
+
         for (var i = 0; i < e.changedTouches.length; i++) {
-            var t = e.changedTouches[i], id = btnAt(document.elementFromPoint(t.clientX, t.clientY));
+            var t = e.changedTouches[i];
+            var id = btnAtPoint(t.clientX, t.clientY);
             if (id) { touchMap[t.identifier] = id; pressButton(id); }
         }
     }, {passive:false});
+
     window.addEventListener('touchmove', function(e) {
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') e.preventDefault();
+        var tag = e.target.tagName;
+        if (tag !== 'INPUT' && tag !== 'LABEL') e.preventDefault();
+
         for (var i = 0; i < e.changedTouches.length; i++) {
             var t = e.changedTouches[i];
-            var newId = btnAt(document.elementFromPoint(t.clientX, t.clientY)), oldId = touchMap[t.identifier];
+            var newId = btnAtPoint(t.clientX, t.clientY);
+            var oldId = touchMap[t.identifier];
             if (oldId !== newId) {
                 if (oldId) releaseButton(oldId);
-                if (newId) { touchMap[t.identifier] = newId; pressButton(newId); } else delete touchMap[t.identifier];
+                if (newId) { touchMap[t.identifier] = newId; pressButton(newId); }
+                else delete touchMap[t.identifier];
             }
         }
     }, {passive:false});
+
     function endTouches(e) {
         for (var i = 0; i < e.changedTouches.length; i++) {
             var id = touchMap[e.changedTouches[i].identifier];
@@ -667,7 +727,7 @@
     window.addEventListener('touchend', endTouches, {passive:false});
     window.addEventListener('touchcancel', endTouches, {passive:false});
 
-    // Mouse
+    // Mouse (desktop fallback)
     var mouseBtn = null;
     window.addEventListener('mousedown', function(e) {
         if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') e.preventDefault();
@@ -675,7 +735,7 @@
     });
     window.addEventListener('mousemove', function(e) {
         if (!mouseBtn) return;
-        var id = btnAt(document.elementFromPoint(e.clientX, e.clientY));
+        var id = btnAtPoint(e.clientX, e.clientY);
         if (id !== mouseBtn) { releaseButton(mouseBtn); mouseBtn = id || null; if (mouseBtn) pressButton(mouseBtn); }
     });
     window.addEventListener('mouseup', function() { if (mouseBtn) { releaseButton(mouseBtn); mouseBtn = null; } });
@@ -700,6 +760,7 @@
                 buildXMB().then(function() {
                     screen.classList.remove('boot-white'); screen.classList.add('os-ready');
                     isOSReady = true; colIdx = 1; rowIdx = 0; updateXMB();
+                    rectsDirty = true; // rects change after OS transition
                 });
             }, 3500));
         } else {
@@ -712,8 +773,9 @@
             stopEmu(); closePopup();
         }
     }
+
+    // Use only click for power to avoid double-fire
     document.getElementById('btn-power').addEventListener('click', togglePower);
-    document.getElementById('btn-power').addEventListener('touchstart', togglePower, {passive:false});
 
     // ===================================================================
     // Clock, scale, iOS audio unlock, init
@@ -723,17 +785,25 @@
         var ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
         var c = document.getElementById('xmb-clock'); if (c) c.innerText = (now.getMonth()+1) + '/' + now.getDate() + ' ' + h + ':' + m + ap;
     }
-    updateClock(); setInterval(updateClock, 1000);
+    updateClock(); setInterval(updateClock, 30000); // 30s is fine for a clock
 
     function applyScale() {
         var el = document.getElementById('gmx-console'); if (!el || window.innerHeight > window.innerWidth) return;
         var s = Math.min((window.innerWidth * 0.95) / 735, (window.innerHeight * 0.95) / 350, 1);
         el.style.transform = 'scale(' + s + ')';
+        rectsDirty = true;
     }
-    window.addEventListener('resize', applyScale); applyScale();
+    window.addEventListener('resize', function() { applyScale(); markRectsDirty(); });
+    window.addEventListener('orientationchange', function() {
+        // iOS needs a tick to settle layout after orientation
+        setTimeout(function() { applyScale(); markRectsDirty(); }, 200);
+    });
+    applyScale();
 
     window.addEventListener('touchstart', function() { try { new (window.AudioContext || window.webkitAudioContext)().resume(); } catch(e) {} }, {once:true,passive:true});
 
+    // Init
+    cacheElements();
     document.getElementById('loading-overlay').classList.add('hidden');
     </script>
 </body>
