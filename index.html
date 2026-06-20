@@ -6,22 +6,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GMX Emulator</title>
-
-    <script src="https://cdn.jsdelivr.net/npm/jsnes@1.2.1/dist/jsnes.min.js"></script>
-
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
-        body { background-color: #111; display: flex; justify-content: center; align-items: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; perspective: 1000px; font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; }
+        body { background-color: #050608; display: flex; justify-content: center; align-items: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; perspective: 1000px; font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; }
         #rotate-message { display: none; color: #fff; font-size: 1.5rem; text-align: center; font-weight: bold; letter-spacing: 2px; }
         @media (orientation: portrait) { #gmx-console { display: none !important; } #rotate-message { display: block; } }
         @media (orientation: landscape) {
-            #gmx-console { position: relative; display: flex; justify-content: center; align-items: center; width: 735px; height: 350px; background-color: #18c2c1; border-radius: 36px; box-shadow: inset 0 0 40px rgba(0,0,0,0.1), inset 5px 5px 10px rgba(255,255,255,0.15), -5px -5px 15px rgba(0,0,0,0.3), 10px 10px 30px rgba(0,0,0,0.7); overflow: hidden; transform-origin: center center; }
-            #screen-bezel { position: absolute; width: 60%; height: 84%; background: #000; border-radius: 12px; box-shadow: inset 0 0 10px rgba(255,255,255,0.05), inset 0 0 20px rgba(0,0,0,1), 0 10px 20px rgba(0,0,0,0.5); z-index: 10; padding: 4px; }
-            #screen { position: relative; width: 100%; height: 100%; background: #050505; border-radius: 10px; box-shadow: inset 0 0 30px rgba(0,0,0,1); transition: background 0.5s ease; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+            #gmx-console { position: relative; display: flex; justify-content: center; align-items: center; width: 735px; height: 350px; background: #40D0D0; border-radius: 36px; box-shadow: inset 0 0 4px rgba(255,255,255,0.05), inset 2px 2px 10px rgba(255,255,255,0.08), inset -3px -3px 15px rgba(0,0,0,0.6), -10px -10px 25px rgba(0,0,0,0.4), 15px 15px 45px rgba(0,0,0,0.8); overflow: hidden; transform-origin: center center; border: 1px solid #353942; }
+            #screen-bezel { position: absolute; width: 60%; height: 84%; background: linear-gradient(180deg, #020202 0%, #0a0a0c 100%); border-radius: 12px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.15), inset 0 0 20px rgba(0,0,0,1), 0 12px 25px rgba(0,0,0,0.6); z-index: 10; padding: 4px; border: 1px solid #111; }
+            #screen { position: relative; width: 100%; height: 100%; background: #030303; border-radius: 10px; box-shadow: inset 0 0 35px rgba(0,0,0,1), 0 0 0 1px rgba(255,255,255,0.03); transition: background 0.5s ease; overflow: hidden; display: flex; justify-content: center; align-items: center; }
             #screen.boot-white { background: #ffffff; box-shadow: inset 0 0 15px rgba(0,0,0,0.2); }
             #boot-logo-container { position: absolute; display: flex; align-items: flex-start; opacity: 0; z-index: 20; }
-            #boot-gmx { font-size: 3rem; font-weight: 900; font-style: italic; letter-spacing: -2px; background: linear-gradient(to bottom, #3b2d9b 0%, #6641b5 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; }
-            #boot-reg { font-size: 0.8rem; font-weight: bold; color: #3b2d9b; margin-top: 8px; margin-left: 4px; opacity: 0; }
+            #boot-gmx { font-size: 3rem; font-weight: 900; font-style: italic; letter-spacing: -2px; background: linear-gradient(to bottom, #1e1e1e 0%, #444 50%, #1e1e1e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+            #boot-reg { font-size: 0.8rem; font-weight: bold; color: #444; margin-top: 8px; margin-left: 4px; opacity: 0; }
             #boot-gmx::after { content: ''; position: absolute; top: 0; left: -150%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.9), transparent); transform: skewX(-20deg); pointer-events: none; }
             @keyframes gbaDrop { 0% { transform: translateY(-80px) scale(1.1); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
             @keyframes glintSweep { 0% { left: -150%; } 100% { left: 200%; } }
@@ -31,94 +28,108 @@
             .do-glint::after { animation: glintSweep 0.5s ease-in-out forwards; }
             .do-fade-in { animation: fadeIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
             .do-fade-out { animation: fadeOut 0.5s ease forwards; }
-            .xmb-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.8s ease; background: linear-gradient(135deg, #3b3c63 0%, #2b2c4e 50%, #1e1f3a 100%); z-index: 1; }
+            .xmb-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.8s ease; background: linear-gradient(135deg, #181926 0%, #0f101a 50%, #08080d 100%); z-index: 1; }
             .xmb-game-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center right; opacity: 0; transition: opacity 0.4s ease; z-index: -1; }
-            .wave-line { position: absolute; width: 150%; height: 150px; background: rgba(255,255,255,0.03); border-top: 2px solid rgba(255,255,255,0.15); border-radius: 50%; top: 30%; left: -25%; transform: rotate(-8deg); }
-            .wave-line:nth-child(3) { top: 40%; transform: rotate(5deg) scaleY(1.2); border-top: 1px solid rgba(255,255,255,0.2); }
+            .wave-line { position: absolute; width: 150%; height: 150px; background: rgba(255,255,255,0.01); border-top: 1px solid rgba(255,255,255,0.08); border-radius: 50%; top: 30%; left: -25%; transform: rotate(-8deg); box-shadow: 0 -2px 15px rgba(255,255,255,0.02); }
+            .wave-line:nth-child(3) { top: 40%; transform: rotate(5deg) scaleY(1.2); border-top: 1px solid rgba(255,255,255,0.05); }
             #xmb-ui { position: absolute; width: 100%; height: 100%; z-index: 10; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; color: #fff; }
             #screen.os-ready .xmb-bg { opacity: 1; }
             #screen.os-ready #xmb-ui { opacity: 1; pointer-events: auto; }
-            #xmb-header { position: absolute; top: 8%; right: 4%; font-size: 0.8rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 8px; }
-            .battery-icon { width: 20px; height: 10px; border: 2px solid #fff; border-radius: 2px; position: relative; }
-            .battery-icon::after { content: ''; position: absolute; right: -4px; top: 1px; width: 2px; height: 4px; background: #fff; }
+            #xmb-header { position: absolute; top: 8%; right: 4%; font-size: 0.75rem; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.9); display: flex; align-items: center; gap: 10px; opacity: 0.8; }
+            .battery-icon { width: 22px; height: 10px; border: 1.5px solid #fff; border-radius: 2px; position: relative; }
+            .battery-icon::after { content: ''; position: absolute; right: -4px; top: 1.5px; width: 2px; height: 4px; background: #fff; border-radius: 0 2px 2px 0; }
             .battery-fill { width: 100%; height: 100%; background: #fff; border: 1px solid transparent; background-clip: content-box; }
             #xmb-grid { position: absolute; top: 40%; left: 50%; display: flex; gap: 80px; transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1); }
-            .xmb-col { display: flex; flex-direction: column; align-items: center; gap: 40px; transition: opacity 0.25s, transform 0.25s; opacity: 0.4; transform: scale(0.85); }
+            .xmb-col { display: flex; flex-direction: column; align-items: center; gap: 40px; transition: opacity 0.25s, transform 0.25s; opacity: 0.3; transform: scale(0.85); }
             .xmb-col.active-col { opacity: 1; transform: scale(1); }
             .xmb-main { position: relative; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
-            .xmb-icon { width: 40px; height: 40px; fill: #ffffff; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); transition: all 0.2s; }
-            .xmb-main span { position: absolute; left: 130%; top: 50%; transform: translateY(-50%); font-size: 0.9rem; white-space: nowrap; opacity: 0; transition: opacity 0.2s; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
-            .active-col .active-item.xmb-main .xmb-icon { transform: scale(1.3); filter: drop-shadow(0 0 15px rgba(255,255,255,0.9)); }
+            .xmb-icon { width: 40px; height: 40px; fill: #ffffff; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); transition: all 0.2s; }
+            .xmb-main span { position: absolute; left: 130%; top: 50%; transform: translateY(-50%); font-size: 0.9rem; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity 0.2s; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
+            .active-col .active-item.xmb-main .xmb-icon { transform: scale(1.3); filter: drop-shadow(0 0 20px rgba(255,255,255,0.6)); }
             .active-col .active-item.xmb-main span { opacity: 1; }
-            .xmb-sub { font-size: 0.9rem; opacity: 0; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); transition: all 0.2s; white-space: nowrap; }
-            .active-col .xmb-sub { opacity: 0.6; }
-            .active-col .active-item.xmb-sub { opacity: 1; transform: scale(1.15); }
+            .xmb-sub { font-size: 0.85rem; font-weight: 500; opacity: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.9); transition: all 0.2s; white-space: nowrap; }
+            .active-col .xmb-sub { opacity: 0.5; }
+            .active-col .active-item.xmb-sub { opacity: 1; transform: scale(1.15); font-weight: 700; }
             .game-item { display: flex; align-items: center; justify-content: center; position: relative; }
-            .box-art { width: 60px; height: 40px; object-fit: cover; border: 2px solid transparent; border-radius: 4px; transition: all 0.2s; }
-            .active-col .active-item.game-item .box-art { border-color: white; box-shadow: 0 0 15px rgba(255,255,255,0.8); transform: scale(1.1); }
+            .box-art { width: 60px; height: 40px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+            .active-col .active-item.game-item .box-art { border: 2px solid #fff; box-shadow: 0 0 20px rgba(255,255,255,0.5), 0 8px 15px rgba(0,0,0,0.8); transform: scale(1.1); }
             .game-details { position: absolute; left: 80px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; opacity: 0; transition: opacity 0.2s; }
             .active-col .active-item.game-item .game-details { opacity: 1; }
-            .game-title { font-size: 0.8rem; font-weight: bold; text-shadow: 1px 1px 3px rgba(0,0,0,0.9); }
-            #sys-msg { position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%); font-size: 0.8rem; opacity: 0; transition: opacity 0.3s; z-index: 50;}
-            #game-canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; z-index: 30; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
-            #screen.game-running #game-canvas { opacity: 1; pointer-events: auto; }
+            .game-title { font-size: 0.85rem; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.9); }
+            #sys-msg { position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%); font-size: 0.75rem; font-weight: 600; letter-spacing: 1px; opacity: 0; transition: opacity 0.3s; z-index: 50; text-transform: uppercase; color: #aaa; white-space: nowrap; }
+            /* Game display: IodineGBA renders into a canvas */
+            #game-area { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; display: flex; justify-content: center; align-items: center; background: #000; }
+            #screen.game-running #game-area { opacity: 1; pointer-events: auto; }
             #screen.game-running #xmb-ui { opacity: 0; pointer-events: none; }
             #screen.game-running .xmb-bg { opacity: 0; }
-            #install-popup { position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0,0,0,0.85); z-index: 60; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+            #game-canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
+            #install-popup { position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0,0,0,0.9); z-index: 60; display: none; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
             #install-popup.visible { display: flex; }
-            .popup-box { width: 80%; max-width: 280px; background: linear-gradient(135deg, #23245a, #13143a); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; padding: 20px; color: #fff; text-align: center; box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.1); font-family: inherit; }
-            .popup-box h3 { font-size: 1rem; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 8px; }
-            .popup-btn { display: block; width: 100%; padding: 10px; margin: 8px 0; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.1s; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
-            .popup-btn:active { background: rgba(255,255,255,0.25); transform: scale(0.97); }
-            .popup-btn.install-btn { background: #6641b5; border-color: #8a6dd4; margin-top: 15px; }
-            .popup-btn.install-btn:disabled { opacity: 0.4; pointer-events: none; }
-            .file-name { font-size: 0.7rem; color: #ccc; margin-top: 2px; word-break: break-all; }
+            .popup-box { width: 80%; max-width: 280px; background: linear-gradient(135deg, #1c1d26, #0d0e14); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; color: #fff; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.05); font-family: inherit; }
+            .popup-box h3 { font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; color: #ddd; }
+            .popup-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; font-size: 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
+            .popup-btn:active { background: rgba(255,255,255,0.1); transform: translateY(2px); }
+            .popup-btn.install-btn { background: linear-gradient(to bottom, #4a4e69, #2b2d42); border-color: #5a5e79; margin-top: 20px; color: #fff; }
+            .popup-btn.install-btn:disabled { opacity: 0.3; pointer-events: none; }
+            .file-name { font-size: 0.65rem; color: #888; margin-top: 4px; word-break: break-all; font-family: monospace; }
         }
-        .shoulder-group { position: absolute; top: 7%; display: flex; gap: 10px; }
-        .left-shoulder { left: 10%; transform: translateX(-50%); } .right-shoulder { right: 10%; transform: translateX(50%); }
-        .btn-shoulder { background: linear-gradient(#2a2a2a 0%, #1a1a1a 100%); color: #c0c0c0; border-radius: 12px; padding: 6px 18px; font-size: 0.7rem; font-weight: 700; box-shadow: inset 0 2px 2px rgba(255,255,255,0.1), inset 0 -2px 3px rgba(0,0,0,0.7), 0 4px 6px rgba(0,0,0,0.3), 0 1px 1px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.1s ease-out; }
-        .btn-shoulder:active, .btn-shoulder.pressed { background: linear-gradient(#151515 0%, #0a0a0a 100%); transform: translateY(2px); box-shadow: inset 0 2px 5px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(255,255,255,0.05), 0 1px 2px rgba(0,0,0,0.3); color: #909090; }
-        .control-base { position: absolute; top: 32%; width: 17%; aspect-ratio: 1; background: radial-gradient(circle at 30% 30%, #b0b8ff 0%, #909bff 50%, #858eee 100%); border: 3px solid #111; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), inset 0 -2px 10px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.4); }
-        .left-base { left: 10%; transform: translateX(-50%); } .right-base { right: 10%; transform: translateX(50%); }
-        .d-pad-cross { position: relative; width: 80%; height: 80%; background: linear-gradient(#2d2d2d 0%, #1a1a1a 100%); border-radius: 50%; box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), 0 3px 6px rgba(0,0,0,0.6); }
-        .d-btn { position: absolute; width: 28%; height: 32%; cursor: pointer; background: #1a1a1a; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.8), inset 0 2px 3px rgba(255,255,255,0.05); display: flex; justify-content: center; align-items: center; transition: filter 0.1s; }
-        .d-btn.pressed { background: #111; filter: brightness(0.7); }
-        .d-up { top: 7%; left: 36%; border-radius: 6px 6px 12px 12px; } .d-right { top: 34%; right: 7%; border-radius: 12px 6px 6px 12px; height: 28%; width: 32%;} .d-down { bottom: 7%; left: 36%; border-radius: 12px 12px 6px 6px; } .d-left { top: 34%; left: 7%; border-radius: 6px 12px 12px 6px; height: 28%; width: 32%;}
-        .action-pad-cluster { position: relative; width: 85%; height: 85%; }
-        .btn-action { position: absolute; width: 32%; height: 32%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e0e0e0 30%, #b0b0b0 80%, #999999 100%); box-shadow: inset -3px -3px 8px rgba(0,0,0,0.4), inset 2px 2px 6px rgba(255,255,255,0.8), 0 6px 8px rgba(0,0,0,0.6); color: #222; font-weight: 700; font-size: 0.8rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
-        .btn-action.pressed { transform: translateY(4px); box-shadow: inset -1px -1px 4px rgba(0,0,0,0.4), inset 1px 1px 4px rgba(255,255,255,0.8), 0 2px 2px rgba(0,0,0,0.6); background: radial-gradient(circle at 35% 35%, #e8e8e8 0%, #c0c0c0 30%, #909090 80%, #777777 100%); }
-        .btn-y { top: 4%; left: 34%; } .btn-b { top: 34%; right: 4%; } .btn-a { bottom: 4%; left: 34%; } .btn-x { top: 34%; left: 4%; }
-        .analog-stick { position: absolute; width: 8%; aspect-ratio: 1; background: linear-gradient(#0c0c0c 0%, #151515 100%); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 10px 30px rgba(0,0,0,1), inset 0 2px 2px rgba(255,255,255,0.05), 0 2px 5px rgba(0,0,0,0.4); bottom: 9%; z-index: 20; }
-        .left-analog { left: 10%; transform: translateX(-50%); } .right-analog { right: 10%; transform: translateX(50%); }
-        .stick-cap { width: 75%; height: 75%; background: radial-gradient(circle at 40% 40%, #eef1ff 0%, #c8d1ed 50%, #a8b1dd 100%); border-radius: 50%; box-shadow: inset 2px 2px 2px rgba(255,255,255,0.3), inset -5px -5px 15px rgba(0,0,0,0.1), 0 10px 20px rgba(0,0,0,0.5); cursor: grab; background-image: repeating-radial-gradient(circle, transparent 0%, transparent 6%, rgba(0,0,0,0.02) 7%, rgba(0,0,0,0.02) 8%), radial-gradient(circle at 40% 40%, #eef1ff 0%, #c8d1ed 50%, #a8b1dd 100%); }
-        #gmx-logo { position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); color: #000; font-size: 0.9rem; font-style: italic; font-weight: 700; letter-spacing: -1px; opacity: 0.8; text-shadow: 1px 1px 1px rgba(255,255,255,0.1); }
-        .bottom-btn { position: absolute; bottom: 2%; background: #000; color: #ccc; border-radius: 8px; padding: 3px 10px; font-size: 0.55rem; font-weight: bold; text-transform: uppercase; box-shadow: inset 0 -1px 3px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,0.3); cursor: pointer; }
-        .bottom-btn.pressed { box-shadow: inset 0 1px 3px rgba(0,0,0,0.9); transform: translateY(1px); }
-        .select-btn { left: 35%; } .start-btn { right: 35%; } .power-btn { right: 20%; }
-        .led-indicator { position: absolute; bottom: 3.5%; right: 28%; width: 6px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #5a3a3a 0%, #2a1010 100%); box-shadow: inset 0 1px 3px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.1); transition: background 0.1s ease, box-shadow 0.1s ease; }
-        .led-indicator.is-on { background: radial-gradient(circle at 40% 40%, #e0ffff 0%, #00ffcc 50%, #008866 100%); box-shadow: inset 0 1px 2px rgba(0,0,0,0.5), 0 0 8px #00ffcc, 0 0 15px rgba(0,255,204,0.4); }
+        .shoulder-group { position: absolute; top: 7%; }
+        .left-shoulder { left: 10%; transform: translateX(-50%); }
+        .right-shoulder { right: 10%; transform: translateX(50%); }
+        .btn-shoulder { background: linear-gradient(180deg, #FFF4E9 0%, #FFF4E9 90%, #22252a 100%); color: #888c94; border-radius: 12px; padding: 6px 22px; font-size: 0.75rem; font-weight: 800; box-shadow: inset 0 2px 2px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.8), 0 5px 8px rgba(0,0,0,0.5), 0 1px 1px rgba(0,0,0,0.8); cursor: pointer; transition: transform 0.1s ease-out, box-shadow 0.1s ease-out; border: 1px solid #FFF4E9; }
+        .btn-shoulder:active, .btn-shoulder.pressed { background: linear-gradient(180deg, #968E85 0%, #968E85 90%,#15171a 100%); transform: translateY(3px); box-shadow: inset 0 3px 6px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(255,255,255,0.02), 0 2px 3px rgba(0,0,0,0.4); color: #555960; }
+        .control-base { position: absolute; top: 30%; width: 18%; aspect-ratio: 1; background: radial-gradient(circle at 30% 30%, #FFFFFF 0%, #FFFFFF 50%, #FFFFFF 100%); border: 0.01px solid #FFF4E9; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05), inset 0 -2px 15px rgba(0,0,0,0.8), 0 8px 20px rgba(0,0,0,0.6), 0 0 0 1px #444a55; }
+        .left-base { left: 10%; transform: translateX(-50%); }
+        .right-base { right: 10%; transform: translateX(50%); }
+        .d-pad-cross { position: relative; width: 80%; height: 80%; background: linear-gradient(135deg, #FFF4E9 0%, #FFF4E9 90%,#15171a 100%); border-radius: 50%; box-shadow: inset 0 1px 2px rgba(255,255,255,0.08), 0 6px 10px rgba(0,0,0,0.7); }
+        .d-btn { position: absolute; width: 28%; height: 32%; cursor: pointer; background: #2a2c30; box-shadow: inset 0 -2px 4px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; transition: filter 0.1s, transform 0.1s; border: 1px solid #1a1a1a; }
+        .d-btn.pressed { background: #1a1a1a; filter: brightness(0.8); transform: translateY(2px); box-shadow: inset 0 2px 6px rgba(0,0,0,0.9); }
+        .d-up { top: 7%; left: 36%; border-radius: 6px 6px 12px 12px; }
+        .d-right { top: 34%; right: 7%; border-radius: 12px 6px 6px 12px; height: 28%; width: 32%; }
+        .d-down { bottom: 7%; left: 36%; border-radius: 12px 12px 6px 6px; }
+        .d-left { top: 34%; left: 7%; border-radius: 6px 12px 12px 6px; height: 28%; width: 32%; }
+        .action-pad-gba { position: relative; width: 90%; height: 90%; }
+        .btn-action-gba { position: absolute; width: 38%; height: 38%; border-radius: 50%; background: linear-gradient(180deg, #444a52 0%, #2a2d33 100%); box-shadow: inset 0 1px 2px rgba(255,255,255,0.15), 0 4px 8px rgba(0,0,0,0.7); color: #dcdcdc; font-weight: 800; font-size: 0.95rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; text-shadow: 0 -1px 1px rgba(0,0,0,0.8); border: 1px solid #151515; }
+        .btn-action-gba.pressed { transform: translateY(3px); box-shadow: inset 0 2px 6px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.6); background: linear-gradient(180deg, #2a2d33 0%, #1e2025 100%); color: #aaaaaa; }
+        .btn-gba-a { top: 20%; right: 8%; }
+        .btn-gba-b { bottom: 20%; left: 8%; }
+        #gmx-logo { position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); background: linear-gradient(180deg, #ffffff 0%, #a0a5b0 40%, #60646b 50%, #a0a5b0 60%, #ffffff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-size: 0.95rem; font-style: italic; font-weight: 900; letter-spacing: 1px; filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.8)); }
+        .bottom-btn { position: absolute; bottom: 2%; background: linear-gradient(180deg, #FFF4E9 0%, #FFFFFF 100%); color: #777; border-radius: 8px; padding: 4px 12px; font-size: 0.5rem; font-weight: 800; text-transform: uppercase; box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.9), 0 4px 6px rgba(0,0,0,0.6); cursor: pointer; border: 1px solid #0a0a0a; letter-spacing: 0.5px; transition: transform 0.1s, box-shadow 0.1s; }
+        .bottom-btn.pressed { box-shadow: inset 0 2px 5px rgba(0,0,0,0.9); transform: translateY(2px); color: #444; }
+        .select-btn { left: 35%; }
+        .start-btn { right: 35%; }
+        .power-btn { right: 20%; }
+        .led-indicator { position: absolute; bottom: 3.5%; right: 28%; width: 6px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #2a1a1a 0%, #0a0505 100%); box-shadow: inset 0 1px 3px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.05); transition: background 0.1s ease, box-shadow 0.1s ease; border: 1px solid #000; }
+        .led-indicator.is-on { background: radial-gradient(circle at 40% 40%, #ffffff 0%, #00ffcc 40%, #006655 100%); box-shadow: inset 0 1px 2px rgba(0,0,0,0.5), 0 0 6px #00ffcc, 0 0 12px rgba(0,255,204,0.3); }
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #050608; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; color: #40D0D0; font-family: 'Century Gothic', sans-serif; }
+        #loading-overlay.hidden { display: none; }
+        .loader-spinner { width: 40px; height: 40px; border: 3px solid rgba(64,208,208,0.2); border-top: 3px solid #40D0D0; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <input type="file" id="install-rom-upload" accept=".nes" style="position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 1px; height: 1px;">
-    <input type="file" id="install-cover-upload" accept="image/*" style="position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 1px; height: 1px;">
-    
+    <div id="loading-overlay">
+        <div class="loader-spinner"></div>
+        <div style="font-size:0.9rem;font-weight:700;letter-spacing:2px;">LOADING CORE...</div>
+    </div>
+    <input type="file" id="install-rom-upload" accept=".gba,.GBA" style="position:absolute;left:-9999px;top:-9999px;opacity:0;width:1px;height:1px;" touch-action="auto">
+    <input type="file" id="install-cover-upload" accept="image/*" style="position:absolute;left:-9999px;top:-9999px;opacity:0;width:1px;height:1px;" touch-action="auto">
+    <input type="file" id="install-bios-upload" accept=".bin,.BIN" style="position:absolute;left:-9999px;top:-9999px;opacity:0;width:1px;height:1px;" touch-action="auto">
     <div id="rotate-message">PLEASE ROTATE DEVICE</div>
     <div id="gmx-console">
-        <div id="left-controls">
-            <div class="shoulder-group left-shoulder"><div class="btn-shoulder" id="btn-l1">L1</div><div class="btn-shoulder" id="btn-l2">L2</div></div>
-            <div class="control-base left-base">
-                <div class="d-pad-cross">
-                    <div class="d-btn d-up" id="btn-up"></div><div class="d-btn d-right" id="btn-right"></div>
-                    <div class="d-btn d-down" id="btn-down"></div><div class="d-btn d-left" id="btn-left"></div>
-                </div>
+        <div class="shoulder-group left-shoulder"><div class="btn-shoulder" id="btn-l">L</div></div>
+        <div class="control-base left-base">
+            <div class="d-pad-cross">
+                <div class="d-btn d-up" id="btn-up"></div>
+                <div class="d-btn d-right" id="btn-right"></div>
+                <div class="d-btn d-down" id="btn-down"></div>
+                <div class="d-btn d-left" id="btn-left"></div>
             </div>
-            <div class="analog-stick left-analog" id="joystick-socket-left"><div class="stick-cap" id="joystick-cap-left"></div></div>
         </div>
         <div id="screen-bezel">
             <div id="screen">
                 <div id="boot-logo-container">
-                    <div id="boot-gmx">GMX</div><div id="boot-reg">®</div>
+                    <div id="boot-gmx">GMX</div><div id="boot-reg">&reg;</div>
                 </div>
                 <div class="xmb-bg">
                     <div id="game-bg-layer" class="xmb-game-bg"></div>
@@ -135,7 +146,7 @@
                                 <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M17 6h-2V4c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2v2H7c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2h2v2h-2V4z M19 18H5V11h14v7z M5 9V8h14v1H5z"/></svg>
                                 <span>Settings</span>
                             </div>
-                            <div class="xmb-sub">System Update</div>
+                            <div class="xmb-sub">Insert Core (BIOS)</div>
                         </div>
                         <div class="xmb-col" id="game-column">
                             <div class="xmb-main">
@@ -149,22 +160,31 @@
                                 <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                                 <span>About</span>
                             </div>
-                            <div class="xmb-sub">Version 1.4 (Offline)</div>
+                            <div class="xmb-sub">Version 2.0 (GBA)</div>
                         </div>
                     </div>
                     <div id="sys-msg">Press 'A' to execute</div>
                 </div>
                 <div id="install-popup">
-                    <div class="popup-box">
+                    <div class="popup-box" id="popup-box-game" style="display:block;">
                         <h3>Install to Memory Stick</h3>
-                        <label for="install-rom-upload" class="popup-btn" style="cursor: pointer;">Select .NES ROM</label>
+                        <label for="install-rom-upload" class="popup-btn" style="cursor:pointer;touch-action:auto;">Select .GBA ROM</label>
                         <div class="file-name" id="popup-rom-name"></div>
-                        <label for="install-cover-upload" class="popup-btn" style="cursor: pointer;">Select Cover Art</label>
+                        <label for="install-cover-upload" class="popup-btn" style="cursor:pointer;touch-action:auto;">Select Cover Art</label>
                         <div class="file-name" id="popup-cover-name"></div>
-                        <button class="popup-btn install-btn" id="popup-install" disabled>Install</button>
+                        <button class="popup-btn install-btn" id="popup-install" disabled style="touch-action:auto;">Install</button>
+                    </div>
+                    <div class="popup-box" id="popup-box-bios" style="display:none;">
+                        <h3>Insert Core (BIOS)</h3>
+                        <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Required to play games.<br>Upload your GBA BIOS .bin file.</div>
+                        <label for="install-bios-upload" class="popup-btn" style="cursor:pointer;touch-action:auto;">Select BIOS .bin</label>
+                        <div class="file-name" id="popup-bios-name"></div>
+                        <button class="popup-btn install-btn" id="popup-install-bios" disabled style="touch-action:auto;">Install Core</button>
                     </div>
                 </div>
-                <canvas id="game-canvas" width="256" height="240"></canvas>
+                <div id="game-area">
+                    <canvas id="game-canvas" width="240" height="160"></canvas>
+                </div>
             </div>
         </div>
         <div id="gmx-logo">GMX</div>
@@ -172,495 +192,559 @@
         <div class="bottom-btn start-btn" id="btn-start">START</div>
         <div class="led-indicator" id="power-led"></div>
         <div class="bottom-btn power-btn" id="btn-power">POWER</div>
-        <div id="right-controls">
-            <div class="shoulder-group right-shoulder"><div class="btn-shoulder" id="btn-r1">R1</div><div class="btn-shoulder" id="btn-r2">R2</div></div>
-            <div class="control-base right-base">
-                <div class="action-pad-cluster">
-                    <div class="btn-action btn-y" id="btn-y">Y</div><div class="btn-action btn-b" id="btn-b">B</div>
-                    <div class="btn-action btn-a" id="btn-a">A</div><div class="btn-action btn-x" id="btn-x">X</div>
-                </div>
+        <div class="shoulder-group right-shoulder"><div class="btn-shoulder" id="btn-r">R</div></div>
+        <div class="control-base right-base">
+            <div class="action-pad-gba">
+                <div class="btn-action-gba btn-gba-a" id="btn-a">A</div>
+                <div class="btn-action-gba btn-gba-b" id="btn-b">B</div>
             </div>
-            <div class="analog-stick right-analog" id="joystick-socket-right"><div class="stick-cap" id="joystick-cap-right"></div></div>
         </div>
     </div>
 
     <script>
-        // ===================== AUDIO CONTROLLER =====================
-        class GMXAudio {
-            constructor() {
-                this.context = new (window.AudioContext || window.webkitAudioContext)();
-                this.sampleRate = this.context.sampleRate;
-                this.bufferSize = 4096;
-                this.scriptNode = this.context.createScriptProcessor(this.bufferSize, 0, 2);
+    // ===================== GBA ENGINE: IodineGBA =====================
+    var IodineGUI = { Iodine: null, Blitter: null, coreTimerID: null, isPlaying: false, startTime: +(new Date()).getTime() };
+    var isRunning = false;
 
-                this.ringSize = this.sampleRate * 2; 
-                this.ringL = new Float32Array(this.ringSize);
-                this.ringR = new Float32Array(this.ringSize);
-                this.writePtr = 0;
-                this.readPtr = 0;
+    // Button index map: A=0,B=1,Select=2,Start=3,Right=4,Left=5,Up=6,Down=7,R=8,L=9
+    var btnBits = {
+        'btn-a':0,'btn-b':1,'btn-select':2,'btn-start':3,
+        'btn-right':4,'btn-left':5,'btn-up':6,'btn-down':7,
+        'btn-r':8,'btn-l':9
+    };
 
-                this.scriptNode.onaudioprocess = (e) => {
-                    const outL = e.outputBuffer.getChannelData(0);
-                    const outR = e.outputBuffer.getChannelData(1);
-                    for (let i = 0; i < this.bufferSize; i++) {
-                        if (this.readPtr !== this.writePtr) {
-                            outL[i] = this.ringL[this.readPtr];
-                            outR[i] = this.ringR[this.readPtr];
-                            this.readPtr = (this.readPtr + 1) % this.ringSize;
-                        } else {
-                            outL[i] = 0;
-                            outR[i] = 0;
-                        }
-                    }
-                };
-                this.scriptNode.connect(this.context.destination);
-                this.unlocked = false;
-            }
-
-            pushSample(l, r) {
-                this.ringL[this.writePtr] = l;
-                this.ringR[this.writePtr] = r;
-                this.writePtr = (this.writePtr + 1) % this.ringSize;
-                if (this.writePtr === this.readPtr) {
-                    this.readPtr = (this.readPtr + 1) % this.ringSize;
-                }
-            }
-
-            resume() { if (this.context.state === 'suspended') this.context.resume(); }
-            stop() { this.writePtr = 0; this.readPtr = 0; }
-            unlock() {
-                if (this.unlocked) return;
-                if (this.context.state === 'suspended') this.context.resume();
-                const osc = this.context.createOscillator();
-                osc.type = 'sine'; osc.frequency.value = 0;
-                osc.connect(this.context.destination);
-                osc.start(0); osc.stop(0.01);
-                this.unlocked = true;
-            }
+    var iodineScriptsLoaded = false;
+    function loadIodineScripts(cb){
+        if(iodineScriptsLoaded){ cb(); return; }
+        var BASE = 'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/';
+        var scripts = [
+            'IodineGBA/includes/TypedArrayShim.js',
+            'IodineGBA/core/Cartridge.js','IodineGBA/core/DMA.js','IodineGBA/core/Emulator.js',
+            'IodineGBA/core/Graphics.js','IodineGBA/core/RunLoop.js','IodineGBA/core/Memory.js',
+            'IodineGBA/core/IRQ.js','IodineGBA/core/JoyPad.js','IodineGBA/core/Serial.js',
+            'IodineGBA/core/Sound.js','IodineGBA/core/Timer.js','IodineGBA/core/Wait.js',
+            'IodineGBA/core/CPU.js','IodineGBA/core/Saves.js',
+            'IodineGBA/core/sound/FIFO.js','IodineGBA/core/sound/Channel1.js',
+            'IodineGBA/core/sound/Channel2.js','IodineGBA/core/sound/Channel3.js',
+            'IodineGBA/core/sound/Channel4.js',
+            'IodineGBA/core/CPU/ARM.js','IodineGBA/core/CPU/THUMB.js','IodineGBA/core/CPU/CPSR.js',
+            'IodineGBA/core/graphics/Renderer.js','IodineGBA/core/graphics/RendererShim.js',
+            'IodineGBA/core/graphics/RendererProxy.js','IodineGBA/core/graphics/BGTEXT.js',
+            'IodineGBA/core/graphics/BG2FrameBuffer.js','IodineGBA/core/graphics/BGMatrix.js',
+            'IodineGBA/core/graphics/AffineBG.js','IodineGBA/core/graphics/ColorEffects.js',
+            'IodineGBA/core/graphics/Mosaic.js','IodineGBA/core/graphics/OBJ.js',
+            'IodineGBA/core/graphics/OBJWindow.js','IodineGBA/core/graphics/Window.js',
+            'IodineGBA/core/graphics/Compositor.js',
+            'IodineGBA/core/memory/DMA0.js','IodineGBA/core/memory/DMA1.js',
+            'IodineGBA/core/memory/DMA2.js','IodineGBA/core/memory/DMA3.js',
+            'IodineGBA/core/cartridge/SaveDeterminer.js','IodineGBA/core/cartridge/SRAM.js',
+            'IodineGBA/core/cartridge/FLASH.js','IodineGBA/core/cartridge/EEPROM.js',
+            'IodineGBA/core/cartridge/GPIO.js',
+            'user_scripts/GfxGlueCode.js'
+        ];
+        var i = 0;
+        function next(){
+            if(i >= scripts.length){ iodineScriptsLoaded = true; cb(); return; }
+            var s = document.createElement('script');
+            s.src = BASE + scripts[i++];
+            s.onload = next;
+            s.onerror = function(e){ console.warn('Failed loading: ' + scripts[i-1]); next(); };
+            document.head.appendChild(s);
         }
+        next();
+    }
 
-        // ===================== JSNES BRIDGE =====================
-        class GMXEmulatorBridge {
-            constructor(canvasId) {
-                this.canvas = document.getElementById(canvasId);
-                this.ctx = this.canvas.getContext('2d');
-                this.isRunning = false;
-                this.nes = null;
-                this.audio = new GMXAudio();
+    function stopGame(){
+        isRunning = false;
+        if(IodineGUI.coreTimerID){ clearInterval(IodineGUI.coreTimerID); IodineGUI.coreTimerID = null; }
+        if(IodineGUI.Iodine){ try{ IodineGUI.Iodine.pause(); }catch(e){} }
+        IodineGUI.Iodine = null; IodineGUI.Blitter = null; IodineGUI.isPlaying = false;
+        var canvas = document.getElementById('game-canvas');
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 240, 160);
+    }
 
-                this.imageData = this.ctx.createImageData(256, 240);
-                this.buf32 = new Uint32Array(this.imageData.data.buffer);
+    function renderError(title, msg){
+        document.getElementById('screen').classList.add('game-running');
+        var canvas = document.getElementById('game-canvas');
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle='#050505'; ctx.fillRect(0,0,240,160);
+        ctx.fillStyle='#ff4444'; ctx.font='bold 12px sans-serif'; ctx.fillText(title,8,70);
+        ctx.fillStyle='#aaa'; ctx.font='9px monospace';
+        var words = msg.split(' '), line = '', y = 88;
+        for(var w=0;w<words.length;w++){ var t=line+(line?' ':'')+words[w]; if(ctx.measureText(t).width>224&&line){ctx.fillText(line,8,y);line=words[w];y+=12;}else line=t; }
+        if(line) ctx.fillText(line,8,y);
+    }
 
-                this.nesInputMap = {
-                    'btn-a': 0, 'btn-b': 1, 'btn-select': 2, 'btn-start': 3,
-                    'btn-up': 4, 'btn-down': 5, 'btn-left': 6, 'btn-right': 7
-                };
-
-                this._frameDuration = 1000 / 60;   
-                this._lastFrameTime = 0;
-                this._frameAccumulator = 0;
-                this._renderReqId = null;
-                this._pendingFrame = false;
-            }
-
-            loadRomData(arrayBuffer, filename) {
-                this._stopCurrent();
-
-                this.nes = new jsnes.NES({
-                    onFrame: (frameBuffer) => {
-                        for (let i = 0; i < frameBuffer.length; i++) {
-                            this.buf32[i] = 0xFF000000 | frameBuffer[i];
-                        }
-                        this._pendingFrame = true;
-                    },
-                    onAudioSample: (l, r) => { this.audio.pushSample(l, r); },
-                    sampleRate: this.audio.context.sampleRate
-                });
-
-                const romBytes = new Uint8Array(arrayBuffer);
-                let romString = '';
-                for (let i = 0; i < romBytes.length; i++) { romString += String.fromCharCode(romBytes[i]); }
-
-                try { this.nes.loadROM(romString); } 
-                catch (e) { this.renderError("BOOT FAILURE", "Invalid NES ROM"); return; }
-
-                this.isRunning = true;
-                this.canvas.width = 256; this.canvas.height = 240;
-                this._startNESLoop();
-            }
-
-            _startNESLoop() {
-                this._lastFrameTime = performance.now();
-                this._frameAccumulator = 0;
-
-                const tickLoop = () => {
-                    if (!this.isRunning || !this.nes) return;
-
-                    const now = performance.now();
-                    let delta = now - this._lastFrameTime;
-                    this._lastFrameTime = now;
-                    if (delta > 100) delta = 100;
-
-                    this._frameAccumulator += delta;
-                    while (this._frameAccumulator >= this._frameDuration) {
-                        this.nes.frame();
-                        this._frameAccumulator -= this._frameDuration;
-                    }
-
-                    if (this._pendingFrame) {
-                        this.ctx.putImageData(this.imageData, 0, 0);
-                        this._pendingFrame = false;
-                    }
-                    this._renderReqId = requestAnimationFrame(tickLoop);
-                };
-                this._renderReqId = requestAnimationFrame(tickLoop);
-            }
-
-            handleInput(domId, isPressed) {
-                if (!this.isRunning || !this.nes) return;
-                const nesBtn = this.nesInputMap[domId];
-                if (nesBtn !== undefined) {
-                    if (isPressed) this.nes.buttonDown(1, nesBtn);
-                    else this.nes.buttonUp(1, nesBtn);
-                }
-            }
-
-            handleAnalog(stickId, nx, ny) {
-                if (!this.isRunning || !this.nes) return;
-                const deadzone = 0.4;
-                ['btn-up','btn-down','btn-left','btn-right'].forEach(btn => { this.nes.buttonUp(1, this.nesInputMap[btn]); });
-
-                if (ny < -deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-up']);
-                if (ny > deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-down']);
-                if (nx < -deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-left']);
-                if (nx > deadzone) this.nes.buttonDown(1, this.nesInputMap['btn-right']);
-            }
-
-            _stopCurrent() {
-                this.isRunning = false;
-                if (this._renderReqId) { cancelAnimationFrame(this._renderReqId); this._renderReqId = null; }
-                this.nes = null;
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                if (this.audio) this.audio.stop();
-                this._pendingFrame = false;
-            }
-
-            stop() { this._stopCurrent(); }
-
-            renderError(title, subtitle) {
-                this._stopCurrent();
-                const w = this.canvas.width || 256, h = this.canvas.height || 240;
-                this.ctx.fillStyle = '#050505'; this.ctx.fillRect(0, 0, w, h);
-                this.ctx.fillStyle = '#ff4444'; this.ctx.font = 'bold 20px sans-serif'; this.ctx.fillText(title, 40, h/2);
-                this.ctx.fillStyle = '#ffffff'; this.ctx.font = '12px sans-serif'; this.ctx.fillText(subtitle, 40, h/2 + 25);
-            }
+    function startIodine(biosBuffer, romBuffer){
+        try {
+            IodineGUI.Iodine = new GameBoyAdvanceEmulator();
+            IodineGUI.Iodine.attachBIOS(new Uint8Array(biosBuffer));
+            IodineGUI.Iodine.attachROM(new Uint8Array(romBuffer));
+            IodineGUI.Blitter = new GfxGlueCode(240, 160);
+            IodineGUI.Blitter.attachCanvas(document.getElementById('game-canvas'));
+            IodineGUI.Iodine.attachGraphicsFrameHandler(IodineGUI.Blitter);
+            IodineGUI.Iodine.setIntervalRate(8);
+            IodineGUI.startTime = +(new Date()).getTime();
+            IodineGUI.coreTimerID = setInterval(function(){
+                IodineGUI.Iodine.timerCallback(((+(new Date()).getTime()) - IodineGUI.startTime) >>> 0);
+            }, 8);
+            IodineGUI.Iodine.play();
+            isRunning = true;
+        } catch(e){
+            renderError('BOOT FAILED', String(e));
         }
+    }
 
-        const gmxBridge = new GMXEmulatorBridge('game-canvas');
-
-        // --- IndexedDB & OS Build ---
-        const DB_NAME = "GMX_Storage", STORE_NAME = "library";
+    function loadRom(romBuffer){
+        stopGame();
+        document.getElementById('screen').classList.add('game-running');
+        document.getElementById('screen').classList.remove('os-ready');
         
-        function initDB() { 
-            return new Promise((resolve, reject) => { 
-                if (!window.indexedDB) return reject(new Error("IndexedDB not supported"));
-                const req = indexedDB.open(DB_NAME, 1); 
-                req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME, { keyPath: "id" }); 
-                req.onsuccess = () => resolve(req.result); 
-                req.onerror = () => reject(req.error); 
-            }); 
-        }
-        
-        async function saveGameToDB(romFile, imgFile) {
-            const db = await initDB();
-            const romBuffer = await romFile.arrayBuffer();
-            let coverDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-            if (imgFile) { coverDataUrl = await new Promise(res => { const reader = new FileReader(); reader.onload = e => res(e.target.result); reader.readAsDataURL(imgFile); }); }
-            const gameId = romFile.name.replace(/\.[^/.]+$/, "");
-            const record = { id: gameId, title: gameId, rom: romBuffer, cover: coverDataUrl };
-            return new Promise((resolve, reject) => { const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).put(record); tx.oncomplete = resolve; tx.onerror = reject; });
-        }
+        initDB().then(function(db){
+            if(useMemoryFallback || !db) {
+                if(!memoryStore.bios){ renderError('NO BIOS FOUND', 'Please insert a GBA BIOS core (.bin) via the Settings menu before playing.'); return; }
+                loadIodineScripts(function(){ startIodine(memoryStore.bios, romBuffer); });
+            } else {
+                var tx = db.transaction(STORE_NAME, 'readonly');
+                var req = tx.objectStore(STORE_NAME).get('__bios__');
+                req.onsuccess = function(){
+                    if(!req.result){ renderError('NO BIOS FOUND', 'Please insert a GBA BIOS core (.bin) via the Settings menu before playing.'); return; }
+                    loadIodineScripts(function(){
+                        startIodine(req.result.data, romBuffer);
+                    });
+                };
+            }
+        }).catch(function(){ renderError('DB ERROR','Could not access storage.'); });
+    }
 
-        let currentScale = 1;
-        const consoleEl = document.getElementById('gmx-console');
-        const applyScale = () => { if (window.innerHeight > window.innerWidth) return; currentScale = Math.min((window.innerWidth * 0.95) / 735, (window.innerHeight * 0.95) / 350, 1); consoleEl.style.transform = `scale(${currentScale})`; };
-        window.addEventListener('resize', applyScale); applyScale();
+    function handleInput(btnId, pressed){
+        if(!isRunning || !IodineGUI.Iodine) return;
+        var bit = btnBits[btnId];
+        if(bit === undefined) return;
+        if(pressed) IodineGUI.Iodine.keyDown(bit);
+        else IodineGUI.Iodine.keyUp(bit);
+    }
 
-        let isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0;
-        const maxRows = [1, 1, 1];
-        const grid = document.getElementById('xmb-grid'), cols = document.querySelectorAll('.xmb-col'), sysMsg = document.getElementById('sys-msg'), screen = document.getElementById('screen');
+    // ===================== IndexedDB + Memory Fallback =====================
+    var DB_NAME="GMX_GBA_Storage", STORE_NAME="library";
+    var useMemoryFallback = false;
+    var memoryStore = { bios: null, games: {} };
 
-        async function buildXMB() {
+    function initDB(){
+        return new Promise(function(resolve,reject){
+            if(useMemoryFallback) return resolve(null);
+            if(!window.indexedDB) { useMemoryFallback = true; return resolve(null); }
             try {
-                const dbPromise = initDB();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Storage Timeout")), 1000));
-                const db = await Promise.race([dbPromise, timeoutPromise]);
+                var req=indexedDB.open(DB_NAME,1);
+                req.onupgradeneeded=function(e){e.target.result.createObjectStore(STORE_NAME,{keyPath:"id"});};
+                req.onsuccess=function(){resolve(req.result);};
+                req.onerror=function(){useMemoryFallback=true; resolve(null);};
+            } catch(e) {
+                useMemoryFallback = true; resolve(null);
+            }
+        });
+    }
 
-                return new Promise((resolve, reject) => {
-                    const tx = db.transaction(STORE_NAME, "readonly");
-                    const req = tx.objectStore(STORE_NAME).getAll();
-                    req.onsuccess = () => {
-                        const games = req.result || [];
-                        const gameCol = document.getElementById('game-column');
-                        const memStick = document.getElementById('memory-stick');
-                        document.querySelectorAll('.dynamic-game').forEach(el => el.remove());
-                        let newMaxRows = 1;
-                        games.forEach(game => {
-                            const div = document.createElement('div');
-                            div.className = 'xmb-sub game-item dynamic-game';
-                            div.innerHTML = `<img src="${game.cover}" class="box-art" crossorigin="anonymous"><div class="game-details"><span class="game-title">${game.title}</span></div>`;
-                            gameCol.insertBefore(div, memStick);
-                            newMaxRows++;
-                        });
-                        maxRows[1] = newMaxRows;
+    function saveBiosToDB(biosFile){
+        return biosFile.arrayBuffer().then(function(buf){
+            return initDB().then(function(db){
+                if(useMemoryFallback || !db) {
+                    memoryStore.bios = buf;
+                    return Promise.resolve();
+                }
+                return new Promise(function(resolve,reject){
+                    var tx=db.transaction(STORE_NAME,"readwrite");
+                    tx.objectStore(STORE_NAME).put({id:'__bios__', data:buf});
+                    tx.oncomplete=resolve; tx.onerror=reject;
+                });
+            });
+        });
+    }
+
+    function saveGameToDB(romFile,imgFile){
+        return initDB().then(function(db){
+            return romFile.arrayBuffer().then(function(romBuffer){
+                var coverPromise;
+                if(imgFile){
+                    coverPromise = new Promise(function(res){
+                        var r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(imgFile);
+                    });
+                } else {
+                    coverPromise = Promise.resolve("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=");
+                }
+                return coverPromise.then(function(cover){
+                    var id = romFile.name.replace(/\.[^/.]+$/,"");
+                    var rec = {id:id, title:id, rom:romBuffer, cover:cover};
+                    if(useMemoryFallback || !db) {
+                        memoryStore.games[id] = rec;
+                        return Promise.resolve();
+                    }
+                    return new Promise(function(resolve,reject){
+                        var tx=db.transaction(STORE_NAME,"readwrite");
+                        tx.objectStore(STORE_NAME).put(rec);
+                        tx.oncomplete=resolve; tx.onerror=reject;
+                    });
+                });
+            });
+        });
+    }
+
+    // ===================== Scaling =====================
+    function applyScale(){
+        var consoleEl=document.getElementById('gmx-console');
+        if(!consoleEl||window.innerHeight>window.innerWidth)return;
+        var s=Math.min((window.innerWidth*0.95)/735,(window.innerHeight*0.95)/350,1);
+        consoleEl.style.transform='scale('+s+')';
+    }
+    window.addEventListener('resize',applyScale);
+
+    // ===================== XMB OS =====================
+    var isPoweredOn=false,isOSReady=false,colIdx=1,rowIdx=0;
+    var maxRows=[1,1,1];
+
+    function renderGameList(games) {
+        var gameCol=document.getElementById('game-column');
+        var memStick=document.getElementById('memory-stick');
+        var old=document.querySelectorAll('.dynamic-game');
+        for(var i=0;i<old.length;i++) old[i].remove();
+        var nr=1;
+        games.forEach(function(g){
+            if(g.id === '__bios__') return;
+            var d=document.createElement('div');
+            d.className='xmb-sub game-item dynamic-game';
+            d.innerHTML='<img src="'+g.cover+'" class="box-art"><div class="game-details"><span class="game-title">'+g.title+'</span></div>';
+            gameCol.insertBefore(d,memStick);
+            nr++;
+        });
+        maxRows[1]=nr;
+    }
+
+    function buildXMB(){
+        return initDB().catch(function(){return null;}).then(function(db){
+            return new Promise(function(resolve,reject){
+                if(useMemoryFallback || !db) {
+                    var gamesArr = [];
+                    for(var key in memoryStore.games) gamesArr.push(memoryStore.games[key]);
+                    renderGameList(gamesArr);
+                    resolve();
+                } else {
+                    var tx=db.transaction(STORE_NAME,"readonly");
+                    var req=tx.objectStore(STORE_NAME).getAll();
+                    req.onsuccess=function(){
+                        renderGameList(req.result||[]);
                         resolve();
                     };
-                    req.onerror = () => reject(req.error);
-                });
-            } catch(e) {
-                console.warn("Storage skipped. Booting OS.", e);
-                return Promise.resolve(); 
+                    req.onerror=function(){reject(req.error);};
+                }
+            });
+        });
+    }
+
+    function updateXMB(){
+        var gridEl=document.getElementById('xmb-grid');
+        var colEls=document.querySelectorAll('.xmb-col');
+        var sysMsgEl=document.getElementById('sys-msg');
+        var bgLayer=document.getElementById('game-bg-layer');
+        if(!isOSReady)return;
+        gridEl.style.transform='translate(calc(-50% + '+((1-colIdx)*100)+'px), '+(-rowIdx*60)+'px)';
+        colEls.forEach(function(col,c){
+            if(c===colIdx){col.classList.add('active-col');var ch=col.children;for(var r=0;r<ch.length;r++)ch[r].classList.toggle('active-item',r===rowIdx);}
+            else{col.classList.remove('active-col');var ch2=col.children;for(var r2=0;r2<ch2.length;r2++)ch2[r2].classList.remove('active-item');}
+        });
+        var ai=document.querySelector('.active-col .active-item.dynamic-game img');
+        if(ai){bgLayer.style.backgroundImage='linear-gradient(to right,rgba(15,16,26,0.95) 0%,rgba(15,16,26,0.5) 60%,rgba(0,0,0,0) 100%),url('+ai.src+')';bgLayer.style.opacity=1;}
+        else bgLayer.style.opacity=0;
+        var gi=document.querySelectorAll('.dynamic-game');
+        if(colIdx===1&&rowIdx>0&&rowIdx<=gi.length){sysMsgEl.innerText="(B) Delete Game";sysMsgEl.style.opacity=1;}
+        else{sysMsgEl.innerText="";sysMsgEl.style.opacity=0;}
+    }
+
+    // ===================== Install Popup =====================
+    var selRom=null, selCover=null, selBios=null;
+    function openPopup(){
+        document.getElementById('install-popup').classList.add('visible');
+        document.getElementById('popup-box-game').style.display='block';
+        document.getElementById('popup-box-bios').style.display='none';
+        selRom=null;selCover=null;
+        document.getElementById('install-rom-upload').value='';
+        document.getElementById('install-cover-upload').value='';
+        document.getElementById('popup-rom-name').textContent='';
+        document.getElementById('popup-cover-name').textContent='';
+        document.getElementById('popup-install').disabled=true;
+        document.getElementById('sys-msg').style.opacity=0;
+    }
+    function openBiosPopup(){
+        document.getElementById('install-popup').classList.add('visible');
+        document.getElementById('popup-box-game').style.display='none';
+        document.getElementById('popup-box-bios').style.display='block';
+        selBios=null;
+        document.getElementById('install-bios-upload').value='';
+        document.getElementById('popup-bios-name').textContent='';
+        document.getElementById('popup-install-bios').disabled=true;
+        document.getElementById('sys-msg').style.opacity=0;
+    }
+    function closePopup(){document.getElementById('install-popup').classList.remove('visible');}
+
+    document.getElementById('install-bios-upload').addEventListener('change',function(e){
+        var f=e.target.files[0];
+        if(f&&f.name.toLowerCase().endsWith('.bin')){selBios=f;document.getElementById('popup-bios-name').textContent=f.name;document.getElementById('popup-install-bios').disabled=false;}
+        else this.value='';
+    });
+    document.getElementById('popup-install-bios').addEventListener('click',function(){
+        if(!selBios)return;
+        var sysMsgEl=document.getElementById('sys-msg');
+        closePopup();
+        saveBiosToDB(selBios)
+            .then(function(){sysMsgEl.innerText='Core installed!';sysMsgEl.style.opacity=1;setTimeout(function(){sysMsgEl.style.opacity=0;},2000);})
+            .catch(function(){sysMsgEl.innerText='Core install failed';sysMsgEl.style.opacity=1;});
+    });
+    document.getElementById('install-rom-upload').addEventListener('change',function(e){
+        var f=e.target.files[0];
+        if(f&&f.name.toLowerCase().endsWith('.gba')){selRom=f;document.getElementById('popup-rom-name').textContent=f.name;document.getElementById('popup-install').disabled=false;}
+        else this.value='';
+    });
+    document.getElementById('install-cover-upload').addEventListener('change',function(e){
+        var f=e.target.files[0];if(f){selCover=f;document.getElementById('popup-cover-name').textContent=f.name;}
+    });
+    document.getElementById('popup-install').addEventListener('click',function(){
+        if(!selRom)return;
+        var sysMsgEl=document.getElementById('sys-msg');
+        sysMsgEl.innerText='Installing '+selRom.name+'...';sysMsgEl.style.opacity=1;
+        closePopup();
+        saveGameToDB(selRom,selCover)
+            .then(function(){sysMsgEl.innerText="Install Complete!";})
+            .catch(function(){sysMsgEl.innerText="Install Failed";});
+        setTimeout(function(){sysMsgEl.style.opacity=0;buildXMB().then(updateXMB);},1500);
+    });
+
+    // ===================== Input Manager =====================
+    var navLeft=function(){if(colIdx>0&&isOSReady&&!document.getElementById('install-popup').classList.contains('visible')){colIdx--;rowIdx=0;updateXMB();}};
+    var navRight=function(){if(colIdx<2&&isOSReady&&!document.getElementById('install-popup').classList.contains('visible')){colIdx++;rowIdx=0;updateXMB();}};
+    var navUp=function(){if(rowIdx>0&&isOSReady&&!document.getElementById('install-popup').classList.contains('visible')){rowIdx--;updateXMB();}};
+    var navDown=function(){if(rowIdx<maxRows[colIdx]&&isOSReady&&!document.getElementById('install-popup').classList.contains('visible')){rowIdx++;updateXMB();}};
+
+    var interactable=['btn-up','btn-down','btn-left','btn-right','btn-a','btn-b','btn-select','btn-start','btn-l','btn-r'];
+    var active=new Set();
+
+    function triggerA(){
+        var screenEl=document.getElementById('screen');
+        var sysMsgEl=document.getElementById('sys-msg');
+        if(!isOSReady||document.getElementById('install-popup').classList.contains('visible'))return;
+        if(colIdx===1){
+            var games=document.querySelectorAll('.dynamic-game');
+            if(rowIdx>0&&rowIdx<=games.length){
+                var title=games[rowIdx-1].querySelector('.game-title').innerText;
+                sysMsgEl.innerText="BOOTING: "+title;sysMsgEl.style.opacity=1;
+                initDB().then(function(db){
+                    if(useMemoryFallback || !db) {
+                        var g = memoryStore.games[title];
+                        if(!g){sysMsgEl.innerText="ROM not found.";return;}
+                        loadRom(g.rom);
+                    } else {
+                        var tx=db.transaction(STORE_NAME,"readonly");
+                        var req2=tx.objectStore(STORE_NAME).get(title);
+                        req2.onsuccess=function(){
+                            if(!req2.result){sysMsgEl.innerText="ROM not found.";return;}
+                            loadRom(req2.result.rom);
+                        };
+                    }
+                }).catch(function(){sysMsgEl.innerText="Error loading game.";});
+            } else if(rowIdx===games.length+1){ openPopup(); }
+        } else if(colIdx===0){ openBiosPopup(); } else { sysMsgEl.innerText="Module offline.";sysMsgEl.style.opacity=1; }
+    }
+
+    function triggerB_OS(){
+        var screenEl=document.getElementById('screen');
+        var sysMsgEl=document.getElementById('sys-msg');
+        if(document.getElementById('install-popup').classList.contains('visible')){closePopup();return;}
+        if(!isOSReady||screenEl.classList.contains('game-running'))return;
+        if(colIdx!==1)return;
+        var gi=document.querySelectorAll('.dynamic-game');
+        if(rowIdx<1||rowIdx>gi.length)return;
+        var title=gi[rowIdx-1].querySelector('.game-title').innerText;
+        sysMsgEl.innerText='Deleting '+title+'...';sysMsgEl.style.opacity=1;
+        initDB().then(function(db){
+            if(useMemoryFallback || !db) {
+                delete memoryStore.games[title];
+                return Promise.resolve();
+            } else {
+                var tx=db.transaction(STORE_NAME,"readwrite");
+                tx.objectStore(STORE_NAME).delete(title);
+                return new Promise(function(res,rej){tx.oncomplete=res;tx.onerror=rej;});
+            }
+        }).then(buildXMB).then(function(){rowIdx=Math.min(rowIdx,maxRows[1]-1);updateXMB();sysMsgEl.style.opacity=0;}).catch(function(){});
+    }
+
+    function getInteractableId(el){
+        while(el){
+            if(el.id && interactable.indexOf(el.id)!==-1) return el.id;
+            el=el.parentElement;
+        }
+        return null;
+    }
+
+    function pressButton(id){
+        var screenEl=document.getElementById('screen');
+        if(active.has(id)) return;
+        active.add(id);
+        var el=document.getElementById(id);
+        if(el) el.classList.add('pressed');
+        if(screenEl.classList.contains('game-running')){
+            handleInput(id,true);
+        } else {
+            if(id==='btn-left')navLeft();
+            if(id==='btn-right')navRight();
+            if(id==='btn-up')navUp();
+            if(id==='btn-down')navDown();
+            if(id==='btn-a')triggerA();
+            if(id==='btn-b')triggerB_OS();
+        }
+    }
+
+    function releaseButton(id){
+        var screenEl=document.getElementById('screen');
+        if(!active.has(id)) return;
+        active.delete(id);
+        var el=document.getElementById(id);
+        if(el) el.classList.remove('pressed');
+        if(screenEl.classList.contains('game-running')) handleInput(id,false);
+    }
+
+    function releaseAll(){
+        Array.from(active).forEach(releaseButton);
+    }
+
+    // Touch: track which touch ID maps to which button
+    var touchMap={};
+
+    // Disable standard mobile context menus that block touch inputs on hold
+    window.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+    function onTouchStart(e){
+        var tag=e.target.tagName;
+        if(tag!=='INPUT'&&tag!=='LABEL'&&tag!=='BUTTON') e.preventDefault();
+        for(var i=0;i<e.changedTouches.length;i++){
+            var t=e.changedTouches[i];
+            var id=getInteractableId(document.elementFromPoint(t.clientX,t.clientY));
+            if(id){ touchMap[t.identifier]=id; pressButton(id); }
+        }
+    }
+    function onTouchMove(e){
+        var tag=e.target.tagName;
+        if(tag!=='INPUT'&&tag!=='LABEL'&&tag!=='BUTTON') e.preventDefault();
+        for(var i=0;i<e.changedTouches.length;i++){
+            var t=e.changedTouches[i];
+            var newId=getInteractableId(document.elementFromPoint(t.clientX,t.clientY));
+            var oldId=touchMap[t.identifier];
+            if(oldId!==newId){
+                if(oldId) releaseButton(oldId);
+                if(newId){ touchMap[t.identifier]=newId; pressButton(newId); }
+                else delete touchMap[t.identifier];
             }
         }
-        
-        const updateXMB = () => {
-            if(!isOSReady) return;
-            grid.style.transform = `translate(calc(-50% + ${(1 - colIdx) * 100}px), ${-rowIdx * 60}px)`;
-            cols.forEach((col, c) => {
-                if (c === colIdx) { col.classList.add('active-col'); Array.from(col.children).forEach((item, r) => item.classList.toggle('active-item', r === rowIdx)); }
-                else { col.classList.remove('active-col'); Array.from(col.children).forEach(item => item.classList.remove('active-item')); }
-            });
-            const gameBgLayer = document.getElementById('game-bg-layer');
-            const activeItem = document.querySelector('.active-col .active-item.dynamic-game img');
-            if (activeItem) { gameBgLayer.style.backgroundImage = `linear-gradient(to right, rgba(30,31,58,0.95) 0%, rgba(30,31,58,0.4) 60%, rgba(0,0,0,0) 100%), url('${activeItem.src}')`; gameBgLayer.style.opacity = 1; }
-            else gameBgLayer.style.opacity = 0;
+    }
+    function onTouchEnd(e){
+        for(var i=0;i<e.changedTouches.length;i++){
+            var t=e.changedTouches[i];
+            var id=touchMap[t.identifier];
+            if(id){ releaseButton(id); delete touchMap[t.identifier]; }
+        }
+    }
+    window.addEventListener('touchstart',onTouchStart,{passive:false});
+    window.addEventListener('touchmove',onTouchMove,{passive:false});
+    window.addEventListener('touchend',onTouchEnd,{passive:false});
+    window.addEventListener('touchcancel',onTouchEnd,{passive:false});
 
-            const gameItems = document.querySelectorAll('.dynamic-game');
-            if (colIdx === 1 && rowIdx > 0 && rowIdx <= gameItems.length) { sysMsg.innerText = "(X) Delete Game"; sysMsg.style.opacity = 1; } 
-            else { sysMsg.innerText = ""; sysMsg.style.opacity = 0; }
-        };
+    // Mouse
+    var mouseHeld=null;
+    window.addEventListener('mousedown',function(e){
+        var tag=e.target.tagName;
+        if(tag!=='INPUT'&&tag!=='LABEL'&&tag!=='BUTTON') e.preventDefault();
+        var id=getInteractableId(e.target);
+        if(id){ mouseHeld=id; pressButton(id); }
+    });
+    window.addEventListener('mousemove',function(e){
+        if(!mouseHeld) return;
+        var id=getInteractableId(document.elementFromPoint(e.clientX,e.clientY));
+        if(id!==mouseHeld){ releaseButton(mouseHeld); mouseHeld=id||null; if(mouseHeld) pressButton(mouseHeld); }
+    });
+    window.addEventListener('mouseup',function(){ if(mouseHeld){ releaseButton(mouseHeld); mouseHeld=null; } });
+    window.addEventListener('mouseleave',function(){ if(mouseHeld){ releaseButton(mouseHeld); mouseHeld=null; } });
 
-        const popup = document.getElementById('install-popup'), romInput = document.getElementById('install-rom-upload'), coverInput = document.getElementById('install-cover-upload'), romNameEl = document.getElementById('popup-rom-name'), coverNameEl = document.getElementById('popup-cover-name'), installBtn = document.getElementById('popup-install');
-        let selectedRomFile = null, selectedCoverFile = null;
-        function openInstallPopup() { popup.classList.add('visible'); selectedRomFile = null; selectedCoverFile = null; romInput.value = ''; coverInput.value = ''; romNameEl.textContent = ''; coverNameEl.textContent = ''; installBtn.disabled = true; sysMsg.style.opacity = 0; }
-        function closeInstallPopup() { popup.classList.remove('visible'); }
+    // Keyboard (New Implementation for Desktop Testing)
+    var keyMap = {
+        'ArrowUp': 'btn-up', 'w': 'btn-up', 'W': 'btn-up',
+        'ArrowDown': 'btn-down', 's': 'btn-down', 'S': 'btn-down',
+        'ArrowLeft': 'btn-left', 'a': 'btn-left', 'A': 'btn-left',
+        'ArrowRight': 'btn-right', 'd': 'btn-right', 'D': 'btn-right',
+        'z': 'btn-a', 'Z': 'btn-a', 'j': 'btn-a', 'J': 'btn-a',
+        'x': 'btn-b', 'X': 'btn-b', 'k': 'btn-b', 'K': 'btn-b',
+        'Enter': 'btn-start',
+        'Shift': 'btn-select',
+        'q': 'btn-l', 'Q': 'btn-l',
+        'e': 'btn-r', 'E': 'btn-r'
+    };
 
-        // Notice the JS click handlers have been removed completely. The HTML <label> handles it natively.
+    window.addEventListener('keydown', function(e) {
+        if(document.getElementById('install-popup').classList.contains('visible')) return;
+        var btnId = keyMap[e.key];
+        if(btnId) {
+            if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) > -1) e.preventDefault();
+            pressButton(btnId);
+        }
+    });
 
-        romInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file && file.name.toLowerCase().endsWith('.nes')) { selectedRomFile = file; romNameEl.textContent = file.name; installBtn.disabled = false; } 
-            else { alert('Please select a .nes file.'); romInput.value = ''; }
-        });
-        coverInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (file) { selectedCoverFile = file; coverNameEl.textContent = file.name; } });
-        
-        document.getElementById('popup-install').addEventListener('click', async () => {
-            if (!selectedRomFile) return;
-            sysMsg.innerText = `Installing ${selectedRomFile.name}...`; sysMsg.style.opacity = 1;
-            closeInstallPopup();
-            try { await saveGameToDB(selectedRomFile, selectedCoverFile); sysMsg.innerText = "Install Complete!"; } 
-            catch (err) { sysMsg.innerText = "Install Failed (Storage Disabled)"; }
-            setTimeout(() => { sysMsg.style.opacity = 0; buildXMB().then(() => updateXMB()); }, 1500);
-        });
+    window.addEventListener('keyup', function(e) {
+        var btnId = keyMap[e.key];
+        if(btnId) { e.preventDefault(); releaseButton(btnId); }
+    });
 
-        // =========================================================================
-        // === CENTRALIZED, FLAWLESS VIRTUAL GAMEPAD MANAGER (NO MORE BUTTON DROPS) ===
-        // =========================================================================
-        
-        const navLeft = () => { if(colIdx > 0 && isOSReady && !popup.classList.contains('visible')) { colIdx--; rowIdx = 0; updateXMB(); } };
-        const navRight = () => { if(colIdx < 2 && isOSReady && !popup.classList.contains('visible')) { colIdx++; rowIdx = 0; updateXMB(); } };
-        const navUp = () => { if(rowIdx > 0 && isOSReady && !popup.classList.contains('visible')) { rowIdx--; updateXMB(); } };
-        const navDown = () => { if(rowIdx < maxRows[colIdx] && isOSReady && !popup.classList.contains('visible')) { rowIdx++; updateXMB(); } };
+    // ===================== POWER =====================
+    var bootTimers=[];
+    function togglePower(e){
+        var screenEl=document.getElementById('screen');
+        var bootCont=document.getElementById('boot-logo-container');
+        var sysMsgEl=document.getElementById('sys-msg');
+        if(e)e.preventDefault();
+        isPoweredOn=!isPoweredOn;isOSReady=false;
+        bootTimers.forEach(clearTimeout);bootTimers=[];
+        if(isPoweredOn){
+            document.getElementById('power-led').classList.add('is-on');
+            screenEl.classList.add('boot-white');
+            bootTimers.push(setTimeout(function(){bootCont.classList.add('do-drop');},200));
+            bootTimers.push(setTimeout(function(){document.getElementById('boot-gmx').classList.add('do-glint');document.getElementById('boot-reg').classList.add('do-fade-in');},1000));
+            bootTimers.push(setTimeout(function(){bootCont.classList.add('do-fade-out');},3000));
+            bootTimers.push(setTimeout(function(){
+                buildXMB().catch(function(){}).then(function(){
+                    screenEl.classList.remove('boot-white');screenEl.classList.add('os-ready');isOSReady=true;colIdx=1;rowIdx=0;updateXMB();
+                });
+            },3500));
+        } else {
+            document.getElementById('power-led').classList.remove('is-on');
+            screenEl.className='';bootCont.classList.remove('do-drop','do-fade-out');
+            document.getElementById('boot-gmx').classList.remove('do-glint');document.getElementById('boot-reg').classList.remove('do-fade-in');
+            sysMsgEl.style.opacity=0;stopGame();closePopup();
+        }
+    }
+    document.getElementById('btn-power').addEventListener('click',togglePower);
+    document.getElementById('btn-power').addEventListener('touchstart',togglePower,{passive:false});
 
-        const interactableButtons = [
-            'btn-up', 'btn-down', 'btn-left', 'btn-right',
-            'btn-a', 'btn-b', 'btn-x', 'btn-y',
-            'btn-select', 'btn-start', 
-            'btn-l1', 'btn-l2', 'btn-r1', 'btn-r2'
-        ];
-        const activeButtons = new Set();
-        
-        const triggerA = async () => {
-            if(!isOSReady || popup.classList.contains('visible')) return;
-            gmxBridge.audio.resume();
-            if (colIdx === 1) {
-                const games = document.querySelectorAll('.dynamic-game');
-                if (rowIdx > 0 && rowIdx <= games.length) {
-                    const selectedTitle = games[rowIdx - 1].querySelector('.game-title').innerText;
-                    sysMsg.innerText = "BOOTING: " + selectedTitle; sysMsg.style.opacity = 1;
-                    
-                    try {
-                        const db = await initDB(); 
-                        const tx = db.transaction(STORE_NAME, "readonly"); 
-                        const req = tx.objectStore(STORE_NAME).get(selectedTitle);
-                        req.onsuccess = () => {
-                            setTimeout(() => {
-                                screen.classList.add('game-running');
-                                screen.classList.remove('os-ready');
-                                gmxBridge.loadRomData(req.result.rom, selectedTitle + '.nes');
-                            }, 800);
-                        };
-                    } catch(e) { sysMsg.innerText = "Error loading game."; }
-                } else if (rowIdx === games.length + 1) { openInstallPopup(); }
-            } else { sysMsg.innerText = "Module offline."; sysMsg.style.opacity = 1; }
-        };
+    // ===================== CLOCK =====================
+    function updateClock(){
+        var now=new Date(),mo=now.getMonth()+1,da=now.getDate();
+        var h=now.getHours(),ap=h>=12?'PM':'AM';h=h%12||12;
+        var mi=now.getMinutes().toString().padStart(2,'0');
+        var c=document.getElementById('xmb-clock');if(c)c.innerText=mo+'/'+da+' '+h+':'+mi+ap;
+    }
+    updateClock();setInterval(updateClock,1000);
 
-        const triggerB = () => { if (popup.classList.contains('visible')) closeInstallPopup(); };
+    // iOS audio unlock
+    window.addEventListener('touchstart',function(){try{var ac=new(window.AudioContext||window.webkitAudioContext)();ac.resume();}catch(e){}},{once:true,passive:true});
 
-        const triggerX = async () => {
-            if (!isOSReady || popup.classList.contains('visible') || screen.classList.contains('game-running')) return;
-            if (colIdx !== 1) return;
-            const gameItems = document.querySelectorAll('.dynamic-game');
-            if (rowIdx < 1 || rowIdx > gameItems.length) return;
-            const selectedTitle = gameItems[rowIdx - 1].querySelector('.game-title').innerText;
-            sysMsg.innerText = `Deleting ${selectedTitle}...`;
-            sysMsg.style.opacity = 1;
-            
-            try {
-                const db = await initDB();
-                const tx = db.transaction(STORE_NAME, "readwrite");
-                tx.objectStore(STORE_NAME).delete(selectedTitle);
-                await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
-            } catch (e) { console.warn("Delete failed", e); }
-            
-            await buildXMB(); rowIdx = Math.min(rowIdx, maxRows[1] - 1); updateXMB(); sysMsg.style.opacity = 0;
-        };
-
-        const processInputs = (touches, mouse) => {
-            const nowPressed = new Set();
-            
-            if (touches) {
-                for (let i = 0; i < touches.length; i++) {
-                    const el = document.elementFromPoint(touches[i].clientX, touches[i].clientY);
-                    if (el && el.id && interactableButtons.includes(el.id)) nowPressed.add(el.id);
-                }
-            }
-
-            if (mouse && mouse.isDown) {
-                const el = document.elementFromPoint(mouse.x, mouse.y);
-                if (el && el.id && interactableButtons.includes(el.id)) nowPressed.add(el.id);
-            }
-
-            for (const id of interactableButtons) {
-                const isNow = nowPressed.has(id);
-                const was = activeButtons.has(id);
-                const el = document.getElementById(id);
-                
-                if (isNow && !was) {
-                    activeButtons.add(id);
-                    if (el) el.classList.add('pressed');
-                    
-                    if (screen.classList.contains('game-running')) {
-                        if (gmxBridge.nesInputMap[id] !== undefined) gmxBridge.handleInput(id, true);
-                    } else {
-                        if (id === 'btn-left') navLeft();
-                        if (id === 'btn-right') navRight();
-                        if (id === 'btn-up') navUp();
-                        if (id === 'btn-down') navDown();
-                        if (id === 'btn-b') triggerB();
-                        if (id === 'btn-a') triggerA();
-                        if (id === 'btn-x') triggerX();
-                    }
-                } else if (!isNow && was) {
-                    activeButtons.delete(id);
-                    if (el) el.classList.remove('pressed');
-                    if (screen.classList.contains('game-running')) {
-                        if (gmxBridge.nesInputMap[id] !== undefined) gmxBridge.handleInput(id, false);
-                    }
-                }
-            }
-        };
-
-        let currentTouches = [];
-        let mouseState = { isDown: false, x: 0, y: 0 };
-
-        const handleTouch = (e) => {
-            if (e.target.tagName !== 'INPUT') e.preventDefault(); 
-            currentTouches = e.touches; 
-            processInputs(currentTouches, mouseState);
-        };
-
-        window.addEventListener('touchstart', handleTouch, {passive: false});
-        window.addEventListener('touchmove', handleTouch, {passive: false});
-        window.addEventListener('touchend', handleTouch, {passive: false});
-        window.addEventListener('touchcancel', handleTouch, {passive: false});
-
-        window.addEventListener('mousedown', e => { 
-            if (e.target.tagName !== 'INPUT') e.preventDefault();
-            mouseState.isDown = true; mouseState.x = e.clientX; mouseState.y = e.clientY; 
-            processInputs(currentTouches, mouseState); 
-        });
-        window.addEventListener('mousemove', e => { 
-            if (mouseState.isDown) { mouseState.x = e.clientX; mouseState.y = e.clientY; processInputs(currentTouches, mouseState); }
-        });
-        window.addEventListener('mouseup', e => { mouseState.isDown = false; processInputs(currentTouches, mouseState); });
-        window.addEventListener('mouseleave', e => { mouseState.isDown = false; processInputs(currentTouches, mouseState); });
-
-
-        // ===================== POWER AND JOYSTICKS =====================
-
-        const btnPower = document.getElementById('btn-power'), bootContainer = document.getElementById('boot-logo-container');
-        let bootTimers = [];
-        const togglePower = (e) => {
-            if(e) e.preventDefault();
-            gmxBridge.audio.unlock();
-            isPoweredOn = !isPoweredOn; isOSReady = false;
-            bootTimers.forEach(t => clearTimeout(t)); bootTimers = [];
-            
-            if(isPoweredOn) {
-                document.getElementById('power-led').classList.add('is-on');
-                screen.classList.add('boot-white');
-                bootTimers.push(setTimeout(() => bootContainer.classList.add('do-drop'), 200));
-                bootTimers.push(setTimeout(() => { document.getElementById('boot-gmx').classList.add('do-glint'); document.getElementById('boot-reg').classList.add('do-fade-in'); }, 1000));
-                bootTimers.push(setTimeout(() => bootContainer.classList.add('do-fade-out'), 3000));
-                bootTimers.push(setTimeout(() => { 
-                    buildXMB().finally(() => { 
-                        screen.classList.remove('boot-white'); screen.classList.add('os-ready'); isOSReady = true; colIdx = 1; rowIdx = 0; updateXMB(); 
-                    }); 
-                }, 3500));
-            } else {
-                document.getElementById('power-led').classList.remove('is-on');
-                screen.className = ''; bootContainer.classList.remove('do-drop', 'do-fade-out');
-                document.getElementById('boot-gmx').classList.remove('do-glint'); document.getElementById('boot-reg').classList.remove('do-fade-in');
-                sysMsg.style.opacity = 0; gmxBridge.stop(); closeInstallPopup();
-            }
-        };
-        btnPower.addEventListener('click', togglePower); btnPower.addEventListener('touchstart', togglePower, {passive: false});
-
-        const initJoystick = (socketId, capId, isLeftStick) => {
-            const socket = document.getElementById(socketId), cap = document.getElementById(capId);
-            let isDragging = false, originX, originY, maxRad, touchId = null, navInt = null, curDir = null;
-            const executeNav = (dir) => { if (screen.classList.contains('game-running') || popup.classList.contains('visible')) return; if (isOSReady) { if (dir === 'left') navLeft(); if (dir === 'right') navRight(); if (dir === 'up') navUp(); if (dir === 'down') navDown(); } };
-            const trigNav = (dir) => { if (curDir === dir) return; curDir = dir; clearInterval(navInt); executeNav(dir); navInt = setInterval(() => executeNav(dir), 200); };
-            const stopNav = () => { clearInterval(navInt); navInt = null; curDir = null; };
-            const startDrag = (e) => { isDragging = true; cap.style.transition = 'none'; const r = socket.getBoundingClientRect(); originX = r.left + r.width/2; originY = r.top + r.height/2; maxRad = (socket.offsetWidth/2) - (cap.offsetWidth/2) + 5; if (e.type === 'touchstart') { touchId = e.changedTouches[0].identifier; move(e.changedTouches[0]); } else move(e); };
-            const move = (e) => {
-                let dx = (e.clientX - originX) / currentScale, dy = (e.clientY - originY) / currentScale; const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > maxRad) { dx *= maxRad/dist; dy *= maxRad/dist; }
-                cap.style.transform = `translate(${dx}px, ${dy}px) rotateX(${dy/maxRad*-15}deg) rotateY(${dx/maxRad*15}deg)`;
-                if (screen.classList.contains('game-running')) gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', dx/maxRad, dy/maxRad);
-                else if (isOSReady && !popup.classList.contains('visible')) {
-                    if (dist > maxRad * 0.6) { const ang = Math.atan2(dy, dx) * (180/Math.PI); trigNav(ang >= -45 && ang <= 45 ? 'right' : ang > 45 && ang < 135 ? 'down' : ang < -45 && ang > -135 ? 'up' : 'left'); }
-                    else if (dist < maxRad * 0.2) stopNav();
-                }
-            };
-            const handleDrag = (e) => { if (!isDragging) return; if (e.type === 'touchmove') { for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === touchId) { move(e.changedTouches[i]); break; } } else move(e); };
-            const stopDrag = () => { isDragging = false; touchId = null; stopNav(); cap.style.transition = 'transform 0.1s linear'; cap.style.transform = 'translate(0px, 0px)'; if (screen.classList.contains('game-running')) gmxBridge.handleAnalog(isLeftStick ? 'left-stick' : 'right-stick', 0, 0); };
-            
-            cap.addEventListener('mousedown', startDrag); cap.addEventListener('touchstart', startDrag, {passive: false});
-            window.addEventListener('mousemove', handleDrag); window.addEventListener('touchmove', handleDrag, {passive: false});
-            window.addEventListener('mouseup', stopDrag); window.addEventListener('touchend', stopDrag); window.addEventListener('mouseleave', stopDrag);
-        };
-        initJoystick('joystick-socket-left', 'joystick-cap-left', true);
-        initJoystick('joystick-socket-right', 'joystick-cap-right', false);
-
-        const updateClock = () => {
-            const now = new Date(); const month = now.getMonth() + 1, date = now.getDate();
-            let hours = now.getHours(); const ampm = hours >= 12 ? 'PM' : 'AM'; hours = hours % 12 || 12;
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const clockEl = document.getElementById('xmb-clock'); if (clockEl) clockEl.innerText = `${month}/${date} ${hours}:${minutes}${ampm}`;
-        };
-        updateClock(); setInterval(updateClock, 1000);
+    // Init
+    applyScale();
+    document.getElementById('loading-overlay').classList.add('hidden');
     </script>
 </body>
 </html>
