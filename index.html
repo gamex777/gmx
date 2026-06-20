@@ -57,7 +57,6 @@
             .active-col .active-item.game-item .game-details { opacity: 1; }
             .game-title { font-size: 0.85rem; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.9); }
             #sys-msg { position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%); font-size: 0.75rem; font-weight: 600; letter-spacing: 1px; opacity: 0; transition: opacity 0.3s; z-index: 50; text-transform: uppercase; color: #aaa; white-space: nowrap; }
-            /* Game display: IodineGBA renders into a canvas */
             #game-area { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; display: flex; justify-content: center; align-items: center; background: #000; }
             #screen.game-running #game-area { opacity: 1; pointer-events: auto; }
             #screen.game-running #xmb-ui { opacity: 0; pointer-events: none; }
@@ -110,7 +109,7 @@
 <body>
     <div id="loading-overlay">
         <div class="loader-spinner"></div>
-        <div style="font-size:0.9rem;font-weight:700;letter-spacing:2px;">LOADING CORE...</div>
+        <div style="font-size:0.9rem;font-weight:700;letter-spacing:2px;">LOADING...</div>
     </div>
     <input type="file" id="install-rom-upload" accept=".gba,.GBA" style="position:absolute;left:-9999px;top:-9999px;opacity:0;width:1px;height:1px;" touch-action="auto">
     <input type="file" id="install-cover-upload" accept="image/*" style="position:absolute;left:-9999px;top:-9999px;opacity:0;width:1px;height:1px;" touch-action="auto">
@@ -163,7 +162,7 @@
                             <div class="xmb-sub">Version 2.0 (GBA)</div>
                         </div>
                     </div>
-                    <div id="sys-msg">Press 'A' to execute</div>
+                    <div id="sys-msg">Press X to execute</div>
                 </div>
                 <div id="install-popup">
                     <div class="popup-box" id="popup-box-game" style="display:block;">
@@ -202,22 +201,38 @@
     </div>
 
     <script>
-    // ===================== GBA ENGINE: IodineGBA =====================
-    var IodineGUI = { Iodine: null, Blitter: null, coreTimerID: null, isPlaying: false, startTime: +(new Date()).getTime() };
-    var isRunning = false;
-
-    // Button index map: A=0,B=1,Select=2,Start=3,Right=4,Left=5,Up=6,Down=7,R=8,L=9
-    var btnBits = {
-        'btn-a':0,'btn-b':1,'btn-select':2,'btn-start':3,
-        'btn-right':4,'btn-left':5,'btn-up':6,'btn-down':7,
-        'btn-r':8,'btn-l':9
+    // ===================================================================
+    // GBA JoyPad bit indices — passed to JoyPad.keyPress(n)/keyRelease(n)
+    // JoyPad register: keyInput &= ~(1<<n) on press, |= (1<<n) on release
+    // 0=A  1=B  2=Select  3=Start  4=Right  5=Left  6=Up  7=Down  8=R  9=L
+    // ===================================================================
+    var GBA_BTN = {
+        'btn-a':0, 'btn-b':1, 'btn-select':2, 'btn-start':3,
+        'btn-right':4, 'btn-left':5, 'btn-up':6, 'btn-down':7,
+        'btn-r':8, 'btn-l':9
     };
 
-    var iodineScriptsLoaded = false;
-    function loadIodineScripts(cb){
-        if(iodineScriptsLoaded){ cb(); return; }
+    // Keyboard → button id (no duplicate keys)
+    var KEY_MAP = {
+        'ArrowUp':'btn-up', 'ArrowDown':'btn-down',
+        'ArrowLeft':'btn-left', 'ArrowRight':'btn-right',
+        'x':'btn-a', 'X':'btn-a',
+        'z':'btn-b', 'Z':'btn-b',
+        'Enter':'btn-start', 'Shift':'btn-select',
+        'a':'btn-l', 'A':'btn-l',
+        's':'btn-r', 'S':'btn-r'
+    };
+
+    var BTNS = ['btn-up','btn-down','btn-left','btn-right','btn-a','btn-b','btn-select','btn-start','btn-l','btn-r'];
+
+    // Emulator state
+    var emu = { iodine: null, blitter: null, timer: null, running: false, startTime: 0 };
+    var scriptsLoaded = false;
+
+    function loadScripts(cb) {
+        if (scriptsLoaded) { cb(); return; }
         var BASE = 'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/';
-        var scripts = [
+        var list = [
             'IodineGBA/includes/TypedArrayShim.js',
             'IodineGBA/core/Cartridge.js','IodineGBA/core/DMA.js','IodineGBA/core/Emulator.js',
             'IodineGBA/core/Graphics.js','IodineGBA/core/RunLoop.js','IodineGBA/core/Memory.js',
@@ -243,507 +258,467 @@
             'user_scripts/GfxGlueCode.js'
         ];
         var i = 0;
-        function next(){
-            if(i >= scripts.length){ iodineScriptsLoaded = true; cb(); return; }
+        function next() {
+            if (i >= list.length) { scriptsLoaded = true; cb(); return; }
             var s = document.createElement('script');
-            s.src = BASE + scripts[i++];
+            s.src = BASE + list[i++];
             s.onload = next;
-            s.onerror = function(e){ console.warn('Failed loading: ' + scripts[i-1]); next(); };
+            s.onerror = function() { console.warn('Script failed: ' + list[i-1]); next(); };
             document.head.appendChild(s);
         }
         next();
     }
 
-    function stopGame(){
-        isRunning = false;
-        if(IodineGUI.coreTimerID){ clearInterval(IodineGUI.coreTimerID); IodineGUI.coreTimerID = null; }
-        if(IodineGUI.Iodine){ try{ IodineGUI.Iodine.pause(); }catch(e){} }
-        IodineGUI.Iodine = null; IodineGUI.Blitter = null; IodineGUI.isPlaying = false;
-        var canvas = document.getElementById('game-canvas');
-        var ctx = canvas.getContext('2d');
+    function stopEmu() {
+        emu.running = false;
+        if (emu.timer) { clearInterval(emu.timer); emu.timer = null; }
+        if (emu.iodine) { try { emu.iodine.pause(); } catch(e) {} emu.iodine = null; }
+        emu.blitter = null;
+        var ctx = document.getElementById('game-canvas').getContext('2d');
         ctx.clearRect(0, 0, 240, 160);
     }
 
-    function renderError(title, msg){
+    function renderError(title, msg) {
         document.getElementById('screen').classList.add('game-running');
         var canvas = document.getElementById('game-canvas');
         var ctx = canvas.getContext('2d');
-        ctx.fillStyle='#050505'; ctx.fillRect(0,0,240,160);
-        ctx.fillStyle='#ff4444'; ctx.font='bold 12px sans-serif'; ctx.fillText(title,8,70);
-        ctx.fillStyle='#aaa'; ctx.font='9px monospace';
+        ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, 240, 160);
+        ctx.fillStyle = '#ff4444'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(title, 8, 70);
+        ctx.fillStyle = '#aaa'; ctx.font = '9px monospace';
         var words = msg.split(' '), line = '', y = 88;
-        for(var w=0;w<words.length;w++){ var t=line+(line?' ':'')+words[w]; if(ctx.measureText(t).width>224&&line){ctx.fillText(line,8,y);line=words[w];y+=12;}else line=t; }
-        if(line) ctx.fillText(line,8,y);
+        for (var w = 0; w < words.length; w++) {
+            var t = line + (line ? ' ' : '') + words[w];
+            if (ctx.measureText(t).width > 224 && line) { ctx.fillText(line, 8, y); line = words[w]; y += 12; }
+            else line = t;
+        }
+        if (line) ctx.fillText(line, 8, y);
     }
 
-    function startIodine(biosBuffer, romBuffer){
+    function startIodine(biosData, romData) {
         try {
-            IodineGUI.Iodine = new GameBoyAdvanceEmulator();
-            IodineGUI.Iodine.attachBIOS(new Uint8Array(biosBuffer));
-            IodineGUI.Iodine.attachROM(new Uint8Array(romBuffer));
-            IodineGUI.Blitter = new GfxGlueCode(240, 160);
-            IodineGUI.Blitter.attachCanvas(document.getElementById('game-canvas'));
-            IodineGUI.Iodine.attachGraphicsFrameHandler(IodineGUI.Blitter);
-            IodineGUI.Iodine.setIntervalRate(8);
-            IodineGUI.startTime = +(new Date()).getTime();
-            IodineGUI.coreTimerID = setInterval(function(){
-                IodineGUI.Iodine.timerCallback(((+(new Date()).getTime()) - IodineGUI.startTime) >>> 0);
+            emu.iodine = new GameBoyAdvanceEmulator();
+            // Must attach these before play() or emulator crashes calling null callbacks
+            emu.iodine.attachPlayStatusHandler(function() {});
+            emu.iodine.attachSpeedHandler(function() {});
+            emu.iodine.attachBIOS(new Uint8Array(biosData));
+            emu.iodine.attachROM(new Uint8Array(romData));
+            emu.blitter = new GfxGlueCode(240, 160);
+            emu.blitter.attachCanvas(document.getElementById('game-canvas'));
+            emu.iodine.attachGraphicsFrameHandler(emu.blitter);
+            emu.iodine.setIntervalRate(8);
+            emu.startTime = Date.now();
+            emu.timer = setInterval(function() {
+                emu.iodine.timerCallback((Date.now() - emu.startTime) >>> 0);
             }, 8);
-            IodineGUI.Iodine.play();
-            isRunning = true;
-        } catch(e){
+            emu.iodine.play();
+            emu.running = true;
+        } catch(e) {
             renderError('BOOT FAILED', String(e));
         }
     }
 
-    function loadRom(romBuffer){
-        stopGame();
+    // Send input directly to IodineGBA's joypad register (correct bit indices 0-9)
+    function sendInput(btnId, isDown) {
+        if (!emu.running || !emu.iodine) return;
+        var bit = GBA_BTN[btnId];
+        if (bit === undefined) return;
+        try {
+            if (emu.iodine.IOCore && emu.iodine.IOCore.joypad) {
+                if (isDown) emu.iodine.IOCore.joypad.keyPress(bit | 0);
+                else        emu.iodine.IOCore.joypad.keyRelease(bit | 0);
+            } else if (typeof emu.iodine.keyDown === 'function') {
+                if (isDown) emu.iodine.keyDown(bit | 0);
+                else        emu.iodine.keyUp(bit | 0);
+            }
+        } catch(e) {}
+    }
+
+    // ===================================================================
+    // Storage (IndexedDB + memory fallback)
+    // ===================================================================
+    var DB_NAME = 'GMX_GBA_Storage', STORE = 'library';
+    var memFallback = false, memStore = { bios: null, games: {} };
+
+    function initDB() {
+        return new Promise(function(resolve) {
+            if (memFallback || !window.indexedDB) { memFallback = true; return resolve(null); }
+            try {
+                var req = indexedDB.open(DB_NAME, 1);
+                req.onupgradeneeded = function(e) { e.target.result.createObjectStore(STORE, { keyPath: 'id' }); };
+                req.onsuccess = function() { resolve(req.result); };
+                req.onerror = function() { memFallback = true; resolve(null); };
+            } catch(e) { memFallback = true; resolve(null); }
+        });
+    }
+
+    function dbPut(db, rec) {
+        return new Promise(function(res, rej) {
+            var tx = db.transaction(STORE, 'readwrite');
+            tx.objectStore(STORE).put(rec);
+            tx.oncomplete = res; tx.onerror = rej;
+        });
+    }
+
+    function dbGet(db, key) {
+        return new Promise(function(res) {
+            var tx = db.transaction(STORE, 'readonly');
+            var req = tx.objectStore(STORE).get(key);
+            req.onsuccess = function() { res(req.result || null); };
+            req.onerror = function() { res(null); };
+        });
+    }
+
+    function dbGetAll(db) {
+        return new Promise(function(res) {
+            var tx = db.transaction(STORE, 'readonly');
+            var req = tx.objectStore(STORE).getAll();
+            req.onsuccess = function() { res(req.result || []); };
+            req.onerror = function() { res([]); };
+        });
+    }
+
+    function dbDelete(db, key) {
+        return new Promise(function(res, rej) {
+            var tx = db.transaction(STORE, 'readwrite');
+            tx.objectStore(STORE).delete(key);
+            tx.oncomplete = res; tx.onerror = rej;
+        });
+    }
+
+    function saveBios(file) {
+        return file.arrayBuffer().then(function(buf) {
+            return initDB().then(function(db) {
+                if (!db) { memStore.bios = buf; return; }
+                return dbPut(db, { id: '__bios__', data: buf });
+            });
+        });
+    }
+
+    function saveGame(romFile, imgFile) {
+        return romFile.arrayBuffer().then(function(romBuf) {
+            var coverP = imgFile
+                ? new Promise(function(res) { var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.readAsDataURL(imgFile); })
+                : Promise.resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+            return coverP.then(function(cover) {
+                var id = romFile.name.replace(/\.[^/.]+$/, '');
+                var rec = { id: id, title: id, rom: romBuf, cover: cover };
+                return initDB().then(function(db) {
+                    if (!db) { memStore.games[id] = rec; return; }
+                    return dbPut(db, rec);
+                });
+            });
+        });
+    }
+
+    function loadRom(romData) {
+        stopEmu();
         document.getElementById('screen').classList.add('game-running');
         document.getElementById('screen').classList.remove('os-ready');
-        
-        initDB().then(function(db){
-            if(useMemoryFallback || !db) {
-                if(!memoryStore.bios){ renderError('NO BIOS FOUND', 'Please insert a GBA BIOS core (.bin) via the Settings menu before playing.'); return; }
-                loadIodineScripts(function(){ startIodine(memoryStore.bios, romBuffer); });
-            } else {
-                var tx = db.transaction(STORE_NAME, 'readonly');
-                var req = tx.objectStore(STORE_NAME).get('__bios__');
-                req.onsuccess = function(){
-                    if(!req.result){ renderError('NO BIOS FOUND', 'Please insert a GBA BIOS core (.bin) via the Settings menu before playing.'); return; }
-                    loadIodineScripts(function(){
-                        startIodine(req.result.data, romBuffer);
-                    });
-                };
-            }
-        }).catch(function(){ renderError('DB ERROR','Could not access storage.'); });
-    }
-
-    function handleInput(btnId, pressed){
-        if(!isRunning || !IodineGUI.Iodine) return;
-        var bit = btnBits[btnId];
-        if(bit === undefined) return;
-        if(pressed) IodineGUI.Iodine.keyDown(bit);
-        else IodineGUI.Iodine.keyUp(bit);
-    }
-
-    // ===================== IndexedDB + Memory Fallback =====================
-    var DB_NAME="GMX_GBA_Storage", STORE_NAME="library";
-    var useMemoryFallback = false;
-    var memoryStore = { bios: null, games: {} };
-
-    function initDB(){
-        return new Promise(function(resolve,reject){
-            if(useMemoryFallback) return resolve(null);
-            if(!window.indexedDB) { useMemoryFallback = true; return resolve(null); }
-            try {
-                var req=indexedDB.open(DB_NAME,1);
-                req.onupgradeneeded=function(e){e.target.result.createObjectStore(STORE_NAME,{keyPath:"id"});};
-                req.onsuccess=function(){resolve(req.result);};
-                req.onerror=function(){useMemoryFallback=true; resolve(null);};
-            } catch(e) {
-                useMemoryFallback = true; resolve(null);
-            }
-        });
-    }
-
-    function saveBiosToDB(biosFile){
-        return biosFile.arrayBuffer().then(function(buf){
-            return initDB().then(function(db){
-                if(useMemoryFallback || !db) {
-                    memoryStore.bios = buf;
-                    return Promise.resolve();
-                }
-                return new Promise(function(resolve,reject){
-                    var tx=db.transaction(STORE_NAME,"readwrite");
-                    tx.objectStore(STORE_NAME).put({id:'__bios__', data:buf});
-                    tx.oncomplete=resolve; tx.onerror=reject;
-                });
+        initDB().then(function(db) {
+            var p = db ? dbGet(db, '__bios__').then(function(r) { return r ? r.data : null; }) : Promise.resolve(memStore.bios);
+            p.then(function(biosData) {
+                if (!biosData) { renderError('NO BIOS FOUND', 'Please insert a GBA BIOS .bin via Settings before playing.'); return; }
+                loadScripts(function() { startIodine(biosData, romData); });
             });
         });
     }
 
-    function saveGameToDB(romFile,imgFile){
-        return initDB().then(function(db){
-            return romFile.arrayBuffer().then(function(romBuffer){
-                var coverPromise;
-                if(imgFile){
-                    coverPromise = new Promise(function(res){
-                        var r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(imgFile);
-                    });
-                } else {
-                    coverPromise = Promise.resolve("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=");
-                }
-                return coverPromise.then(function(cover){
-                    var id = romFile.name.replace(/\.[^/.]+$/,"");
-                    var rec = {id:id, title:id, rom:romBuffer, cover:cover};
-                    if(useMemoryFallback || !db) {
-                        memoryStore.games[id] = rec;
-                        return Promise.resolve();
-                    }
-                    return new Promise(function(resolve,reject){
-                        var tx=db.transaction(STORE_NAME,"readwrite");
-                        tx.objectStore(STORE_NAME).put(rec);
-                        tx.oncomplete=resolve; tx.onerror=reject;
-                    });
-                });
-            });
-        });
-    }
-
-    // ===================== Scaling =====================
-    function applyScale(){
-        var consoleEl=document.getElementById('gmx-console');
-        if(!consoleEl||window.innerHeight>window.innerWidth)return;
-        var s=Math.min((window.innerWidth*0.95)/735,(window.innerHeight*0.95)/350,1);
-        consoleEl.style.transform='scale('+s+')';
-    }
-    window.addEventListener('resize',applyScale);
-
-    // ===================== XMB OS =====================
-    var isPoweredOn=false,isOSReady=false,colIdx=1,rowIdx=0;
-    var maxRows=[1,1,1];
+    // ===================================================================
+    // XMB OS
+    // ===================================================================
+    var isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0, maxRows = [1,1,1];
+    var bootTimers = [];
 
     function renderGameList(games) {
-        var gameCol=document.getElementById('game-column');
-        var memStick=document.getElementById('memory-stick');
-        var old=document.querySelectorAll('.dynamic-game');
-        for(var i=0;i<old.length;i++) old[i].remove();
-        var nr=1;
-        games.forEach(function(g){
-            if(g.id === '__bios__') return;
-            var d=document.createElement('div');
-            d.className='xmb-sub game-item dynamic-game';
-            d.innerHTML='<img src="'+g.cover+'" class="box-art"><div class="game-details"><span class="game-title">'+g.title+'</span></div>';
-            gameCol.insertBefore(d,memStick);
-            nr++;
+        var col = document.getElementById('game-column');
+        var stick = document.getElementById('memory-stick');
+        col.querySelectorAll('.dynamic-game').forEach(function(el) { el.remove(); });
+        var count = 1;
+        games.forEach(function(g) {
+            if (g.id === '__bios__') return;
+            var d = document.createElement('div');
+            d.className = 'xmb-sub game-item dynamic-game';
+            d.innerHTML = '<img src="' + g.cover + '" class="box-art"><div class="game-details"><span class="game-title">' + g.title + '</span></div>';
+            col.insertBefore(d, stick);
+            count++;
         });
-        maxRows[1]=nr;
+        maxRows[1] = count;
     }
 
-    function buildXMB(){
-        return initDB().catch(function(){return null;}).then(function(db){
-            return new Promise(function(resolve,reject){
-                if(useMemoryFallback || !db) {
-                    var gamesArr = [];
-                    for(var key in memoryStore.games) gamesArr.push(memoryStore.games[key]);
-                    renderGameList(gamesArr);
-                    resolve();
-                } else {
-                    var tx=db.transaction(STORE_NAME,"readonly");
-                    var req=tx.objectStore(STORE_NAME).getAll();
-                    req.onsuccess=function(){
-                        renderGameList(req.result||[]);
-                        resolve();
-                    };
-                    req.onerror=function(){reject(req.error);};
-                }
+    function buildXMB() {
+        return initDB().then(function(db) {
+            if (!db) { renderGameList(Object.values(memStore.games)); return; }
+            return dbGetAll(db).then(renderGameList);
+        });
+    }
+
+    function updateXMB() {
+        if (!isOSReady) return;
+        var grid = document.getElementById('xmb-grid');
+        var cols = document.querySelectorAll('.xmb-col');
+        var sysMsg = document.getElementById('sys-msg');
+        var bgLayer = document.getElementById('game-bg-layer');
+        grid.style.transform = 'translate(calc(-50% + ' + ((1 - colIdx) * 100) + 'px), ' + (-rowIdx * 60) + 'px)';
+        cols.forEach(function(col, c) {
+            var active = (c === colIdx);
+            col.classList.toggle('active-col', active);
+            Array.from(col.children).forEach(function(ch, r) { ch.classList.toggle('active-item', active && r === rowIdx); });
+        });
+        var img = document.querySelector('.active-col .active-item.dynamic-game img');
+        if (img) { bgLayer.style.backgroundImage = 'linear-gradient(to right,rgba(15,16,26,0.95) 0%,rgba(15,16,26,0.5) 60%,rgba(0,0,0,0) 100%),url(' + img.src + ')'; bgLayer.style.opacity = 1; }
+        else bgLayer.style.opacity = 0;
+        var games = document.querySelectorAll('.dynamic-game');
+        if (colIdx === 1 && rowIdx > 0 && rowIdx <= games.length) { sysMsg.innerText = '(B) Delete'; sysMsg.style.opacity = 1; }
+        else { sysMsg.innerText = ''; sysMsg.style.opacity = 0; }
+    }
+
+    function popupVisible() { return document.getElementById('install-popup').classList.contains('visible'); }
+    function navLeft()  { if (colIdx > 0 && isOSReady && !popupVisible()) { colIdx--; rowIdx = 0; updateXMB(); } }
+    function navRight() { if (colIdx < 2 && isOSReady && !popupVisible()) { colIdx++; rowIdx = 0; updateXMB(); } }
+    function navUp()    { if (rowIdx > 0 && isOSReady && !popupVisible()) { rowIdx--; updateXMB(); } }
+    function navDown()  { if (rowIdx < maxRows[colIdx] && isOSReady && !popupVisible()) { rowIdx++; updateXMB(); } }
+
+    function triggerA() {
+        if (!isOSReady || popupVisible()) return;
+        var sysMsg = document.getElementById('sys-msg');
+        if (colIdx === 0) { openBiosPopup(); return; }
+        if (colIdx === 2) { sysMsg.innerText = 'Module offline.'; sysMsg.style.opacity = 1; return; }
+        var games = document.querySelectorAll('.dynamic-game');
+        if (rowIdx > 0 && rowIdx <= games.length) {
+            var title = games[rowIdx - 1].querySelector('.game-title').innerText;
+            sysMsg.innerText = 'BOOTING: ' + title; sysMsg.style.opacity = 1;
+            initDB().then(function(db) {
+                var p = db ? dbGet(db, title) : Promise.resolve(memStore.games[title] || null);
+                p.then(function(g) {
+                    if (!g) { sysMsg.innerText = 'ROM not found.'; return; }
+                    loadRom(g.rom);
+                });
+            });
+        } else if (rowIdx === games.length + 1) {
+            openPopup();
+        }
+    }
+
+    function triggerB() {
+        if (popupVisible()) { closePopup(); return; }
+        if (!isOSReady) return;
+        var games = document.querySelectorAll('.dynamic-game');
+        if (colIdx !== 1 || rowIdx < 1 || rowIdx > games.length) return;
+        var title = games[rowIdx - 1].querySelector('.game-title').innerText;
+        var sysMsg = document.getElementById('sys-msg');
+        sysMsg.innerText = 'Deleting ' + title + '...'; sysMsg.style.opacity = 1;
+        initDB().then(function(db) {
+            var p = db ? dbDelete(db, title) : Promise.resolve(delete memStore.games[title]);
+            p.then(function() { return buildXMB(); }).then(function() {
+                rowIdx = Math.min(rowIdx, maxRows[1] - 1);
+                updateXMB(); sysMsg.style.opacity = 0;
             });
         });
     }
 
-    function updateXMB(){
-        var gridEl=document.getElementById('xmb-grid');
-        var colEls=document.querySelectorAll('.xmb-col');
-        var sysMsgEl=document.getElementById('sys-msg');
-        var bgLayer=document.getElementById('game-bg-layer');
-        if(!isOSReady)return;
-        gridEl.style.transform='translate(calc(-50% + '+((1-colIdx)*100)+'px), '+(-rowIdx*60)+'px)';
-        colEls.forEach(function(col,c){
-            if(c===colIdx){col.classList.add('active-col');var ch=col.children;for(var r=0;r<ch.length;r++)ch[r].classList.toggle('active-item',r===rowIdx);}
-            else{col.classList.remove('active-col');var ch2=col.children;for(var r2=0;r2<ch2.length;r2++)ch2[r2].classList.remove('active-item');}
+    // ===================================================================
+    // Install Popups
+    // ===================================================================
+    var selRom = null, selCover = null, selBios = null;
+
+    function openPopup() {
+        document.getElementById('install-popup').classList.add('visible');
+        document.getElementById('popup-box-game').style.display = 'block';
+        document.getElementById('popup-box-bios').style.display = 'none';
+        selRom = null; selCover = null;
+        document.getElementById('install-rom-upload').value = '';
+        document.getElementById('install-cover-upload').value = '';
+        document.getElementById('popup-rom-name').textContent = '';
+        document.getElementById('popup-cover-name').textContent = '';
+        document.getElementById('popup-install').disabled = true;
+    }
+    function openBiosPopup() {
+        document.getElementById('install-popup').classList.add('visible');
+        document.getElementById('popup-box-game').style.display = 'none';
+        document.getElementById('popup-box-bios').style.display = 'block';
+        selBios = null;
+        document.getElementById('install-bios-upload').value = '';
+        document.getElementById('popup-bios-name').textContent = '';
+        document.getElementById('popup-install-bios').disabled = true;
+    }
+    function closePopup() { document.getElementById('install-popup').classList.remove('visible'); }
+
+    document.getElementById('install-bios-upload').addEventListener('change', function(e) {
+        var f = e.target.files[0];
+        if (f && f.name.toLowerCase().endsWith('.bin')) { selBios = f; document.getElementById('popup-bios-name').textContent = f.name; document.getElementById('popup-install-bios').disabled = false; }
+    });
+    document.getElementById('popup-install-bios').addEventListener('click', function() {
+        if (!selBios) return;
+        closePopup();
+        saveBios(selBios).then(function() {
+            var s = document.getElementById('sys-msg'); s.innerText = 'Core installed!'; s.style.opacity = 1;
+            setTimeout(function() { s.style.opacity = 0; }, 2000);
         });
-        var ai=document.querySelector('.active-col .active-item.dynamic-game img');
-        if(ai){bgLayer.style.backgroundImage='linear-gradient(to right,rgba(15,16,26,0.95) 0%,rgba(15,16,26,0.5) 60%,rgba(0,0,0,0) 100%),url('+ai.src+')';bgLayer.style.opacity=1;}
-        else bgLayer.style.opacity=0;
-        var gi=document.querySelectorAll('.dynamic-game');
-        if(colIdx===1&&rowIdx>0&&rowIdx<=gi.length){sysMsgEl.innerText="(B) Delete Game";sysMsgEl.style.opacity=1;}
-        else{sysMsgEl.innerText="";sysMsgEl.style.opacity=0;}
-    }
-
-    // ===================== Install Popup =====================
-    var selRom=null, selCover=null, selBios=null;
-    function openPopup(){
-        document.getElementById('install-popup').classList.add('visible');
-        document.getElementById('popup-box-game').style.display='block';
-        document.getElementById('popup-box-bios').style.display='none';
-        selRom=null;selCover=null;
-        document.getElementById('install-rom-upload').value='';
-        document.getElementById('install-cover-upload').value='';
-        document.getElementById('popup-rom-name').textContent='';
-        document.getElementById('popup-cover-name').textContent='';
-        document.getElementById('popup-install').disabled=true;
-        document.getElementById('sys-msg').style.opacity=0;
-    }
-    function openBiosPopup(){
-        document.getElementById('install-popup').classList.add('visible');
-        document.getElementById('popup-box-game').style.display='none';
-        document.getElementById('popup-box-bios').style.display='block';
-        selBios=null;
-        document.getElementById('install-bios-upload').value='';
-        document.getElementById('popup-bios-name').textContent='';
-        document.getElementById('popup-install-bios').disabled=true;
-        document.getElementById('sys-msg').style.opacity=0;
-    }
-    function closePopup(){document.getElementById('install-popup').classList.remove('visible');}
-
-    document.getElementById('install-bios-upload').addEventListener('change',function(e){
-        var f=e.target.files[0];
-        if(f&&f.name.toLowerCase().endsWith('.bin')){selBios=f;document.getElementById('popup-bios-name').textContent=f.name;document.getElementById('popup-install-bios').disabled=false;}
-        else this.value='';
     });
-    document.getElementById('popup-install-bios').addEventListener('click',function(){
-        if(!selBios)return;
-        var sysMsgEl=document.getElementById('sys-msg');
+    document.getElementById('install-rom-upload').addEventListener('change', function(e) {
+        var f = e.target.files[0];
+        if (f && f.name.toLowerCase().endsWith('.gba')) { selRom = f; document.getElementById('popup-rom-name').textContent = f.name; document.getElementById('popup-install').disabled = false; }
+    });
+    document.getElementById('install-cover-upload').addEventListener('change', function(e) {
+        var f = e.target.files[0]; if (f) { selCover = f; document.getElementById('popup-cover-name').textContent = f.name; }
+    });
+    document.getElementById('popup-install').addEventListener('click', function() {
+        if (!selRom) return;
+        var s = document.getElementById('sys-msg'); s.innerText = 'Installing ' + selRom.name + '...'; s.style.opacity = 1;
         closePopup();
-        saveBiosToDB(selBios)
-            .then(function(){sysMsgEl.innerText='Core installed!';sysMsgEl.style.opacity=1;setTimeout(function(){sysMsgEl.style.opacity=0;},2000);})
-            .catch(function(){sysMsgEl.innerText='Core install failed';sysMsgEl.style.opacity=1;});
-    });
-    document.getElementById('install-rom-upload').addEventListener('change',function(e){
-        var f=e.target.files[0];
-        if(f&&f.name.toLowerCase().endsWith('.gba')){selRom=f;document.getElementById('popup-rom-name').textContent=f.name;document.getElementById('popup-install').disabled=false;}
-        else this.value='';
-    });
-    document.getElementById('install-cover-upload').addEventListener('change',function(e){
-        var f=e.target.files[0];if(f){selCover=f;document.getElementById('popup-cover-name').textContent=f.name;}
-    });
-    document.getElementById('popup-install').addEventListener('click',function(){
-        if(!selRom)return;
-        var sysMsgEl=document.getElementById('sys-msg');
-        sysMsgEl.innerText='Installing '+selRom.name+'...';sysMsgEl.style.opacity=1;
-        closePopup();
-        saveGameToDB(selRom,selCover)
-            .then(function(){sysMsgEl.innerText="Install Complete!";})
-            .catch(function(){sysMsgEl.innerText="Install Failed";});
-        setTimeout(function(){sysMsgEl.style.opacity=0;buildXMB().then(updateXMB);},1500);
+        saveGame(selRom, selCover).then(function() {
+            s.innerText = 'Install Complete!';
+            setTimeout(function() { s.style.opacity = 0; buildXMB().then(updateXMB); }, 1500);
+        }).catch(function() { s.innerText = 'Install Failed'; });
     });
 
-    // ===================== Input Manager =====================
-    var navLeft=function(){if(colIdx>0&&isOSReady&&!document.getElementById('install-popup').classList.contains('visible')){colIdx--;rowIdx=0;updateXMB();}};
-    var navRight=function(){if(colIdx<2&&isOSReady&&!document.getElementById('install-popup').classList.contains('visible')){colIdx++;rowIdx=0;updateXMB();}};
-    var navUp=function(){if(rowIdx>0&&isOSReady&&!document.getElementById('install-popup').classList.contains('visible')){rowIdx--;updateXMB();}};
-    var navDown=function(){if(rowIdx<maxRows[colIdx]&&isOSReady&&!document.getElementById('install-popup').classList.contains('visible')){rowIdx++;updateXMB();}};
+    // ===================================================================
+    // Input handler
+    // ===================================================================
+    var held = new Set();   // currently held button ids
+    var osHeld = new Set(); // OS: track keys to fire only once per hold
 
-    var interactable=['btn-up','btn-down','btn-left','btn-right','btn-a','btn-b','btn-select','btn-start','btn-l','btn-r'];
-    var active=new Set();
-
-    function triggerA(){
-        var screenEl=document.getElementById('screen');
-        var sysMsgEl=document.getElementById('sys-msg');
-        if(!isOSReady||document.getElementById('install-popup').classList.contains('visible'))return;
-        if(colIdx===1){
-            var games=document.querySelectorAll('.dynamic-game');
-            if(rowIdx>0&&rowIdx<=games.length){
-                var title=games[rowIdx-1].querySelector('.game-title').innerText;
-                sysMsgEl.innerText="BOOTING: "+title;sysMsgEl.style.opacity=1;
-                initDB().then(function(db){
-                    if(useMemoryFallback || !db) {
-                        var g = memoryStore.games[title];
-                        if(!g){sysMsgEl.innerText="ROM not found.";return;}
-                        loadRom(g.rom);
-                    } else {
-                        var tx=db.transaction(STORE_NAME,"readonly");
-                        var req2=tx.objectStore(STORE_NAME).get(title);
-                        req2.onsuccess=function(){
-                            if(!req2.result){sysMsgEl.innerText="ROM not found.";return;}
-                            loadRom(req2.result.rom);
-                        };
-                    }
-                }).catch(function(){sysMsgEl.innerText="Error loading game.";});
-            } else if(rowIdx===games.length+1){ openPopup(); }
-        } else if(colIdx===0){ openBiosPopup(); } else { sysMsgEl.innerText="Module offline.";sysMsgEl.style.opacity=1; }
-    }
-
-    function triggerB_OS(){
-        var screenEl=document.getElementById('screen');
-        var sysMsgEl=document.getElementById('sys-msg');
-        if(document.getElementById('install-popup').classList.contains('visible')){closePopup();return;}
-        if(!isOSReady||screenEl.classList.contains('game-running'))return;
-        if(colIdx!==1)return;
-        var gi=document.querySelectorAll('.dynamic-game');
-        if(rowIdx<1||rowIdx>gi.length)return;
-        var title=gi[rowIdx-1].querySelector('.game-title').innerText;
-        sysMsgEl.innerText='Deleting '+title+'...';sysMsgEl.style.opacity=1;
-        initDB().then(function(db){
-            if(useMemoryFallback || !db) {
-                delete memoryStore.games[title];
-                return Promise.resolve();
-            } else {
-                var tx=db.transaction(STORE_NAME,"readwrite");
-                tx.objectStore(STORE_NAME).delete(title);
-                return new Promise(function(res,rej){tx.oncomplete=res;tx.onerror=rej;});
-            }
-        }).then(buildXMB).then(function(){rowIdx=Math.min(rowIdx,maxRows[1]-1);updateXMB();sysMsgEl.style.opacity=0;}).catch(function(){});
-    }
-
-    function getInteractableId(el){
-        while(el){
-            if(el.id && interactable.indexOf(el.id)!==-1) return el.id;
-            el=el.parentElement;
+    function pressButton(id) {
+        if (held.has(id)) return;
+        held.add(id);
+        var el = document.getElementById(id); if (el) el.classList.add('pressed');
+        if (emu.running) {
+            sendInput(id, true);
+        } else {
+            if (id==='btn-left') navLeft(); else if (id==='btn-right') navRight();
+            else if (id==='btn-up') navUp(); else if (id==='btn-down') navDown();
+            else if (id==='btn-a') triggerA(); else if (id==='btn-b') triggerB();
         }
+    }
+
+    function releaseButton(id) {
+        if (!held.has(id)) return;
+        held.delete(id);
+        var el = document.getElementById(id); if (el) el.classList.remove('pressed');
+        if (emu.running) sendInput(id, false);
+    }
+
+    function btnAt(el) {
+        while (el) { if (el.id && BTNS.indexOf(el.id) !== -1) return el.id; el = el.parentElement; }
         return null;
     }
 
-    function pressButton(id){
-        var screenEl=document.getElementById('screen');
-        if(active.has(id)) return;
-        active.add(id);
-        var el=document.getElementById(id);
-        if(el) el.classList.add('pressed');
-        if(screenEl.classList.contains('game-running')){
-            handleInput(id,true);
+    // Keyboard
+    window.addEventListener('keydown', function(e) {
+        if (popupVisible()) return;
+        var key = e.key;
+        if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(key) > -1) e.preventDefault();
+        var id = KEY_MAP[key]; if (!id) return;
+        if (emu.running) {
+            var el = document.getElementById(id); if (el && !held.has(id)) { held.add(id); el.classList.add('pressed'); }
+            sendInput(id, true);  // always relay — games need continuous input
         } else {
-            if(id==='btn-left')navLeft();
-            if(id==='btn-right')navRight();
-            if(id==='btn-up')navUp();
-            if(id==='btn-down')navDown();
-            if(id==='btn-a')triggerA();
-            if(id==='btn-b')triggerB_OS();
+            if (!osHeld.has(id)) { osHeld.add(id); pressButton(id); }
         }
-    }
+    });
+    window.addEventListener('keyup', function(e) {
+        var id = KEY_MAP[e.key]; if (!id) return;
+        osHeld.delete(id);
+        releaseButton(id);
+    });
 
-    function releaseButton(id){
-        var screenEl=document.getElementById('screen');
-        if(!active.has(id)) return;
-        active.delete(id);
-        var el=document.getElementById(id);
-        if(el) el.classList.remove('pressed');
-        if(screenEl.classList.contains('game-running')) handleInput(id,false);
-    }
-
-    function releaseAll(){
-        Array.from(active).forEach(releaseButton);
-    }
-
-    // Touch: track which touch ID maps to which button
-    var touchMap={};
-
-    // Disable standard mobile context menus that block touch inputs on hold
+    // Touch
+    var touchMap = {};
     window.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-
-    function onTouchStart(e){
-        var tag=e.target.tagName;
-        if(tag!=='INPUT'&&tag!=='LABEL'&&tag!=='BUTTON') e.preventDefault();
-        for(var i=0;i<e.changedTouches.length;i++){
-            var t=e.changedTouches[i];
-            var id=getInteractableId(document.elementFromPoint(t.clientX,t.clientY));
-            if(id){ touchMap[t.identifier]=id; pressButton(id); }
+    window.addEventListener('touchstart', function(e) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') e.preventDefault();
+        for (var i = 0; i < e.changedTouches.length; i++) {
+            var t = e.changedTouches[i], id = btnAt(document.elementFromPoint(t.clientX, t.clientY));
+            if (id) { touchMap[t.identifier] = id; pressButton(id); }
         }
-    }
-    function onTouchMove(e){
-        var tag=e.target.tagName;
-        if(tag!=='INPUT'&&tag!=='LABEL'&&tag!=='BUTTON') e.preventDefault();
-        for(var i=0;i<e.changedTouches.length;i++){
-            var t=e.changedTouches[i];
-            var newId=getInteractableId(document.elementFromPoint(t.clientX,t.clientY));
-            var oldId=touchMap[t.identifier];
-            if(oldId!==newId){
-                if(oldId) releaseButton(oldId);
-                if(newId){ touchMap[t.identifier]=newId; pressButton(newId); }
-                else delete touchMap[t.identifier];
+    }, {passive:false});
+    window.addEventListener('touchmove', function(e) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') e.preventDefault();
+        for (var i = 0; i < e.changedTouches.length; i++) {
+            var t = e.changedTouches[i];
+            var newId = btnAt(document.elementFromPoint(t.clientX, t.clientY)), oldId = touchMap[t.identifier];
+            if (oldId !== newId) {
+                if (oldId) releaseButton(oldId);
+                if (newId) { touchMap[t.identifier] = newId; pressButton(newId); } else delete touchMap[t.identifier];
             }
         }
-    }
-    function onTouchEnd(e){
-        for(var i=0;i<e.changedTouches.length;i++){
-            var t=e.changedTouches[i];
-            var id=touchMap[t.identifier];
-            if(id){ releaseButton(id); delete touchMap[t.identifier]; }
+    }, {passive:false});
+    function endTouches(e) {
+        for (var i = 0; i < e.changedTouches.length; i++) {
+            var id = touchMap[e.changedTouches[i].identifier];
+            if (id) { releaseButton(id); delete touchMap[e.changedTouches[i].identifier]; }
         }
     }
-    window.addEventListener('touchstart',onTouchStart,{passive:false});
-    window.addEventListener('touchmove',onTouchMove,{passive:false});
-    window.addEventListener('touchend',onTouchEnd,{passive:false});
-    window.addEventListener('touchcancel',onTouchEnd,{passive:false});
+    window.addEventListener('touchend', endTouches, {passive:false});
+    window.addEventListener('touchcancel', endTouches, {passive:false});
 
     // Mouse
-    var mouseHeld=null;
-    window.addEventListener('mousedown',function(e){
-        var tag=e.target.tagName;
-        if(tag!=='INPUT'&&tag!=='LABEL'&&tag!=='BUTTON') e.preventDefault();
-        var id=getInteractableId(e.target);
-        if(id){ mouseHeld=id; pressButton(id); }
+    var mouseBtn = null;
+    window.addEventListener('mousedown', function(e) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') e.preventDefault();
+        var id = btnAt(e.target); if (id) { mouseBtn = id; pressButton(id); }
     });
-    window.addEventListener('mousemove',function(e){
-        if(!mouseHeld) return;
-        var id=getInteractableId(document.elementFromPoint(e.clientX,e.clientY));
-        if(id!==mouseHeld){ releaseButton(mouseHeld); mouseHeld=id||null; if(mouseHeld) pressButton(mouseHeld); }
+    window.addEventListener('mousemove', function(e) {
+        if (!mouseBtn) return;
+        var id = btnAt(document.elementFromPoint(e.clientX, e.clientY));
+        if (id !== mouseBtn) { releaseButton(mouseBtn); mouseBtn = id || null; if (mouseBtn) pressButton(mouseBtn); }
     });
-    window.addEventListener('mouseup',function(){ if(mouseHeld){ releaseButton(mouseHeld); mouseHeld=null; } });
-    window.addEventListener('mouseleave',function(){ if(mouseHeld){ releaseButton(mouseHeld); mouseHeld=null; } });
+    window.addEventListener('mouseup', function() { if (mouseBtn) { releaseButton(mouseBtn); mouseBtn = null; } });
+    window.addEventListener('mouseleave', function() { if (mouseBtn) { releaseButton(mouseBtn); mouseBtn = null; } });
 
-    // Keyboard (New Implementation for Desktop Testing)
-    var keyMap = {
-        'ArrowUp': 'btn-up', 'w': 'btn-up', 'W': 'btn-up',
-        'ArrowDown': 'btn-down', 's': 'btn-down', 'S': 'btn-down',
-        'ArrowLeft': 'btn-left', 'a': 'btn-left', 'A': 'btn-left',
-        'ArrowRight': 'btn-right', 'd': 'btn-right', 'D': 'btn-right',
-        'z': 'btn-a', 'Z': 'btn-a', 'j': 'btn-a', 'J': 'btn-a',
-        'x': 'btn-b', 'X': 'btn-b', 'k': 'btn-b', 'K': 'btn-b',
-        'Enter': 'btn-start',
-        'Shift': 'btn-select',
-        'q': 'btn-l', 'Q': 'btn-l',
-        'e': 'btn-r', 'E': 'btn-r'
-    };
-
-    window.addEventListener('keydown', function(e) {
-        if(document.getElementById('install-popup').classList.contains('visible')) return;
-        var btnId = keyMap[e.key];
-        if(btnId) {
-            if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) > -1) e.preventDefault();
-            pressButton(btnId);
-        }
-    });
-
-    window.addEventListener('keyup', function(e) {
-        var btnId = keyMap[e.key];
-        if(btnId) { e.preventDefault(); releaseButton(btnId); }
-    });
-
-    // ===================== POWER =====================
-    var bootTimers=[];
-    function togglePower(e){
-        var screenEl=document.getElementById('screen');
-        var bootCont=document.getElementById('boot-logo-container');
-        var sysMsgEl=document.getElementById('sys-msg');
-        if(e)e.preventDefault();
-        isPoweredOn=!isPoweredOn;isOSReady=false;
-        bootTimers.forEach(clearTimeout);bootTimers=[];
-        if(isPoweredOn){
+    // ===================================================================
+    // Power button
+    // ===================================================================
+    function togglePower(e) {
+        if (e) e.preventDefault();
+        var screen = document.getElementById('screen');
+        var bootCont = document.getElementById('boot-logo-container');
+        isPoweredOn = !isPoweredOn; isOSReady = false;
+        bootTimers.forEach(clearTimeout); bootTimers = [];
+        if (isPoweredOn) {
             document.getElementById('power-led').classList.add('is-on');
-            screenEl.classList.add('boot-white');
-            bootTimers.push(setTimeout(function(){bootCont.classList.add('do-drop');},200));
-            bootTimers.push(setTimeout(function(){document.getElementById('boot-gmx').classList.add('do-glint');document.getElementById('boot-reg').classList.add('do-fade-in');},1000));
-            bootTimers.push(setTimeout(function(){bootCont.classList.add('do-fade-out');},3000));
-            bootTimers.push(setTimeout(function(){
-                buildXMB().catch(function(){}).then(function(){
-                    screenEl.classList.remove('boot-white');screenEl.classList.add('os-ready');isOSReady=true;colIdx=1;rowIdx=0;updateXMB();
+            screen.classList.add('boot-white');
+            bootTimers.push(setTimeout(function() { bootCont.classList.add('do-drop'); }, 200));
+            bootTimers.push(setTimeout(function() { document.getElementById('boot-gmx').classList.add('do-glint'); document.getElementById('boot-reg').classList.add('do-fade-in'); }, 1000));
+            bootTimers.push(setTimeout(function() { bootCont.classList.add('do-fade-out'); }, 3000));
+            bootTimers.push(setTimeout(function() {
+                buildXMB().then(function() {
+                    screen.classList.remove('boot-white'); screen.classList.add('os-ready');
+                    isOSReady = true; colIdx = 1; rowIdx = 0; updateXMB();
                 });
-            },3500));
+            }, 3500));
         } else {
             document.getElementById('power-led').classList.remove('is-on');
-            screenEl.className='';bootCont.classList.remove('do-drop','do-fade-out');
-            document.getElementById('boot-gmx').classList.remove('do-glint');document.getElementById('boot-reg').classList.remove('do-fade-in');
-            sysMsgEl.style.opacity=0;stopGame();closePopup();
+            screen.className = '';
+            bootCont.classList.remove('do-drop','do-fade-out');
+            document.getElementById('boot-gmx').classList.remove('do-glint');
+            document.getElementById('boot-reg').classList.remove('do-fade-in');
+            document.getElementById('sys-msg').style.opacity = 0;
+            stopEmu(); closePopup();
         }
     }
-    document.getElementById('btn-power').addEventListener('click',togglePower);
-    document.getElementById('btn-power').addEventListener('touchstart',togglePower,{passive:false});
+    document.getElementById('btn-power').addEventListener('click', togglePower);
+    document.getElementById('btn-power').addEventListener('touchstart', togglePower, {passive:false});
 
-    // ===================== CLOCK =====================
-    function updateClock(){
-        var now=new Date(),mo=now.getMonth()+1,da=now.getDate();
-        var h=now.getHours(),ap=h>=12?'PM':'AM';h=h%12||12;
-        var mi=now.getMinutes().toString().padStart(2,'0');
-        var c=document.getElementById('xmb-clock');if(c)c.innerText=mo+'/'+da+' '+h+':'+mi+ap;
+    // ===================================================================
+    // Clock, scale, iOS audio unlock, init
+    // ===================================================================
+    function updateClock() {
+        var now = new Date(), h = now.getHours(), m = now.getMinutes().toString().padStart(2,'0');
+        var ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+        var c = document.getElementById('xmb-clock'); if (c) c.innerText = (now.getMonth()+1) + '/' + now.getDate() + ' ' + h + ':' + m + ap;
     }
-    updateClock();setInterval(updateClock,1000);
+    updateClock(); setInterval(updateClock, 1000);
 
-    // iOS audio unlock
-    window.addEventListener('touchstart',function(){try{var ac=new(window.AudioContext||window.webkitAudioContext)();ac.resume();}catch(e){}},{once:true,passive:true});
+    function applyScale() {
+        var el = document.getElementById('gmx-console'); if (!el || window.innerHeight > window.innerWidth) return;
+        var s = Math.min((window.innerWidth * 0.95) / 735, (window.innerHeight * 0.95) / 350, 1);
+        el.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', applyScale); applyScale();
 
-    // Init
-    applyScale();
+    window.addEventListener('touchstart', function() { try { new (window.AudioContext || window.webkitAudioContext)().resume(); } catch(e) {} }, {once:true,passive:true});
+
     document.getElementById('loading-overlay').classList.add('hidden');
     </script>
 </body>
