@@ -66,10 +66,11 @@
             #install-popup.visible { display: flex; }
             .popup-box { width: 80%; max-width: 280px; background: linear-gradient(135deg, #1c1d26, #0d0e14); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; color: #fff; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.05); font-family: inherit; }
             .popup-box h3 { font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; color: #ddd; }
-            .popup-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; font-size: 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
+            .popup-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; font-size: 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.4); position: relative; overflow: hidden; }
             .popup-btn:active { background: rgba(255,255,255,0.1); transform: translateY(2px); }
             .popup-btn.install-btn { background: linear-gradient(to bottom, #4a4e69, #2b2d42); border-color: #5a5e79; margin-top: 20px; color: #fff; }
             .popup-btn.install-btn:disabled { opacity: 0.3; pointer-events: none; }
+            .popup-btn input[type="file"] { margin: 0; padding: 0; font-size: 999px; pointer-events: auto; }
             .file-name { font-size: 0.65rem; color: #888; margin-top: 4px; word-break: break-all; font-family: monospace; }
         }
         .shoulder-group { position: absolute; top: 7%; }
@@ -111,9 +112,8 @@
         <div class="loader-spinner"></div>
         <div style="font-size:0.9rem;font-weight:700;letter-spacing:2px;">LOADING...</div>
     </div>
-    <input type="file" id="install-rom-upload" accept=".gba,.GBA" style="position:absolute;left:-9999px;top:-9999px;opacity:0;width:1px;height:1px;" touch-action="auto">
-    <input type="file" id="install-cover-upload" accept="image/*" style="position:absolute;left:-9999px;top:-9999px;opacity:0;width:1px;height:1px;" touch-action="auto">
-    <input type="file" id="install-bios-upload" accept=".bin,.BIN" style="position:absolute;left:-9999px;top:-9999px;opacity:0;width:1px;height:1px;" touch-action="auto">
+
+    <!-- File inputs are now inside their labels; no separate off‑screen elements -->
     <div id="rotate-message">PLEASE ROTATE DEVICE</div>
     <div id="gmx-console">
         <div class="shoulder-group left-shoulder"><div class="btn-shoulder" id="btn-l">L</div></div>
@@ -167,16 +167,31 @@
                 <div id="install-popup">
                     <div class="popup-box" id="popup-box-game" style="display:block;">
                         <h3>Install to Memory Stick</h3>
-                        <label for="install-rom-upload" class="popup-btn" style="cursor:pointer;touch-action:auto;">Select .GBA ROM</label>
+                        <label class="popup-btn" style="cursor:pointer; touch-action:auto;">
+                            Select .GBA ROM
+                            <input type="file" id="install-rom-upload" accept=".gba,.GBA"
+                                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                                          opacity: 0; cursor: pointer; touch-action: auto;">
+                        </label>
                         <div class="file-name" id="popup-rom-name"></div>
-                        <label for="install-cover-upload" class="popup-btn" style="cursor:pointer;touch-action:auto;">Select Cover Art</label>
+                        <label class="popup-btn" style="cursor:pointer; touch-action:auto;">
+                            Select Cover Art
+                            <input type="file" id="install-cover-upload" accept="image/*"
+                                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                                          opacity: 0; cursor: pointer; touch-action: auto;">
+                        </label>
                         <div class="file-name" id="popup-cover-name"></div>
                         <button class="popup-btn install-btn" id="popup-install" disabled style="touch-action:auto;">Install</button>
                     </div>
                     <div class="popup-box" id="popup-box-bios" style="display:none;">
                         <h3>Insert Core (BIOS)</h3>
                         <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Required to play games.<br>Upload your GBA BIOS .bin file.</div>
-                        <label for="install-bios-upload" class="popup-btn" style="cursor:pointer;touch-action:auto;">Select BIOS .bin</label>
+                        <label class="popup-btn" style="cursor:pointer; touch-action:auto;">
+                            Select BIOS .bin
+                            <input type="file" id="install-bios-upload" accept=".bin,.BIN"
+                                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                                          opacity: 0; cursor: pointer; touch-action: auto;">
+                        </label>
                         <div class="file-name" id="popup-bios-name"></div>
                         <button class="popup-btn install-btn" id="popup-install-bios" disabled style="touch-action:auto;">Install Core</button>
                     </div>
