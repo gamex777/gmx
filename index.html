@@ -639,7 +639,6 @@
         if (held[id]) return;
         held[id] = true;
         var el = btnElements[id]; if (el) el.classList.add('pressed');
-        hapticLight();
         if (emu.running) {
             sendInput(id, true);
         } else {
@@ -743,47 +742,6 @@
     window.addEventListener('mouseleave', function() { if (mouseBtn) { releaseButton(mouseBtn); mouseBtn = null; } });
 
     // ===================================================================
-    // Haptics
-    // ===================================================================
-    var _hapticCtx = null;
-    function getHapticCtx() {
-        if (!_hapticCtx) {
-            try { _hapticCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
-        }
-        return _hapticCtx;
-    }
-
-    // Light tap — works on iOS via 1-sample click through the audio system
-    // which triggers the taptic engine on iPhones with haptic feedback enabled.
-    // On Android/desktop, falls back to navigator.vibrate.
-    function hapticTap(durationMs) {
-        durationMs = durationMs || 10;
-        // Android / Chrome vibration API
-        if (navigator.vibrate) { try { navigator.vibrate(durationMs); } catch(e) {} }
-        // iOS: short burst via AudioContext (triggers taptic on supported iPhones)
-        var ctx = getHapticCtx();
-        if (!ctx) return;
-        try {
-            var buf = ctx.createBuffer(1, ctx.sampleRate * 0.02, ctx.sampleRate);
-            var data = buf.getChannelData(0);
-            for (var i = 0; i < data.length; i++) {
-                // Sharp attack, fast decay — mimics a physical click impulse
-                data[i] = (i < 10 ? 1 : 0) * Math.exp(-i * 0.3) * (Math.random() * 2 - 1);
-            }
-            var src = ctx.createBufferSource();
-            var gain = ctx.createGain();
-            gain.gain.value = 0.15; // quiet enough not to be audible
-            src.buffer = buf;
-            src.connect(gain);
-            gain.connect(ctx.destination);
-            src.start();
-        } catch(e) {}
-    }
-
-    function hapticHeavy() { hapticTap(30); }
-    function hapticLight() { hapticTap(8); }
-
-    // ===================================================================
     // Power button — iOS-safe touch handling
     // ===================================================================
     // iOS Safari does NOT fire 'click' on non-<a>/<button> elements reliably.
@@ -794,7 +752,6 @@
 
     function togglePower(e) {
         if (e) e.preventDefault();
-        hapticHeavy();
         var screen = document.getElementById('screen');
         var bootCont = document.getElementById('boot-logo-container');
         var pwrBtn = document.getElementById('btn-power');
@@ -874,11 +831,7 @@
     });
     applyScale();
 
-    // Unlock AudioContext on first touch (required by iOS before any audio/haptic)
-    window.addEventListener('touchstart', function() {
-        var ctx = getHapticCtx();
-        if (ctx && ctx.state === 'suspended') { try { ctx.resume(); } catch(e) {} }
-    }, {once:true, passive:true});
+
 
     // Init
     cacheElements();
