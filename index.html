@@ -848,8 +848,8 @@
 
     function applyScale() {
         var el = document.getElementById('gmx-console'); if (!el || window.innerHeight > window.innerWidth) return;
-        // Updated inner width scale calculation to reflect the new 820px width
-        var s = Math.min((window.innerWidth * 0.95) / 820, (window.innerHeight * 0.95) / 350, 1);
+        // Removed the 0.95 margin and the '1' maximum scale limit to fill the screen
+        var s = Math.min(window.innerWidth / 820, window.innerHeight / 350);
         el.style.transform = 'scale(' + s + ')';
         rectsDirty = true;
     }
