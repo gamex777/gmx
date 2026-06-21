@@ -66,7 +66,7 @@
             #install-popup.visible { display: flex; }
             .popup-box { width: 80%; max-width: 280px; background: linear-gradient(135deg, #1c1d26, #0d0e14); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; color: #fff; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.05); font-family: inherit; }
             .popup-box h3 { font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; color: #ddd; }
-            .popup-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; font-size: 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.4); position: relative; overflow: hidden; }
+            .popup-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; font-size: 0.8rem; border-radius: 6px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.4); position: relative; overflow: hidden; }
             .popup-btn:active { background: rgba(255,255,255,0.1); transform: translateY(2px); }
             .popup-btn.install-btn { background: linear-gradient(to bottom, #4a4e69, #2b2d42); border-color: #5a5e79; margin-top: 20px; color: #fff; }
             .popup-btn.install-btn:disabled { opacity: 0.3; pointer-events: none; }
@@ -172,33 +172,33 @@
                 <div id="install-popup">
                     <div class="popup-box" id="popup-box-game" style="display:block;">
                         <h3>Install to Memory Stick</h3>
-                        <label class="popup-btn" style="position: relative; overflow: hidden; cursor:pointer; touch-action:auto;">
+                        <label class="popup-btn">
                             Select .GBA ROM
                             <input type="file" id="install-rom-upload" accept=".gba,.GBA"
                                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                                          opacity: 0; cursor: pointer; touch-action: auto;">
+                                          opacity: 0; cursor: pointer; touch-action: manipulation;">
                         </label>
                         <div class="file-name" id="popup-rom-name"></div>
-                        <label class="popup-btn" style="position: relative; overflow: hidden; cursor:pointer; touch-action:auto;">
+                        <label class="popup-btn">
                             Select Cover Art
                             <input type="file" id="install-cover-upload" accept="image/*"
                                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                                          opacity: 0; cursor: pointer; touch-action: auto;">
+                                          opacity: 0; cursor: pointer; touch-action: manipulation;">
                         </label>
                         <div class="file-name" id="popup-cover-name"></div>
-                        <button class="popup-btn install-btn" id="popup-install" disabled style="touch-action:auto;">Install</button>
+                        <button class="popup-btn install-btn" id="popup-install" disabled>Install</button>
                     </div>
                     <div class="popup-box" id="popup-box-bios" style="display:none;">
                         <h3>Insert Core (BIOS)</h3>
                         <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Required to play games.<br>Upload your GBA BIOS .bin file.</div>
-                        <label class="popup-btn" style="position: relative; overflow: hidden; cursor:pointer; touch-action:auto;">
+                        <label class="popup-btn">
                             Select BIOS .bin
                             <input type="file" id="install-bios-upload" accept=".bin,.BIN"
                                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                                          opacity: 0; cursor: pointer; touch-action: auto;">
+                                          opacity: 0; cursor: pointer; touch-action: manipulation;">
                         </label>
                         <div class="file-name" id="popup-bios-name"></div>
-                        <button class="popup-btn install-btn" id="popup-install-bios" disabled style="touch-action:auto;">Install Core</button>
+                        <button class="popup-btn install-btn" id="popup-install-bios" disabled>Install Core</button>
                     </div>
                 </div>
                 <div id="game-area">
@@ -487,7 +487,7 @@
                 ? new Promise(function(res) { var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.readAsDataURL(imgFile); })
                 : Promise.resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
             return coverP.then(function(cover) {
-                var id = romFile.name.replace(/\\.[^/.]+$/, '');
+                var id = romFile.name.replace(/\.[^/.]+$/, '');
                 var rec = { id: id, title: id, rom: romBuf, cover: cover };
                 return initDB().then(function(db) {
                     if (!db) { memStore.games[id] = rec; return; }
@@ -662,7 +662,7 @@
     // ===================================================================
     // Input handler — optimized for iOS
     // ===================================================================
-    var held = {};          // id -> true (plain object faster than Set on old WebKit)
+    var held = {};         // id -> true (plain object faster than Set on old WebKit)
     var osHeld = {};
 
     function pressButton(id) {
@@ -718,9 +718,9 @@
     window.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
     window.addEventListener('touchstart', function(e) {
-        // Allow file inputs to work
+        // ALLOW FILE INPUTS, LABELS, AND BUTTONS TO WORK NATIVELY
         var tag = e.target.tagName;
-        if (tag !== 'INPUT' && tag !== 'LABEL') e.preventDefault();
+        if (tag !== 'INPUT' && tag !== 'LABEL' && tag !== 'BUTTON') e.preventDefault();
 
         // Rebuild rects on first touch interaction (lazy, avoids layout thrash on boot)
         if (rectsDirty) rebuildRects();
@@ -733,8 +733,9 @@
     }, {passive:false});
 
     window.addEventListener('touchmove', function(e) {
+        // ALLOW FILE INPUTS, LABELS, AND BUTTONS TO WORK NATIVELY
         var tag = e.target.tagName;
-        if (tag !== 'INPUT' && tag !== 'LABEL') e.preventDefault();
+        if (tag !== 'INPUT' && tag !== 'LABEL' && tag !== 'BUTTON') e.preventDefault();
 
         for (var i = 0; i < e.changedTouches.length; i++) {
             var t = e.changedTouches[i];
@@ -760,7 +761,8 @@
     // Mouse (desktop fallback)
     var mouseBtn = null;
     window.addEventListener('mousedown', function(e) {
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') e.preventDefault();
+        var tag = e.target.tagName;
+        if (tag !== 'INPUT' && tag !== 'LABEL' && tag !== 'BUTTON') e.preventDefault();
         var id = btnAt(e.target); if (id) { mouseBtn = id; pressButton(id); }
     });
     window.addEventListener('mousemove', function(e) {
