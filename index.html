@@ -1,934 +1,947 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GMX Emulator</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
-        body { background-color: #050608; display: flex; justify-content: center; align-items: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; perspective: 1000px; font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif; }
-        #rotate-message { display: none; color: #fff; font-size: 1.5rem; text-align: center; font-weight: bold; letter-spacing: 2px; }
-        @media (orientation: portrait) { #gmx-console { display: none !important; } #rotate-message { display: block; } }
-        @media (orientation: landscape) {
-            #gmx-console { position: relative; display: flex; justify-content: center; align-items: center; width: 820px; height: 350px; min-width: 820px; min-height: 350px; flex-shrink: 0; background: #40D0D0; border-radius: 36px; box-shadow: inset 0 0 4px rgba(255,255,255,0.05), inset 2px 2px 10px rgba(255,255,255,0.08), inset -3px -3px 15px rgba(0,0,0,0.6), -10px -10px 25px rgba(0,0,0,0.4), 15px 15px 45px rgba(0,0,0,0.8); overflow: hidden; transform-origin: center center; border: 1px solid #353942; will-change: transform; }
-            #screen-bezel { position: absolute; width: 441px; height: 294px; background: linear-gradient(180deg, #020202 0%, #0a0a0c 100%); border-radius: 12px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.15), inset 0 0 20px rgba(0,0,0,1), 0 12px 25px rgba(0,0,0,0.6); z-index: 10; padding: 4px; border: 1px solid #111; }
-            #screen { position: relative; width: 100%; height: 100%; background: #030303; border-radius: 10px; box-shadow: inset 0 0 35px rgba(0,0,0,1), 0 0 0 1px rgba(255,255,255,0.03); transition: background 0.5s ease; overflow: hidden; display: flex; justify-content: center; align-items: center; }
-            #screen.boot-white { background: #ffffff; box-shadow: inset 0 0 15px rgba(0,0,0,0.2); }
-            #boot-logo-container { position: absolute; display: flex; align-items: flex-start; opacity: 0; z-index: 20; }
-            #boot-gmx { font-size: 3rem; font-weight: 900; font-style: italic; letter-spacing: -2px; background: linear-gradient(to bottom, #1e1e1e 0%, #444 50%, #1e1e1e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
-            #boot-reg { font-size: 0.8rem; font-weight: bold; color: #444; margin-top: 8px; margin-left: 4px; opacity: 0; }
-            #boot-gmx::after { content: ''; position: absolute; top: 0; left: -150%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.9), transparent); transform: skewX(-20deg); pointer-events: none; }
-            @keyframes gbaDrop { 0% { transform: translateY(-80px) scale(1.1); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
-            @keyframes glintSweep { 0% { left: -150%; } 100% { left: 200%; } }
-            @keyframes fadeIn { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
-            @keyframes fadeOut { 100% { opacity: 0; } }
-            .do-drop { animation: gbaDrop 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-            .do-glint::after { animation: glintSweep 0.5s ease-in-out forwards; }
-            .do-fade-in { animation: fadeIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-            .do-fade-out { animation: fadeOut 0.5s ease forwards; }
-            .xmb-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.8s ease; background: linear-gradient(135deg, #181926 0%, #0f101a 50%, #08080d 100%); z-index: 1; }
-            .xmb-game-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center right; opacity: 0; transition: opacity 0.4s ease; z-index: -1; }
-            .wave-line { position: absolute; width: 150%; height: 150px; background: rgba(255,255,255,0.01); border-top: 1px solid rgba(255,255,255,0.08); border-radius: 50%; top: 30%; left: -25%; transform: rotate(-8deg); box-shadow: 0 -2px 15px rgba(255,255,255,0.02); }
-            .wave-line:nth-child(3) { top: 40%; transform: rotate(5deg) scaleY(1.2); border-top: 1px solid rgba(255,255,255,0.05); }
-            #xmb-ui { position: absolute; width: 100%; height: 100%; z-index: 10; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; color: #fff; }
-            #screen.os-ready .xmb-bg { opacity: 1; }
-            #screen.os-ready #xmb-ui { opacity: 1; pointer-events: auto; }
-            #xmb-header { position: absolute; top: 8%; right: 4%; font-size: 0.75rem; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.9); display: flex; align-items: center; gap: 10px; opacity: 0.8; }
-            .battery-icon { width: 22px; height: 10px; border: 1.5px solid #fff; border-radius: 2px; position: relative; }
-            .battery-icon::after { content: ''; position: absolute; right: -4px; top: 1.5px; width: 2px; height: 4px; background: #fff; border-radius: 0 2px 2px 0; }
-            .battery-fill { width: 100%; height: 100%; background: #fff; border: 1px solid transparent; background-clip: content-box; }
-            #xmb-grid { position: absolute; top: 40%; left: 50%; display: flex; gap: 80px; transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1); will-change: transform; }
-            .xmb-col { display: flex; flex-direction: column; align-items: center; gap: 40px; transition: opacity 0.25s, transform 0.25s; opacity: 0.3; transform: scale(0.85); }
-            .xmb-col.active-col { opacity: 1; transform: scale(1); }
-            .xmb-main { position: relative; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
-            .xmb-icon { width: 40px; height: 40px; fill: #ffffff; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); transition: all 0.2s; }
-            .xmb-main span { position: absolute; left: 130%; top: 50%; transform: translateY(-50%); font-size: 0.9rem; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity 0.2s; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
-            .active-col .active-item.xmb-main .xmb-icon { transform: scale(1.3); filter: drop-shadow(0 0 20px rgba(255,255,255,0.6)); }
-            .active-col .active-item.xmb-main span { opacity: 1; }
-            .xmb-sub { font-size: 0.85rem; font-weight: 500; opacity: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.9); transition: all 0.2s; white-space: nowrap; }
-            .active-col .xmb-sub { opacity: 0.5; }
-            .active-col .active-item.xmb-sub { opacity: 1; transform: scale(1.15); font-weight: 700; }
-            .game-item { display: flex; align-items: center; justify-content: center; position: relative; }
-            .box-art { width: 60px; height: 40px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.8); }
-            .active-col .active-item.game-item .box-art { border: 2px solid #fff; box-shadow: 0 0 20px rgba(255,255,255,0.5), 0 8px 15px rgba(0,0,0,0.8); transform: scale(1.1); }
-            .game-details { position: absolute; left: 80px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; opacity: 0; transition: opacity 0.2s; }
-            .active-col .active-item.game-item .game-details { opacity: 1; }
-            .game-title { font-size: 0.85rem; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.9); }
-            #sys-msg { position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%); font-size: 0.75rem; font-weight: 600; letter-spacing: 1px; opacity: 0; transition: opacity 0.3s; z-index: 50; text-transform: uppercase; color: #aaa; white-space: nowrap; }
-            #game-area { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; display: flex; justify-content: center; align-items: center; background: #000; }
-            #screen.game-running #game-area { opacity: 1; pointer-events: auto; }
-            #screen.game-running #xmb-ui { opacity: 0; pointer-events: none; }
-            #screen.game-running .xmb-bg { opacity: 0; }
-            #game-canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; will-change: contents; }
-            #install-popup { position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: rgba(0,0,0,0.9); z-index: 60; display: none; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
-            #install-popup.visible { display: flex; }
-            .popup-box { width: 80%; max-width: 280px; background: linear-gradient(135deg, #1c1d26, #0d0e14); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; color: #fff; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.05); font-family: inherit; }
-            .popup-box h3 { font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; color: #ddd; }
-            .popup-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #ccc; font-size: 0.8rem; border-radius: 6px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.4); position: relative; overflow: hidden; }
-            .popup-btn:active { background: rgba(255,255,255,0.1); transform: translateY(2px); }
-            .popup-btn.install-btn { background: linear-gradient(to bottom, #4a4e69, #2b2d42); border-color: #5a5e79; margin-top: 20px; color: #fff; }
-            .popup-btn.install-btn:disabled { opacity: 0.3; pointer-events: none; }
-            .popup-btn input[type="file"] { margin: 0; padding: 0; font-size: 999px; pointer-events: auto; }
-            .file-name { font-size: 0.65rem; color: #888; margin-top: 4px; word-break: break-all; font-family: monospace; }
-        }
-        .shoulder-group { position: absolute; top: 25px; }
-        .left-shoulder { left: 95px; transform: translateX(-50%); }
-        .right-shoulder { right: 95px; transform: translateX(50%); }
-        .btn-shoulder { background: linear-gradient(180deg, #FFF4E9 0%, #FFF4E9 90%, #22252a 100%); color: #888c94; border-radius: 12px; padding: 6px 22px; font-size: 0.75rem; font-weight: 800; box-shadow: inset 0 2px 2px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.8), 0 5px 8px rgba(0,0,0,0.5), 0 1px 1px rgba(0,0,0,0.8); cursor: pointer; transition: transform 0.1s ease-out, box-shadow 0.1s ease-out; border: 1px solid #FFF4E9; }
-        .btn-shoulder:active, .btn-shoulder.pressed { background: linear-gradient(180deg, #968E85 0%, #968E85 90%,#15171a 100%); transform: translateY(3px); box-shadow: inset 0 3px 6px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(255,255,255,0.02), 0 2px 3px rgba(0,0,0,0.4); color: #555960; }
-        .control-base { position: absolute; top: 105px; width: 132px; height: 132px; background: radial-gradient(circle at 30% 30%, #FFFFFF 0%, #FFFFFF 50%, #FFFFFF 100%); border: 0.01px solid #FFF4E9; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05), inset 0 -2px 15px rgba(0,0,0,0.8), 0 8px 20px rgba(0,0,0,0.6), 0 0 0 1px #444a55; }
-        .left-base { left: 95px; transform: translateX(-50%); }
-        .right-base { right: 95px; transform: translateX(50%); }
-        .d-pad-cross { position: relative; width: 80%; height: 80%; background: linear-gradient(135deg, #FFF4E9 0%, #FFF4E9 90%,#15171a 100%); border-radius: 50%; box-shadow: inset 0 1px 2px rgba(255,255,255,0.08), 0 6px 10px rgba(0,0,0,0.7); }
-        .d-btn { position: absolute; width: 28%; height: 32%; cursor: pointer; background: #2a2c30; box-shadow: inset 0 -2px 4px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; transition: filter 0.1s, transform 0.1s; border: 1px solid #1a1a1a; }
-        .d-btn.pressed { background: #1a1a1a; filter: brightness(0.8); transform: translateY(2px); box-shadow: inset 0 2px 6px rgba(0,0,0,0.9); }
-        .d-up { top: 7%; left: 36%; border-radius: 6px 6px 12px 12px; }
-        .d-right { top: 34%; right: 7%; border-radius: 12px 6px 6px 12px; height: 28%; width: 32%; }
-        .d-down { bottom: 7%; left: 36%; border-radius: 12px 12px 6px 6px; }
-        .d-left { top: 34%; left: 7%; border-radius: 6px 12px 12px 6px; height: 28%; width: 32%; }
-        .action-pad-gba { position: relative; width: 90%; height: 90%; }
-        .btn-action-gba { position: absolute; width: 38%; height: 38%; border-radius: 50%; background: linear-gradient(180deg, #444a52 0%, #2a2d33 100%); box-shadow: inset 0 1px 2px rgba(255,255,255,0.15), 0 4px 8px rgba(0,0,0,0.7); color: #dcdcdc; font-weight: 800; font-size: 0.95rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; text-shadow: 0 -1px 1px rgba(0,0,0,0.8); border: 1px solid #151515; }
-        .btn-action-gba.pressed { transform: translateY(3px); box-shadow: inset 0 2px 6px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.6); background: linear-gradient(180deg, #2a2d33 0%, #1e2025 100%); color: #aaaaaa; }
-        .btn-gba-a { top: 20%; right: 8%; }
-        .btn-gba-b { bottom: 20%; left: 8%; }
-        #gmx-logo { position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); background: linear-gradient(180deg, #ffffff 0%, #a0a5b0 40%, #60646b 50%, #a0a5b0 60%, #ffffff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-size: 0.95rem; font-style: italic; font-weight: 900; letter-spacing: 1px; filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.8)); }
-        .bottom-btn { position: absolute; bottom: 2%; background: linear-gradient(180deg, #FFF4E9 0%, #FFFFFF 100%); color: #777; border-radius: 8px; padding: 4px 12px; font-size: 0.5rem; font-weight: 800; text-transform: uppercase; box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.9), 0 4px 6px rgba(0,0,0,0.6); cursor: pointer; border: 1px solid #0a0a0a; letter-spacing: 0.5px; transition: transform 0.1s, box-shadow 0.1s; }
-        .bottom-btn.pressed { box-shadow: inset 0 2px 5px rgba(0,0,0,0.9); transform: translateY(2px); color: #444; }
-        .select-btn { left: calc(50% - 110px); }
-        .start-btn { right: calc(50% - 110px); }
-        .power-btn { right: calc(50% - 220px); }
-        .vol-btn { position: absolute; bottom: 2%; background: linear-gradient(180deg, #FFF4E9 0%, #FFFFFF 100%); color: #777; border-radius: 50%; width: 18px; height: 18px; font-size: 0.55rem; font-weight: 900; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.9), 0 4px 6px rgba(0,0,0,0.6); cursor: pointer; border: 1px solid #0a0a0a; transition: transform 0.1s, box-shadow 0.1s; }
-        .vol-btn.pressed { box-shadow: inset 0 2px 5px rgba(0,0,0,0.9); transform: translateY(2px); color: #444; }
-        .vol-down-btn { left: calc(50% - 220px); }
-        .vol-up-btn { left: calc(50% - 195px); }
-        #speed-display { position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); font-size: 0.5rem; font-weight: 700; color: rgba(255,255,255,0.25); letter-spacing: 0.5px; pointer-events: none; transition: color 0.5s; }
-        #speed-display.active { color: rgba(255,255,255,0.7); }
-        .led-indicator { position: absolute; bottom: 3.5%; right: calc(50% - 162px); width: 6px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #2a1a1a 0%, #0a0505 100%); box-shadow: inset 0 1px 3px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.05); transition: background 0.1s ease, box-shadow 0.1s ease; border: 1px solid #000; }
-        .led-indicator.is-on { background: radial-gradient(circle at 40% 40%, #ffffff 0%, #00ffcc 40%, #006655 100%); box-shadow: inset 0 1px 2px rgba(0,0,0,0.5), 0 0 6px #00ffcc, 0 0 12px rgba(0,255,204,0.3); }
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #050608; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; color: #40D0D0; font-family: 'Century Gothic', sans-serif; }
-        #loading-overlay.hidden { display: none; }
-        .loader-spinner { width: 40px; height: 40px; border: 3px solid rgba(64,208,208,0.2); border-top: 3px solid #40D0D0; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>GMX</title>
+<link rel="manifest" href="manifest.json">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GMX">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  @import url('https://fonts.googleapis.com/css?family=Play&display=swap');
+
+  /* Base PWA Resets */
+  * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+  }
+
+  body {
+    height: 100dvh;
+    width: 100dvw;
+    margin: 0;
+    display: grid;
+    place-items: center;
+    background-color: #121212;
+    overflow: hidden;
+  }
+
+  article {
+    --joycon-left: #00c5e2;
+    --joycon-left-shadow: #0128;
+    --joycon-right: #ff6658;
+    --joycon-right-shadow: #c218;
+    position: relative;
+    font-size: min(90dvw, 211.4dvh); 
+    width: 1em;
+    aspect-ratio: 632 / 269;
+    background: #f000;
+  }
+
+  article *,
+  article *::before,
+  article *::after {
+    position: absolute;
+    box-sizing: border-box;
+  }
+
+  :focus {
+    outline: 1px dashed;
+    outline-offset: 2px;
+  }
+
+  .round { border-radius: 50%; }
+
+  .body {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 72.1%;
+    height: 99%;
+  }
+
+  .frame {
+    width: 100%;
+    height: 100%;
+    border-radius: 0.002em;
+    background: 
+      radial-gradient(farthest-side, #2f3638 50%, #0000) -1% 3% / 2% 2%,
+      radial-gradient(farthest-side, #2f3638, #0000) 1% -0.75% / 2% 2%,
+      radial-gradient(95% 70% at 0% 0%, #2f3638 85%, #fff3, #f000) 0.5% 0.75% / 1.55% 5.25% no-repeat,
+      radial-gradient(farthest-side, #2f3638 50%, #0000) 101% 3% / 2% 2%,
+      radial-gradient(farthest-side, #2f3638, #0000) 99% -0.75% / 2% 2%,
+      radial-gradient(95% 70% at 100% 0%, #2f3638 85%, #fff3, #f000) 99.5% 0.75% / 1.55% 5.25% no-repeat,
+      linear-gradient(#0000 1%, #fff3 2%, #0000 4%),
+      linear-gradient(#0000 95%, #0008),
+      #2f3638;
+    background-repeat: no-repeat;
+    box-shadow:
+      inset -0.0015em 0 0.00075em -0.00075em #fff5,
+      inset 0.0015em 0 0.00075em -0.00075em #fff6;
+    -webkit-mask:
+      radial-gradient(farthest-side at 100% 100%, #f00 99.99%, #f000) 0 3.9% / 0.6% 1% no-repeat,
+      radial-gradient(farthest-side at 100% 100%, #f00 99.99%, #f000) 1.7% 0% / 0.4% 1% no-repeat,
+      radial-gradient(78.33% 60.33% at 0% 0%, #f000 99%, #f00) 0.5% 0.75% / 1.55% 5.25% no-repeat,
+      radial-gradient(farthest-side at 0% 100%, #f00 99.99%, #f000) 100% 3.9% / 0.6% 1% no-repeat,
+      radial-gradient(farthest-side at 0% 100%, #f00 99.99%, #f000) 98.3% 0% / 0.4% 1% no-repeat,
+      radial-gradient(78.33% 60.33% at 100% 0%, #f000 99%, #f00) 99.5% 0.75% / 1.55% 5.25% no-repeat,
+      linear-gradient(#0000 4.7%, #000 0),
+      linear-gradient(90deg,#0000 2%, #000 0 98%, #0000 0);
+  }
+
+  .frame::before {
+    content: "";
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 94%;
+    height: 93%;
+    border-radius: 0.011em;
+    border: 0.0003em solid #000;
+    box-shadow: 
+      0 0.00045em 0.001em #fff8,
+      inset 0 0.0006em 0.0015em -0.00025em #000,
+      inset 0 0.0007em 0.0015em -0.00025em #fffc;
+    background: 
+      radial-gradient(circle at 32.7% 98%, #0e0e0e 0.9%, #000 0 1%, #0e0e0e 0 1.2%, #0000 0),
+      linear-gradient(#0e0e0e 0 0) 32.33% 100% / 2.1% 2% no-repeat,
+      #000;
+  }
+
+  /* --- SCREEN POWER LOGIC & BOOT SEQUENCE --- */
+  .screen {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 77.5%;
+    border-radius: 0.001em;
+    background: #292d30;
+    box-shadow: inset 0 0.0015em 0.005em -0.0015em #000c;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+  }
+
+  .screen.power-off {
+    background: #020202 !important;
+    box-shadow: inset 0 0 20px #000 !important;
+  }
+
+  .boot-sequence {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: black;
+    font-family: 'Play', sans-serif;
+    transform-style: preserve-3d;
+    perspective: 0.25em; 
+    overflow: hidden;
+    opacity: 0; 
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .screen.is-booting .boot-sequence {
+    opacity: 1;
+  }
+
+  .boot-inner {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex; flex-wrap: wrap; align-content: flex-start;
+    padding: 1%; padding-top: 10%;
+    transform-style: preserve-3d;
+  }
+
+  .screen.is-booting .boot-inner {
+    animation: boot-enter 8s cubic-bezier(1,0,.4,1) forwards;
+  }
+
+  .boxes-wrapper {
+    display: flex; flex-wrap: wrap; width: 100%; height: 100%;
+    transform-style: preserve-3d;
+  }
+
+  .box-container {
+    width: calc(100% / 14);
+    padding: 1%;
+    position: relative;
+    transform-style: preserve-3d;
+  }
+
+  .box {
+    width: 100%; padding-top: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+  }
+
+  .box .top, .box .bottom, .box .left, .box .right {
+    position: absolute; 
+    width: 100%; height: 100%;
+    box-shadow: inset 0 0 0.005em rgba(0, 255, 255, 0.07);
+  }
+
+  .box .top { height: 0.15em; bottom: 100%; left: 0; transform-origin: 100% 100%; transform: rotateX(90deg); background: linear-gradient(to top, rgba(155,166,198,.9), rgba(0,0,0,0)); }
+  .box .bottom { height: 0.15em; top: 100%; left: 0; transform-origin: 0% 0%; transform: rotateX(-90deg); background: linear-gradient(to bottom, rgba(99,108,148,.9), rgba(0,0,0,0)); }
+  .box .left { width: 0.15em; top: 0; right: 100%; transform-origin: 100% 100%; transform: rotateY(-90deg); background: linear-gradient(to left, rgba(125,136,178,.9), rgba(0,0,0,0)); }
+  .box .right { width: 0.15em; top: 0; left: 100%; transform-origin: 0% 0%; transform: rotateY(90deg); background: linear-gradient(to right, rgba(125,136,178,.9), rgba(0,0,0,0)); }
+
+  .boot-content {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    text-align: center; color: white; z-index: 200;
+  }
+  .screen.is-booting .boot-content {
+    animation: boot-content-bg 8s forwards;
+  }
+  .boot-content p {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0;
+  }
+  .boot-content .copyright {
+    font-size: 0.015em; text-shadow: #000 0px 0px 2px; opacity: 0;
+  }
+  .screen.is-booting .boot-content .copyright {
+    animation: boot-copyright 8s linear forwards;
+  }
+  .boot-content .branding { font-size: 0.04em; opacity: 0; }
+  .screen.is-booting .boot-content .branding {
+    animation: boot-branding 8s cubic-bezier(0,.74,.46,1) forwards;
+  }
+  .boot-content .branding .is-small { font-size: .3em; vertical-align: super; }
+
+  .particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 200; }
+  .particles span { display: block; width: 1px; height: 1px; background: white; position: absolute; border-radius: 50%; opacity: 0; }
+  .particles span:nth-child(1) { left: 70%; top: 70%; box-shadow: 0 0 0.01em 0.005em rgba(255,0,0,.8); }
+  .particles span:nth-child(2) { left: 70%; top: 50%; box-shadow: 0 0 0.01em 0.005em rgba(0,255,0,.8); }
+  .particles span:nth-child(3) { left: 15%; top: 75%; box-shadow: 0 0 0.01em 0.005em rgba(0,0,255,.8); }
+  
+  .screen.is-booting .particles span:nth-child(1) { animation: p1 4s cubic-bezier(0,.74,.46,1) infinite; }
+  .screen.is-booting .particles span:nth-child(2) { animation: p2 4s cubic-bezier(0,.74,.46,1) infinite; }
+  .screen.is-booting .particles span:nth-child(3) { animation: p3 4s cubic-bezier(0,.74,.46,1) infinite; }
+
+  @keyframes boot-enter {
+    0% { transform: rotate(-20deg); }
+    60%, 100% { transform: rotate(100deg) scale(4); }
+  }
+  @keyframes boot-copyright {
+    0%, 5% { opacity: 0; }
+    10%, 35% { opacity: 1; }
+    40%, 100% { opacity: 0; }
+  }
+  @keyframes boot-content-bg {
+    0% { background-color: black; }
+    5%, 43% { background: transparent; }
+    48%, 100% { background-color: black; }
+  }
+  @keyframes boot-branding {
+    0%, 65% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.5); }
+    68%, 93% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1); }
+    96%, 100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.5); }
+  }
+  @keyframes p1 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(-0.15em, -0.1em); opacity:0;} }
+  @keyframes p2 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(-0.2em, 0.05em); opacity:0;} }
+  @keyframes p3 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(0.25em, -0.1em); opacity:0;} }
+
+  /* --- CONTROLLERS --- */
+  .controller {
+    opacity: 10.7;
+    --color: var(--joycon-left);
+    --color-shadow: var(--joycon-left-shadow);
+    width: 13.85%;
+    height: 99%;
+    bottom: 0;
+    left: 0;
+    border-radius: 0.09em 0.004em 0.002em 0.09em;
+    background: var(--color);
+    box-shadow:
+      0.02em 0.0105em 0 -0.0123em #020100,
+      inset 0.001em -0.009em 0.01em -0.003em var(--color-shadow),
+      inset 0.035em 0 0.025em -0.025em #0002,
+      inset -0.002em 0 0.004em var(--color),
+      inset 0.006em 0.016em 0.005em -0.008em var(--color),
+      inset 0 0.017em 0.005em -0.008em #fff,
+      inset 0.005em -0.005em 0.01em -0.004em var(--color-shadow);
+  }
+
+  .controller::before {
+    content: "";
+    width: 0.00275em;
+    aspect-ratio: 1;
+    background: #393537;
+    box-shadow: inset 0.0001em 0.00075em 0.0004em #fff3;
+    left: 100%;
+    top: 97.75%;
+    border-radius: 50%;
+  }
+
+  .controller.right {
+    --color: var(--joycon-right);
+    --color-shadow: var(--joycon-right-shadow);
+    left: auto;
+    right: 0;
+    border-radius: 0.004em 0.09em 0.09em 0.002em;
+    box-shadow:
+      -0.02em 0.0105em 0 -0.0123em #020100,
+      inset -0.001em -0.009em 0.01em -0.003em #000a,
+      inset -0.035em 0 0.025em -0.025em #0002,
+      inset 0.002em 0 0.004em var(--color),
+      inset -0.006em 0.016em 0.005em -0.008em var(--color),
+      inset 0 0.017em 0.005em -0.008em #fff,
+      inset -0.01em 0 0.01em -0.004em var(--color-shadow);
+  }
+
+  .controller.right::before {
+    left: auto;
+    right: 100%;
+    box-shadow: inset -0.0001em 0.00075em 0.0004em #fff3;
+  }
+  
+  /* --- SURFACE BUMPERS --- */
+  .bumper {
+    position: absolute;
+    width: 32%;
+    height: 3%;
+    background: #25282a; 
+    z-index: 10;
+    cursor: pointer;
+    transition: all 0.05s ease;
+    box-shadow: 
+      inset 0 0.001em 0.001em #000a,
+      0 0.001em 0.001em #fff2;
+    border-radius: 80% 80% 40% 40% / 150% 150% 60% 60%;
+  }
+
+  .bumper::after {
+    content: "";
+    position: absolute;
+    top: 15%; left: 10%; width: 80%; height: 70%;
+    background: linear-gradient(to bottom, #4a4e52, #2a2e31);
+    border-radius: 70% 70% 30% 30% / 120% 120% 40% 40%;
+    box-shadow: 0 0.001em 0.001em #0006;
+  }
+
+  .l-bumper { top: 5.5%; left: 2.5%; transform: rotate(-45deg); }
+  .r-bumper { top: 5.5%; right: 2.5%; left: auto; transform: rotate(45deg); }
+
+  .bumper::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #888;
+    font-family: 'Play', Helvetica, sans-serif;
+    font-size: 0.011em;
+    font-weight: bold;
+    z-index: 20;
+    text-shadow: 0 -0.0005em 0 #000;
+  }
+
+  .l-bumper::before { content: "L"; }
+  .r-bumper::before { content: "R"; }
+
+  .bumper.active::after {
+    filter: brightness(0.6);
+    transform: translateY(0.001em);
+  }
+  
+  /* --- OTHER BUTTONS --- */
+  button {
+    border: 0;
+    font-size: 1em;
+    padding: 0;
+    transition: filter 0.05s ease, transform 0.05s ease;
+    cursor: pointer;
+    z-index: 10;
+  }
+
+  button.active:not(.bumper) {
+    filter: brightness(0.7);
+    transform: scale(0.95);
+  }
+
+  .minus {
+    --c: #404040;
+    width: 17%;
+    height: 1.8%;
+    background: var(--c);
+    top: 8.9%;
+    right: 7.7%;
+    border-radius: 0.0015em;
+    border: 0.001em solid var(--color-shadow);
+    box-shadow:
+      inset 0.00075em -0.00075em 0.0005em #0008,
+      inset -0.0006em 0 0.0005em #0003,
+      inset 0 0.00075em 0.0005em #fff6,
+      0 0.002em 0.0025em -0.001em #0006;
+  }
+
+  .plus { left: 7.7%; right: auto; }
+
+  .plus::before {
+    content: "";
+    width: 35%;
+    height: 400%;
+    background: var(--c);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 0.0015em;
+    border: 0.001em solid var(--color-shadow);
+    box-shadow:
+      0 0.004em 0.02em var(--color-shadow),
+      inset -0.0006em 0 0.0004em #0007,
+      inset 0.0006em 0 0.0004em #0007,
+      inset 0 -0.001em 0.0005em -0.0002em #0008,
+      inset 0 0.00075em 0.0005em -0.0002em #fff6;
+  }
+
+  .plus::after {
+    content: "";
+    width: 35%;
+    aspect-ratio:1 ;
+    background: 
+      radial-gradient(circle at 0 0, #834 20%, #0000 20% 35%, var(--c) 0) 0 0 / 50% 50%,
+      conic-gradient(at 0 0, #000, #fff) 1% 1% / 40% 40%,
+      radial-gradient(circle at 100% 0, #834 20%, #0000 20% 35%, var(--c) 0) 100% 0 / 50% 50%,
+      conic-gradient(at 100% 0, #fff 25%, #000) 99% 1% / 40% 40%,
+      radial-gradient(circle at 0% 100%, #834 20%, #0000 20% 35%, var(--c) 0) 1% 99% / 50% 50%,
+      radial-gradient(at 0% 100%,  #0008, #0000) 1% 99% / 40% 40%,
+      radial-gradient(circle at 100% 100%, #834 20%, #0000 20% 35%, var(--c) 0) 99% 99% / 50% 50%,
+      radial-gradient(at 100% 100%,  #0008, #0000) 100% 99% / 40% 40%,
+      var(--c);
+    background-repeat: no-repeat;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* --- JOYSTICK PHYSICS --- */
+  .mushroom {
+    width: 47%;
+    aspect-ratio: 1;
+    border: 0.001em solid var(--color-shadow);
+    top: 17.5%;
+    left: 30%;
+    background:
+      radial-gradient(circle at 50% 0, #6669, #6660 60%),
+      #2a2e31;
+    box-shadow:
+      inset 0 0.0001em 0.00125em -0.0005em var(--color),
+      inset 0 0.003em 0.003em #0004,
+      inset 0 -0.005em 0.003em #0006,
+      0 -0.0009em 0.001em 0.001em #0003,
+      0 0.00075em 0.001em 0.001em #0003,
+      0 0.01em 0.01em -0.0025em #0004,
+      0 0.025em 0.035em var(--color-shadow);
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+  }
+
+  .mushroom.dragging {
+    transition: none;
+    filter: brightness(0.8);
+  }
+
+  .right .mushroom { top: 61.5%; left: 23.25% }
+
+  .mushroom::before {
+    content: "";
+    width: 80%;
+    aspect-ratio: 1;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%; 
+    background: radial-gradient(circle at 50% 0, #6669, #6660 60%);
+    box-shadow:
+      inset 0 0 0.001em #0008,
+      inset 0 0.002em 0.002em #0008,
+      inset 0 -0.001em 0.001em 0.001em #fff4,
+      0 0.001em 0.001em #fff2,
+      0 -0.0007em 0.001em 0.0006em #0008,
+      0 -0.0025em 0.0015em 0.0006em #fff2
+  }
+
+  .mushroom::after {
+    content: "";
+    width: 95%;
+    aspect-ratio: 1;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%; 
+    background: 
+      linear-gradient(90deg, #000, #0000 20% 80%, #000) 50% 0 / 3% 12%,
+      linear-gradient(#000 5%, #444 15% 30%, #666 50%, #3c3c3c, #484848) 50% 0 / 3% 12%,
+      linear-gradient(#0000 30% 90%, #fff) 0% 50% / 12% 3%,
+      linear-gradient(#000, #0000 30% 70%, #000) 0% 50% / 12% 3%,
+      linear-gradient(90deg, #fff4, #222 10% 50%, #444) 0% 50% / 12% 3%,
+      linear-gradient(#0000 30% 90%, #fff) 100% 50% / 12% 3%,
+      linear-gradient(#000, #0000 30% 70%, #000) 100% 50% / 12% 3%,
+      linear-gradient(to left, #fff4, #222 10% 50%, #444) 100% 50% / 12% 3%,
+      linear-gradient(90deg, #000, #0000 20% 80%, #000) 50% 100% / 3% 12%,
+      linear-gradient(to top, #fff4, #111 15% 50%, #444) 50% 100% / 3% 12%,
+      #f000;
+    background-repeat: no-repeat;
+  }
+
+  .direction {
+    display: grid;
+    place-items: center;
+    width: 23%;
+    aspect-ratio: 1;
+    border: 0.0007em solid var(--color-shadow);
+    background:
+      linear-gradient(#fff2, #fff0),
+      #35393c;
+    box-shadow:
+      0 0.002em 0.007em var(--color-shadow),
+      inset 0 0.0001em 0.0015em -0.0005em var(--color),
+      inset 0 0 0.0005em 0.001em #323439,
+      inset 0 0.002em 0.001em 0.0002em #def5,
+      inset 0 -0.001em 0.0005em 0.0002em #000,
+      inset 0 -0.001em 0.001em 0.002em #000c
+  }
+
+  .direction::before {
+    font-size: 0.0175em;
+    font-family: Helvetica, sans-serif;
+    color: #fffa;
+  }
+
+  .arrow::before,
+  .arrow::after {
+    content: "";
+    width: 40%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #252525;
+    clip-path: polygon(52% -2%, 100% 80%, 0 80%, 48% -2%);
+  }
+
+  .arrow::before {
+    top: 51.5%;
+    background: #fff3;
+    filter: blur(0.01em);
+  }
+
+  .arrow.right::before, .arrow.right::after { transform: translate(-50%, -50%) rotate(90deg); }
+  .arrow.left::before, .arrow.left::after { transform: translate(-50%, -50%) rotate(-90deg) ; }
+  .arrow.down::before, .arrow.down::after { transform: translate(-50%, -50%) rotate(180deg) ; }
+
+  .direction.up { top: 58%; left: 41.9%; }
+  .direction.down { top: 72.85%; left: 41.9%; }
+  .direction.left { left: 18.25%; top: 65.5%; }
+  .direction.right { left: 65.75%; top: 65.5%; }
+
+  .direction.x { top: 14%; left: 35%; }
+  .direction.x::before { content: "X"; }
+
+  .direction.y { top: 21.5%; left: 11.25% }
+  .direction.y::before { content: "Y"; }
+
+  .direction.a { top: 21.5%; left: 59% }
+  .direction.a::before { content: "A"; }
+
+  .direction.b { top: 29%; left: 35% }
+  .direction.b::before { content: "B"; }
+
+  .menu {
+    width: 19.35%;
+    aspect-ratio: 1;
+    border: 0.0009em solid var(--color-shadow);
+    top: 84.75%;
+    left: 60.5%;
+    border-radius: 0.003em;
+    background: #464b50;
+    box-shadow: 
+      inset 0 0.001em 0.001em -0.0005em #fff6,
+      inset 0 -0.001em 0.001em -0.0005em #0006
+  }
+
+  .menu::before {
+    content: "";
+    width: 67%;
+    aspect-ratio: 1;
+    background: #33393c;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    box-shadow:
+      inset 0 0.0009em 0.00075em #0008,
+      0 0.0008em 0.00075em #fff5
+  }
+
+  .volume {
+    width: 8.5%;
+    height: 0.7%;
+    background: linear-gradient(#444, #222);
+    left: 13.3%;
+    top: -0.6%;
+    border-radius: 0.0005em 0.0005em 0 0;
+    clip-path: polygon(-20% -100%, 32% -100%, 32% 0, 33% 35%, 66% 35%, 67% 0%, 67% -100%, 110% -100%, 110% 120%, -20% 120%);
+    z-index: -1;
+  }
+
+  .home {
+    top: 83.85%;
+    left: 17.5%;
+    display: grid;
+    place-items: center;
+    width: 25%;
+    aspect-ratio: 1;
+    border: 0.0007em solid var(--color-shadow);
+    background:
+      linear-gradient(#0001, #0005),
+      radial-gradient(#0000 52.5%, #9c9a9a 0),
+      #404547;
+  }
+
+  .home::before {
+    content: "";
+    top: 23%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    width: 50%;
+    height: 24.5%;
+    background: conic-gradient(at 50% 0, #0000 132deg, #010202 0 228deg, #0000 0);
+    box-shadow: 0 0.00015em 0.0001em -0.00008em #fff
+  }
+
+  .home::after {
+    content: "";
+    color: #010202;
+    top: 46%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    width: 39%;
+    height: 24.5%;
+    box-shadow: 
+      inset -0.004em 0,
+      inset 0.004em 0,
+      inset 0 -0.004em 0,
+      0 0.00015em 0.0001em -0.00008em #fff
+  }
+</style>
 </head>
 <body>
-    <div id="loading-overlay">
-        <div class="loader-spinner"></div>
-        <div style="font-size:0.9rem;font-weight:700;letter-spacing:2px;">LOADING...</div>
-    </div>
 
-    <div id="rotate-message">PLEASE ROTATE DEVICE</div>
-    <div id="gmx-console">
-        <div class="shoulder-group left-shoulder"><div class="btn-shoulder" id="btn-l">L</div></div>
-        <div class="control-base left-base">
-            <div class="d-pad-cross">
-                <div class="d-btn d-up" id="btn-up"></div>
-                <div class="d-btn d-right" id="btn-right"></div>
-                <div class="d-btn d-down" id="btn-down"></div>
-                <div class="d-btn d-left" id="btn-left"></div>
+  <main>
+    <article aria-label="Drawing of a Nintendo Switch">
+      <section class="controller left">
+        <button class="bumper l-bumper"></button>
+        <button class="minus"></button>
+        <button class="mushroom round"></button>
+        <button class="direction arrow round up"></button>
+        <button class="direction arrow round left"></button>
+        <button class="direction arrow round right"></button>
+        <button class="direction arrow round down"></button>
+        <button class="menu"></button>
+      </section>
+      
+      <section class="controller right">
+        <button class="bumper r-bumper"></button>
+        <button class="minus plus"></button>
+        <button class="direction round up x"></button>
+        <button class="direction round left y"></button>
+        <button class="direction round right a"></button>
+        <button class="direction round down b"></button>
+        <button class="mushroom round"></button>
+        <button class="round home"></button>
+      </section>
+      
+      <section class="body">
+        <button class="volume"></button>
+        <div class="frame"></div>
+        <div class="screen">
+          
+          <div class="boot-sequence">
+            <div class="boot-content">
+              <p class="copyright">Gamex computer entertainment</p>
+              <p class="branding">GMX<span class="is-small">®</span> &nbsp; 1</p>
             </div>
-        </div>
-        <div id="screen-bezel">
-            <div id="screen">
-                <div id="boot-logo-container">
-                    <div id="boot-gmx">GMX</div><div id="boot-reg">&reg;</div>
-                </div>
-                <div class="xmb-bg">
-                    <div id="game-bg-layer" class="xmb-game-bg"></div>
-                    <div class="wave-line"></div><div class="wave-line"></div>
-                </div>
-                <div id="xmb-ui">
-                    <div id="xmb-header">
-                        <span id="xmb-clock"></span>
-                        <div class="battery-icon"><div class="battery-fill"></div></div>
-                    </div>
-                    <div id="xmb-grid">
-                        <div class="xmb-col">
-                            <div class="xmb-main">
-                                <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M17 6h-2V4c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2v2H7c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2h2v2h-2V4z M19 18H5V11h14v7z M5 9V8h14v1H5z"/></svg>
-                                <span>Settings</span>
-                            </div>
-                            <div class="xmb-sub">Insert Core (BIOS)</div>
-                        </div>
-                        <div class="xmb-col" id="game-column">
-                            <div class="xmb-main">
-                                <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h4l2-2h6l2 2h4c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm6.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm2-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-                                <span>Game</span>
-                            </div>
-                            <div class="xmb-sub" id="memory-stick">Memory Stick (Install)</div>
-                        </div>
-                        <div class="xmb-col">
-                            <div class="xmb-main">
-                                <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                                <span>About</span>
-                            </div>
-                            <div class="xmb-sub">Version 2.0 (GBA)</div>
-                        </div>
-                    </div>
-                    <div id="sys-msg">Press X to execute</div>
-                </div>
-                <div id="install-popup">
-                    <div class="popup-box" id="popup-box-game" style="display:block;">
-                        <h3>Install to Memory Stick</h3>
-                        <label class="popup-btn">
-                            Select .GBA ROM
-                            <input type="file" id="install-rom-upload" accept=".gba,.GBA"
-                                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                                          opacity: 0; cursor: pointer; touch-action: manipulation;">
-                        </label>
-                        <div class="file-name" id="popup-rom-name"></div>
-                        <label class="popup-btn">
-                            Select Cover Art
-                            <input type="file" id="install-cover-upload" accept="image/*"
-                                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                                          opacity: 0; cursor: pointer; touch-action: manipulation;">
-                        </label>
-                        <div class="file-name" id="popup-cover-name"></div>
-                        <button class="popup-btn install-btn" id="popup-install" disabled>Install</button>
-                    </div>
-                    <div class="popup-box" id="popup-box-bios" style="display:none;">
-                        <h3>Insert Core (BIOS)</h3>
-                        <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Required to play games.<br>Upload your GBA BIOS .bin file.</div>
-                        <label class="popup-btn">
-                            Select BIOS .bin
-                            <input type="file" id="install-bios-upload" accept=".bin,.BIN"
-                                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                                          opacity: 0; cursor: pointer; touch-action: manipulation;">
-                        </label>
-                        <div class="file-name" id="popup-bios-name"></div>
-                        <button class="popup-btn install-btn" id="popup-install-bios" disabled>Install Core</button>
-                    </div>
-                </div>
-                <div id="game-area">
-                    <canvas id="game-canvas" width="240" height="160"></canvas>
-                </div>
+            <div class="boot-inner">
+              <div class="particles">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="boxes-wrapper"></div>
             </div>
-        </div>
-        <div id="gmx-logo">GMX</div>
-        <div class="vol-btn vol-down-btn" id="btn-vol-down">−</div>
-        <div class="vol-btn vol-up-btn" id="btn-vol-up">+</div>
-        <div id="speed-display">1.0×</div>
-        <div class="bottom-btn select-btn" id="btn-select">SELECT</div>
-        <div class="bottom-btn start-btn" id="btn-start">START</div>
-        <div class="led-indicator" id="power-led"></div>
-        <div class="bottom-btn power-btn" id="btn-power">POWER</div>
-        <div class="shoulder-group right-shoulder"><div class="btn-shoulder" id="btn-r">R</div></div>
-        <div class="control-base right-base">
-            <div class="action-pad-gba">
-                <div class="btn-action-gba btn-gba-a" id="btn-a">A</div>
-                <div class="btn-action-gba btn-gba-b" id="btn-b">B</div>
-            </div>
-        </div>
-    </div>
+          </div>
+          </div>
+      </section>
+    </article>
+  </main>
 
-    <script>
-    // ===================================================================
-    // GBA JoyPad bit indices
-    // ===================================================================
-    var GBA_BTN = {
-        'btn-a':0, 'btn-b':1, 'btn-select':2, 'btn-start':3,
-        'btn-right':4, 'btn-left':5, 'btn-up':6, 'btn-down':7,
-        'btn-r':8, 'btn-l':9
-    };
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      
+      // 1. Standard Button Haptics
+      const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.home)');
+      const handlePress = (e, btn) => {
+        e.preventDefault();
+        btn.classList.add('active');
+      };
+      const handleRelease = (e, btn) => {
+        e.preventDefault();
+        btn.classList.remove('active');
+      };
 
-    var KEY_MAP = {
-        'ArrowUp':'btn-up', 'ArrowDown':'btn-down',
-        'ArrowLeft':'btn-left', 'ArrowRight':'btn-right',
-        'x':'btn-a', 'X':'btn-a',
-        'z':'btn-b', 'Z':'btn-b',
-        'Enter':'btn-start', 'Shift':'btn-select',
-        'a':'btn-l', 'A':'btn-l',
-        's':'btn-r', 'S':'btn-r'
-    };
+      standardButtons.forEach(btn => {
+        btn.addEventListener('touchstart', (e) => handlePress(e, btn), { passive: false });
+        btn.addEventListener('touchend', (e) => handleRelease(e, btn), { passive: false });
+        btn.addEventListener('touchcancel', (e) => handleRelease(e, btn), { passive: false });
+        btn.addEventListener('mousedown', (e) => handlePress(e, btn));
+        btn.addEventListener('mouseup', (e) => handleRelease(e, btn));
+        btn.addEventListener('mouseleave', (e) => handleRelease(e, btn));
+      });
 
-    var BTNS = ['btn-up','btn-down','btn-left','btn-right','btn-a','btn-b','btn-select','btn-start','btn-l','btn-r'];
+      // 2. Dynamic 3D Boot Screen Generator
+      const boxesWrapper = document.querySelector('.boxes-wrapper');
+      const hiddenBoxes = [41, 40, 47, 48, 46, 95, 94, 102, 101];
 
-    // ===================================================================
-    // Pre-cache button elements & build hit-test rects
-    // ===================================================================
-    var btnElements = {};
-    var btnRects = [];       // [{id, x, y, w, h, el}]
-    var rectsDirty = true;
+      for (let i = 1; i <= 112; i++) {
+        const container = document.createElement('div');
+        container.className = 'box-container';
+        if (hiddenBoxes.includes(i)) container.style.visibility = 'hidden';
 
-    function cacheElements() {
-        BTNS.forEach(function(id) { btnElements[id] = document.getElementById(id); });
-    }
+        const box = document.createElement('div');
+        box.className = 'box';
 
-    function rebuildRects() {
-        btnRects = [];
-        BTNS.forEach(function(id) {
-            var el = btnElements[id];
-            if (!el) return;
-            var r = el.getBoundingClientRect();
-            if (r.width > 0 && r.height > 0) {
-                btnRects.push({ id: id, x: r.left, y: r.top, w: r.width, h: r.height });
-            }
-        });
-        rectsDirty = false;
-    }
+        const zDepth = (Math.random() * 0.15) - 0.15;
+        box.style.transform = `translateZ(${zDepth}em)`;
 
-    // Fast rect hit-test instead of document.elementFromPoint
-    function btnAtPoint(cx, cy) {
-        if (rectsDirty) rebuildRects();
-        for (var i = 0; i < btnRects.length; i++) {
-            var r = btnRects[i];
-            if (cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h) return r.id;
+        const darken = 1 - (Math.random() * 0.4);
+        box.style.backgroundColor = `rgba(${136 * darken}, ${147 * darken}, ${184 * darken}, 0.95)`;
+
+        box.innerHTML = `
+          <div class="top"></div>
+          <div class="bottom"></div>
+          <div class="left"></div>
+          <div class="right"></div>
+        `;
+        
+        container.appendChild(box);
+        boxesWrapper.appendChild(container);
+      }
+
+      // 3. Audio Tracking Engine
+      let globalCtx = null;
+      let activeOscillators = [];
+      let currentMasterGain = null;
+      
+      const initAudioContext = () => {
+        if (!globalCtx) {
+          globalCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        return null;
-    }
-
-    // Rebuild rects on resize/orientation change
-    function markRectsDirty() { rectsDirty = true; }
-
-    // ===================================================================
-    // Emulator state
-    // ===================================================================
-    var emu = { iodine: null, blitter: null, rafId: null, running: false };
-    var scriptsLoaded = false;
-    var emuSpeed = 1.0;   // 1.0 = 100%
-    var TICK_MS = 16;     // fixed tick size passed to timerCallback
-    var accumulator = 0;
-    var lastRaf = 0;
-
-    function loadScripts(cb) {
-        if (scriptsLoaded) { cb(); return; }
-        var BASE = 'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/';
-        var list = [
-            'IodineGBA/includes/TypedArrayShim.js',
-            'IodineGBA/core/Cartridge.js','IodineGBA/core/DMA.js','IodineGBA/core/Emulator.js',
-            'IodineGBA/core/Graphics.js','IodineGBA/core/RunLoop.js','IodineGBA/core/Memory.js',
-            'IodineGBA/core/IRQ.js','IodineGBA/core/JoyPad.js','IodineGBA/core/Serial.js',
-            'IodineGBA/core/Sound.js','IodineGBA/core/Timer.js','IodineGBA/core/Wait.js',
-            'IodineGBA/core/CPU.js','IodineGBA/core/Saves.js',
-            'IodineGBA/core/sound/FIFO.js','IodineGBA/core/sound/Channel1.js',
-            'IodineGBA/core/sound/Channel2.js','IodineGBA/core/sound/Channel3.js',
-            'IodineGBA/core/sound/Channel4.js',
-            'IodineGBA/core/CPU/ARM.js','IodineGBA/core/CPU/THUMB.js','IodineGBA/core/CPU/CPSR.js',
-            'IodineGBA/core/graphics/Renderer.js','IodineGBA/core/graphics/RendererShim.js',
-            'IodineGBA/core/graphics/RendererProxy.js','IodineGBA/core/graphics/BGTEXT.js',
-            'IodineGBA/core/graphics/BG2FrameBuffer.js','IodineGBA/core/graphics/BGMatrix.js',
-            'IodineGBA/core/graphics/AffineBG.js','IodineGBA/core/graphics/ColorEffects.js',
-            'IodineGBA/core/graphics/Mosaic.js','IodineGBA/core/graphics/OBJ.js',
-            'IodineGBA/core/graphics/OBJWindow.js','IodineGBA/core/graphics/Window.js',
-            'IodineGBA/core/graphics/Compositor.js',
-            'IodineGBA/core/memory/DMA0.js','IodineGBA/core/memory/DMA1.js',
-            'IodineGBA/core/memory/DMA2.js','IodineGBA/core/memory/DMA3.js',
-            'IodineGBA/core/cartridge/SaveDeterminer.js','IodineGBA/core/cartridge/SRAM.js',
-            'IodineGBA/core/cartridge/FLASH.js','IodineGBA/core/cartridge/EEPROM.js',
-            'IodineGBA/core/cartridge/GPIO.js',
-            'user_scripts/GfxGlueCode.js'
-        ];
-        var i = 0;
-        function next() {
-            if (i >= list.length) { scriptsLoaded = true; cb(); return; }
-            var s = document.createElement('script');
-            s.src = BASE + list[i++];
-            s.onload = next;
-            s.onerror = function() { console.warn('Script failed: ' + list[i-1]); next(); };
-            document.head.appendChild(s);
+        if (globalCtx.state === 'suspended') {
+          globalCtx.resume();
         }
-        next();
-    }
+      };
 
-    function stopEmu() {
-        emu.running = false;
-        if (emu.rafId) { cancelAnimationFrame(emu.rafId); emu.rafId = null; }
-        if (emu.iodine) { try { emu.iodine.pause(); } catch(e) {} emu.iodine = null; }
-        emu.blitter = null;
-        var canvas = document.getElementById('game-canvas');
-        var ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, 240, 160);
-    }
+      document.addEventListener('touchstart', initAudioContext, { once: true });
+      document.addEventListener('mousedown', initAudioContext, { once: true });
 
-    function renderError(title, msg) {
-        document.getElementById('screen').classList.add('game-running');
-        var canvas = document.getElementById('game-canvas');
-        var ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, 240, 160);
-        ctx.fillStyle = '#ff4444'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(title, 8, 70);
-        ctx.fillStyle = '#aaa'; ctx.font = '9px monospace';
-        var words = msg.split(' '), line = '', y = 88;
-        for (var w = 0; w < words.length; w++) {
-            var t = line + (line ? ' ' : '') + words[w];
-            if (ctx.measureText(t).width > 224 && line) { ctx.fillText(line, 8, y); line = words[w]; y += 12; }
-            else line = t;
+      function stopBootSound() {
+        if (!globalCtx) return;
+        const now = globalCtx.currentTime;
+
+        // Fade out quickly to prevent audio clicks
+        if (currentMasterGain) {
+          currentMasterGain.gain.cancelScheduledValues(now);
+          currentMasterGain.gain.setValueAtTime(currentMasterGain.gain.value, now);
+          currentMasterGain.gain.linearRampToValueAtTime(0.0001, now + 0.05);
         }
-        if (line) ctx.fillText(line, 8, y);
-    }
 
-    function applyEmuSpeed() {
-        if (!emu.iodine) return;
-        // setIntervalRate tells IodineGBA how many ms between ticks.
-        // Lower = faster emulation. Base is 16ms (≈60fps GBA).
-        var rate = Math.max(1, Math.round(TICK_MS / emuSpeed));
-        emu.iodine.setIntervalRate(rate);
-    }
+        // Hard stop all active oscillators
+        activeOscillators.forEach(osc => {
+          try {
+            osc.stop(now + 0.06);
+          } catch (e) {
+            // Already stopped or scheduled
+          }
+        });
+        activeOscillators = [];
+      }
 
-    function startIodine(biosData, romData) {
-        try {
-            emu.iodine = new GameBoyAdvanceEmulator();
-            emu.iodine.attachPlayStatusHandler(function() {});
-            emu.iodine.attachSpeedHandler(function() {});
-            emu.iodine.attachBIOS(new Uint8Array(biosData));
-            emu.iodine.attachROM(new Uint8Array(romData));
-            emu.blitter = new GfxGlueCode(240, 160);
-            emu.blitter.attachCanvas(document.getElementById('game-canvas'));
-            emu.iodine.attachGraphicsFrameHandler(emu.blitter);
+      function playBootSound() {
+        initAudioContext(); 
+        const ctx = globalCtx;
+        const now = ctx.currentTime;
+        const totalDuration = 8.5; 
 
-            applyEmuSpeed();
-            emu.running = true;
-            accumulator = 0;
-            lastRaf = 0;
+        stopBootSound(); // Ensure everything is clear before starting a new boot
 
-            // Fixed-step rAF loop: accumulate real time, dispatch fixed TICK_MS
-            // chunks to IodineGBA so it never has to "catch up" all at once.
-            function rafLoop(now) {
-                if (!emu.running) return;
-                if (lastRaf === 0) lastRaf = now;
-                var delta = now - lastRaf;
-                lastRaf = now;
-                // Cap delta to 3 frames so a tab-hide doesn't cause a huge spike
-                if (delta > 50) delta = 50;
-                accumulator += delta * emuSpeed;
-                while (accumulator >= TICK_MS) {
-                    emu.iodine.timerCallback(TICK_MS >>> 0);
-                    accumulator -= TICK_MS;
-                }
-                emu.rafId = requestAnimationFrame(rafLoop);
-            }
-            emu.rafId = requestAnimationFrame(rafLoop);
-            emu.iodine.play();
-        } catch(e) {
-            renderError('BOOT FAILED', String(e));
+        // Master Output
+        currentMasterGain = ctx.createGain();
+        currentMasterGain.gain.setValueAtTime(0.5, now);
+        currentMasterGain.connect(ctx.destination);
+
+        const masterFilter = ctx.createBiquadFilter();
+        masterFilter.type = 'lowpass';
+        masterFilter.frequency.setValueAtTime(1500, now);
+        masterFilter.frequency.linearRampToValueAtTime(800, now + totalDuration);
+        masterFilter.connect(currentMasterGain);
+
+        function playString(freq, start, duration, maxVol) {
+          const detunes = [-8, 0, 8]; 
+          
+          detunes.forEach(detune => {
+            const osc = ctx.createOscillator();
+            activeOscillators.push(osc); // Track oscillator
+            const gain = ctx.createGain();
+            
+            osc.type = 'sawtooth';
+            osc.frequency.value = freq;
+            osc.detune.value = detune;
+
+            gain.gain.setValueAtTime(0, start);
+            gain.gain.linearRampToValueAtTime(maxVol / 3, start + 1.5); 
+            gain.gain.setValueAtTime(maxVol / 3, start + duration - 2.0); 
+            gain.gain.linearRampToValueAtTime(0, start + duration); 
+
+            osc.connect(gain);
+            gain.connect(masterFilter);
+            
+            osc.start(start);
+            osc.stop(start + duration);
+          });
         }
-    }
 
-    function sendInput(btnId, isDown) {
-        if (!emu.running || !emu.iodine) return;
-        var bit = GBA_BTN[btnId];
-        if (bit === undefined) return;
-        try {
-            if (emu.iodine.IOCore && emu.iodine.IOCore.joypad) {
-                if (isDown) emu.iodine.IOCore.joypad.keyPress(bit | 0);
-                else        emu.iodine.IOCore.joypad.keyRelease(bit | 0);
-            } else if (typeof emu.iodine.keyDown === 'function') {
-                if (isDown) emu.iodine.keyDown(bit | 0);
-                else        emu.iodine.keyUp(bit | 0);
-            }
-        } catch(e) {}
-    }
+        function playBass(freq, start, duration, maxVol) {
+          ['triangle', 'sine'].forEach((type, i) => {
+            const osc = ctx.createOscillator();
+            activeOscillators.push(osc); // Track oscillator
+            const gain = ctx.createGain();
+            
+            osc.type = type;
+            osc.frequency.value = freq / (i + 1); 
 
-    // ===================================================================
-    // Storage (IndexedDB + memory fallback)
-    // ===================================================================
-    var DB_NAME = 'GMX_GBA_Storage', STORE = 'library';
-    var memFallback = false, memStore = { bios: null, games: {} };
+            gain.gain.setValueAtTime(0, start);
+            gain.gain.linearRampToValueAtTime(maxVol, start + 1.0); 
+            gain.gain.setValueAtTime(maxVol, start + duration - 2.0);
+            gain.gain.linearRampToValueAtTime(0, start + duration);
 
-    function initDB() {
-        return new Promise(function(resolve) {
-            if (memFallback || !window.indexedDB) { memFallback = true; return resolve(null); }
-            try {
-                var req = indexedDB.open(DB_NAME, 1);
-                req.onupgradeneeded = function(e) { e.target.result.createObjectStore(STORE, { keyPath: 'id' }); };
-                req.onsuccess = function() { resolve(req.result); };
-                req.onerror = function() { memFallback = true; resolve(null); };
-            } catch(e) { memFallback = true; resolve(null); }
-        });
-    }
+            const bassFilter = ctx.createBiquadFilter();
+            bassFilter.type = 'lowpass';
+            bassFilter.frequency.value = 400;
+            
+            osc.connect(gain);
+            gain.connect(bassFilter);
+            bassFilter.connect(currentMasterGain);
 
-    function dbPut(db, rec) {
-        return new Promise(function(res, rej) {
-            var tx = db.transaction(STORE, 'readwrite');
-            tx.objectStore(STORE).put(rec);
-            tx.oncomplete = res; tx.onerror = rej;
-        });
-    }
-
-    function dbGet(db, key) {
-        return new Promise(function(res) {
-            var tx = db.transaction(STORE, 'readonly');
-            var req = tx.objectStore(STORE).get(key);
-            req.onsuccess = function() { res(req.result || null); };
-            req.onerror = function() { res(null); };
-        });
-    }
-
-    function dbGetAll(db) {
-        return new Promise(function(res) {
-            var tx = db.transaction(STORE, 'readonly');
-            var req = tx.objectStore(STORE).getAll();
-            req.onsuccess = function() { res(req.result || []); };
-            req.onerror = function() { res([]); };
-        });
-    }
-
-    function dbDelete(db, key) {
-        return new Promise(function(res, rej) {
-            var tx = db.transaction(STORE, 'readwrite');
-            tx.objectStore(STORE).delete(key);
-            tx.oncomplete = res; tx.onerror = rej;
-        });
-    }
-
-    function saveBios(file) {
-        return file.arrayBuffer().then(function(buf) {
-            return initDB().then(function(db) {
-                if (!db) { memStore.bios = buf; return; }
-                return dbPut(db, { id: '__bios__', data: buf });
-            });
-        });
-    }
-
-    function saveGame(romFile, imgFile) {
-        return romFile.arrayBuffer().then(function(romBuf) {
-            var coverP = imgFile
-                ? new Promise(function(res) { var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.readAsDataURL(imgFile); })
-                : Promise.resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
-            return coverP.then(function(cover) {
-                var id = romFile.name.replace(/\.[^/.]+$/, '');
-                var rec = { id: id, title: id, rom: romBuf, cover: cover };
-                return initDB().then(function(db) {
-                    if (!db) { memStore.games[id] = rec; return; }
-                    return dbPut(db, rec);
-                });
-            });
-        });
-    }
-
-    function loadRom(romData) {
-        stopEmu();
-        document.getElementById('screen').classList.add('game-running');
-        document.getElementById('screen').classList.remove('os-ready');
-        initDB().then(function(db) {
-            var p = db ? dbGet(db, '__bios__').then(function(r) { return r ? r.data : null; }) : Promise.resolve(memStore.bios);
-            p.then(function(biosData) {
-                if (!biosData) { renderError('NO BIOS FOUND', 'Please insert a GBA BIOS .bin via Settings before playing.'); return; }
-                loadScripts(function() { startIodine(biosData, romData); });
-            });
-        });
-    }
-
-    // ===================================================================
-    // XMB OS
-    // ===================================================================
-    var isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0, maxRows = [1,1,1];
-    var bootTimers = [];
-
-    function renderGameList(games) {
-        var col = document.getElementById('game-column');
-        var stick = document.getElementById('memory-stick');
-        col.querySelectorAll('.dynamic-game').forEach(function(el) { el.remove(); });
-        var count = 1;
-        games.forEach(function(g) {
-            if (g.id === '__bios__') return;
-            var d = document.createElement('div');
-            d.className = 'xmb-sub game-item dynamic-game';
-            d.innerHTML = '<img src="' + g.cover + '" class="box-art"><div class="game-details"><span class="game-title">' + g.title + '</span></div>';
-            col.insertBefore(d, stick);
-            count++;
-        });
-        maxRows[1] = count;
-    }
-
-    function buildXMB() {
-        return initDB().then(function(db) {
-            if (!db) { renderGameList(Object.values(memStore.games)); return; }
-            return dbGetAll(db).then(renderGameList);
-        });
-    }
-
-    function updateXMB() {
-        if (!isOSReady) return;
-        var grid = document.getElementById('xmb-grid');
-        var cols = document.querySelectorAll('.xmb-col');
-        var sysMsg = document.getElementById('sys-msg');
-        var bgLayer = document.getElementById('game-bg-layer');
-        grid.style.transform = 'translate(calc(-50% + ' + ((1 - colIdx) * 100) + 'px), ' + (-rowIdx * 60) + 'px)';
-        cols.forEach(function(col, c) {
-            var active = (c === colIdx);
-            col.classList.toggle('active-col', active);
-            Array.from(col.children).forEach(function(ch, r) { ch.classList.toggle('active-item', active && r === rowIdx); });
-        });
-        var img = document.querySelector('.active-col .active-item.dynamic-game img');
-        if (img) { bgLayer.style.backgroundImage = 'linear-gradient(to right,rgba(15,16,26,0.95) 0%,rgba(15,16,26,0.5) 60%,rgba(0,0,0,0) 100%),url(' + img.src + ')'; bgLayer.style.opacity = 1; }
-        else bgLayer.style.opacity = 0;
-        var games = document.querySelectorAll('.dynamic-game');
-        if (colIdx === 1 && rowIdx > 0 && rowIdx <= games.length) { sysMsg.innerText = '(B) Delete'; sysMsg.style.opacity = 1; }
-        else { sysMsg.innerText = ''; sysMsg.style.opacity = 0; }
-    }
-
-    function popupVisible() { return document.getElementById('install-popup').classList.contains('visible'); }
-    function navLeft()  { if (colIdx > 0 && isOSReady && !popupVisible()) { colIdx--; rowIdx = 0; updateXMB(); } }
-    function navRight() { if (colIdx < 2 && isOSReady && !popupVisible()) { colIdx++; rowIdx = 0; updateXMB(); } }
-    function navUp()    { if (rowIdx > 0 && isOSReady && !popupVisible()) { rowIdx--; updateXMB(); } }
-    function navDown()  { if (rowIdx < maxRows[colIdx] && isOSReady && !popupVisible()) { rowIdx++; updateXMB(); } }
-
-    function triggerA() {
-        if (!isOSReady || popupVisible()) return;
-        var sysMsg = document.getElementById('sys-msg');
-        if (colIdx === 0) { openBiosPopup(); return; }
-        if (colIdx === 2) { sysMsg.innerText = 'Module offline.'; sysMsg.style.opacity = 1; return; }
-        var games = document.querySelectorAll('.dynamic-game');
-        if (rowIdx > 0 && rowIdx <= games.length) {
-            var title = games[rowIdx - 1].querySelector('.game-title').innerText;
-            sysMsg.innerText = 'BOOTING: ' + title; sysMsg.style.opacity = 1;
-            initDB().then(function(db) {
-                var p = db ? dbGet(db, title) : Promise.resolve(memStore.games[title] || null);
-                p.then(function(g) {
-                    if (!g) { sysMsg.innerText = 'ROM not found.'; return; }
-                    loadRom(g.rom);
-                });
-            });
-        } else if (rowIdx === games.length + 1) {
-            openPopup();
+            osc.start(start);
+            osc.stop(start + duration);
+          });
         }
-    }
 
-    function triggerB() {
-        if (popupVisible()) { closePopup(); return; }
-        if (!isOSReady) return;
-        var games = document.querySelectorAll('.dynamic-game');
-        if (colIdx !== 1 || rowIdx < 1 || rowIdx > games.length) return;
-        var title = games[rowIdx - 1].querySelector('.game-title').innerText;
-        var sysMsg = document.getElementById('sys-msg');
-        sysMsg.innerText = 'Deleting ' + title + '...'; sysMsg.style.opacity = 1;
-        initDB().then(function(db) {
-            var p = db ? dbDelete(db, title) : Promise.resolve(delete memStore.games[title]);
-            p.then(function() { return buildXMB(); }).then(function() {
-                rowIdx = Math.min(rowIdx, maxRows[1] - 1);
-                updateXMB(); sysMsg.style.opacity = 0;
-            });
-        });
-    }
+        // Sequence
+        playBass(77.78, now, 4.5, 0.3);
+        playBass(155.56, now, 4.5, 0.15);
+        playString(311.13, now, 4.5, 0.12);
+        playString(392.00, now, 4.5, 0.12);
+        playString(466.16, now, 4.5, 0.12);
+      }
 
-    // ===================================================================
-    // Install Popups
-    // ===================================================================
-    var selRom = null, selCover = null, selBios = null;
+      // 4. Power Button Logic
+      const homeBtn = document.querySelector('.home');
+      const screen = document.querySelector('.screen');
+      let isPoweredOn = false;
 
-    function openPopup() {
-        document.getElementById('install-popup').classList.add('visible');
-        document.getElementById('popup-box-game').style.display = 'block';
-        document.getElementById('popup-box-bios').style.display = 'none';
-        selRom = null; selCover = null;
-        document.getElementById('install-rom-upload').value = '';
-        document.getElementById('install-cover-upload').value = '';
-        document.getElementById('popup-rom-name').textContent = '';
-        document.getElementById('popup-cover-name').textContent = '';
-        document.getElementById('popup-install').disabled = true;
-    }
-    function openBiosPopup() {
-        document.getElementById('install-popup').classList.add('visible');
-        document.getElementById('popup-box-game').style.display = 'none';
-        document.getElementById('popup-box-bios').style.display = 'block';
-        selBios = null;
-        document.getElementById('install-bios-upload').value = '';
-        document.getElementById('popup-bios-name').textContent = '';
-        document.getElementById('popup-install-bios').disabled = true;
-    }
-    function closePopup() { document.getElementById('install-popup').classList.remove('visible'); }
+      screen.classList.add('power-off'); 
 
-    document.getElementById('install-bios-upload').addEventListener('change', function(e) {
-        var f = e.target.files[0];
-        if (f && f.name.toLowerCase().endsWith('.bin')) { selBios = f; document.getElementById('popup-bios-name').textContent = f.name; document.getElementById('popup-install-bios').disabled = false; }
-    });
-    document.getElementById('popup-install-bios').addEventListener('click', function() {
-        if (!selBios) return;
-        closePopup();
-        saveBios(selBios).then(function() {
-            var s = document.getElementById('sys-msg'); s.innerText = 'Core installed!'; s.style.opacity = 1;
-            setTimeout(function() { s.style.opacity = 0; }, 2000);
-        });
-    });
-    document.getElementById('install-rom-upload').addEventListener('change', function(e) {
-        var f = e.target.files[0];
-        if (f && f.name.toLowerCase().endsWith('.gba')) { selRom = f; document.getElementById('popup-rom-name').textContent = f.name; document.getElementById('popup-install').disabled = false; }
-    });
-    document.getElementById('install-cover-upload').addEventListener('change', function(e) {
-        var f = e.target.files[0]; if (f) { selCover = f; document.getElementById('popup-cover-name').textContent = f.name; }
-    });
-    document.getElementById('popup-install').addEventListener('click', function() {
-        if (!selRom) return;
-        var s = document.getElementById('sys-msg'); s.innerText = 'Installing ' + selRom.name + '...'; s.style.opacity = 1;
-        closePopup();
-        saveGame(selRom, selCover).then(function() {
-            s.innerText = 'Install Complete!';
-            setTimeout(function() { s.style.opacity = 0; buildXMB().then(updateXMB); }, 1500);
-        }).catch(function() { s.innerText = 'Install Failed'; });
-    });
-
-    // ===================================================================
-    // Input handler — optimized for iOS
-    // ===================================================================
-    var held = {};         // id -> true (plain object faster than Set on old WebKit)
-    var osHeld = {};
-
-    function pressButton(id) {
-        if (held[id]) return;
-        held[id] = true;
-        var el = btnElements[id]; if (el) el.classList.add('pressed');
-        if (emu.running) {
-            sendInput(id, true);
-        } else {
-            if (id==='btn-left') navLeft(); else if (id==='btn-right') navRight();
-            else if (id==='btn-up') navUp(); else if (id==='btn-down') navDown();
-            else if (id==='btn-a') triggerA(); else if (id==='btn-b') triggerB();
-        }
-    }
-
-    function releaseButton(id) {
-        if (!held[id]) return;
-        delete held[id];
-        var el = btnElements[id]; if (el) el.classList.remove('pressed');
-        if (emu.running) sendInput(id, false);
-    }
-
-    // Legacy btnAt for mouse (rare on iOS, keep simple)
-    function btnAt(el) {
-        while (el) { if (el.id && btnElements[el.id]) return el.id; el = el.parentElement; }
-        return null;
-    }
-
-    // Keyboard
-    window.addEventListener('keydown', function(e) {
-        if (popupVisible()) return;
-        var key = e.key;
-        if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(key) > -1) e.preventDefault();
-        var id = KEY_MAP[key]; if (!id) return;
-        if (emu.running) {
-            if (!held[id]) { held[id] = true; var el = btnElements[id]; if (el) el.classList.add('pressed'); }
-            sendInput(id, true);
-        } else {
-            if (!osHeld[id]) { osHeld[id] = true; pressButton(id); }
-        }
-    });
-    window.addEventListener('keyup', function(e) {
-        var id = KEY_MAP[e.key]; if (!id) return;
-        delete osHeld[id];
-        releaseButton(id);
-    });
-
-    // ===================================================================
-    // Touch — rect-based hit testing, no elementFromPoint
-    // ===================================================================
-    var touchMap = {};
-
-    window.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-
-    window.addEventListener('touchstart', function(e) {
-        // ALLOW FILE INPUTS, LABELS, AND BUTTONS TO WORK NATIVELY
-        var tag = e.target.tagName;
-        if (tag !== 'INPUT' && tag !== 'LABEL' && tag !== 'BUTTON') e.preventDefault();
-
-        // Rebuild rects on first touch interaction (lazy, avoids layout thrash on boot)
-        if (rectsDirty) rebuildRects();
-
-        for (var i = 0; i < e.changedTouches.length; i++) {
-            var t = e.changedTouches[i];
-            var id = btnAtPoint(t.clientX, t.clientY);
-            if (id) { touchMap[t.identifier] = id; pressButton(id); }
-        }
-    }, {passive:false});
-
-    window.addEventListener('touchmove', function(e) {
-        // ALLOW FILE INPUTS, LABELS, AND BUTTONS TO WORK NATIVELY
-        var tag = e.target.tagName;
-        if (tag !== 'INPUT' && tag !== 'LABEL' && tag !== 'BUTTON') e.preventDefault();
-
-        for (var i = 0; i < e.changedTouches.length; i++) {
-            var t = e.changedTouches[i];
-            var newId = btnAtPoint(t.clientX, t.clientY);
-            var oldId = touchMap[t.identifier];
-            if (oldId !== newId) {
-                if (oldId) releaseButton(oldId);
-                if (newId) { touchMap[t.identifier] = newId; pressButton(newId); }
-                else delete touchMap[t.identifier];
-            }
-        }
-    }, {passive:false});
-
-    function endTouches(e) {
-        for (var i = 0; i < e.changedTouches.length; i++) {
-            var id = touchMap[e.changedTouches[i].identifier];
-            if (id) { releaseButton(id); delete touchMap[e.changedTouches[i].identifier]; }
-        }
-    }
-    window.addEventListener('touchend', endTouches, {passive:false});
-    window.addEventListener('touchcancel', endTouches, {passive:false});
-
-    // Mouse (desktop fallback)
-    var mouseBtn = null;
-    window.addEventListener('mousedown', function(e) {
-        var tag = e.target.tagName;
-        if (tag !== 'INPUT' && tag !== 'LABEL' && tag !== 'BUTTON') e.preventDefault();
-        var id = btnAt(e.target); if (id) { mouseBtn = id; pressButton(id); }
-    });
-    window.addEventListener('mousemove', function(e) {
-        if (!mouseBtn) return;
-        var id = btnAtPoint(e.clientX, e.clientY);
-        if (id !== mouseBtn) { releaseButton(mouseBtn); mouseBtn = id || null; if (mouseBtn) pressButton(mouseBtn); }
-    });
-    window.addEventListener('mouseup', function() { if (mouseBtn) { releaseButton(mouseBtn); mouseBtn = null; } });
-    window.addEventListener('mouseleave', function() { if (mouseBtn) { releaseButton(mouseBtn); mouseBtn = null; } });
-
-    // ===================================================================
-    // Power button — iOS-safe touch handling
-    // ===================================================================
-    var _powerTouched = false;
-
-    function togglePower(e) {
-        if (e) e.preventDefault();
-        var screen = document.getElementById('screen');
-        var bootCont = document.getElementById('boot-logo-container');
-        var pwrBtn = document.getElementById('btn-power');
-        isPoweredOn = !isPoweredOn; isOSReady = false;
-        bootTimers.forEach(clearTimeout); bootTimers = [];
-
-        // Visual press feedback
-        pwrBtn.classList.add('pressed');
-        setTimeout(function() { pwrBtn.classList.remove('pressed'); }, 150);
-
+      const togglePower = (e) => {
+        e.preventDefault();
+        homeBtn.classList.add('active');
+        setTimeout(() => homeBtn.classList.remove('active'), 100); 
+        
+        isPoweredOn = !isPoweredOn;
+        
         if (isPoweredOn) {
-            document.getElementById('power-led').classList.add('is-on');
-            screen.classList.add('boot-white');
-            bootTimers.push(setTimeout(function() { bootCont.classList.add('do-drop'); }, 200));
-            bootTimers.push(setTimeout(function() { document.getElementById('boot-gmx').classList.add('do-glint'); document.getElementById('boot-reg').classList.add('do-fade-in'); }, 1000));
-            bootTimers.push(setTimeout(function() { bootCont.classList.add('do-fade-out'); }, 3000));
-            bootTimers.push(setTimeout(function() {
-                buildXMB().then(function() {
-                    screen.classList.remove('boot-white'); screen.classList.add('os-ready');
-                    isOSReady = true; colIdx = 1; rowIdx = 0; updateXMB();
-                    rectsDirty = true;
-                });
-            }, 3500));
+          screen.classList.remove('power-off');
+          screen.classList.remove('is-booting');
+          void screen.offsetWidth;
+          screen.classList.add('is-booting');
+          playBootSound();
         } else {
-            document.getElementById('power-led').classList.remove('is-on');
-            screen.className = '';
-            bootCont.classList.remove('do-drop','do-fade-out');
-            document.getElementById('boot-gmx').classList.remove('do-glint');
-            document.getElementById('boot-reg').classList.remove('do-fade-in');
-            document.getElementById('sys-msg').style.opacity = 0;
-            stopEmu(); closePopup();
+          screen.classList.add('power-off');
+          screen.classList.remove('is-booting');
+          stopBootSound(); // Shuts down audio instantly
         }
-    }
+      };
 
-    var pwrEl = document.getElementById('btn-power');
-    // Touch: stopPropagation prevents global touchstart from stealing it
-    pwrEl.addEventListener('touchstart', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        _powerTouched = true;
-        pwrEl.classList.add('pressed');
-    }, {passive: false});
-    pwrEl.addEventListener('touchend', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        pwrEl.classList.remove('pressed');
-        if (_powerTouched) { _powerTouched = false; togglePower(null); }
-    }, {passive: false});
-    pwrEl.addEventListener('touchcancel', function(e) {
-        e.stopPropagation();
-        _powerTouched = false;
-        pwrEl.classList.remove('pressed');
-    }, {passive: false});
-    // Mouse/desktop click fallback
-    pwrEl.addEventListener('click', togglePower);
+      homeBtn.addEventListener('touchstart', togglePower, { passive: false });
+      homeBtn.addEventListener('mousedown', togglePower);
 
-    // ===================================================================
-    // Clock, scale, iOS audio unlock, init
-    // ===================================================================
-    function updateClock() {
-        var now = new Date(), h = now.getHours(), m = now.getMinutes().toString().padStart(2,'0');
-        var ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
-        var c = document.getElementById('xmb-clock'); if (c) c.innerText = (now.getMonth()+1) + '/' + now.getDate() + ' ' + h + ':' + m + ap;
-    }
-    updateClock(); setInterval(updateClock, 30000);
+      // 5. Joystick Drag Physics
+      const mushrooms = document.querySelectorAll('.mushroom');
+      const maxDragRadius = 12; 
 
-    function applyScale() {
-        var el = document.getElementById('gmx-console'); if (!el || window.innerHeight > window.innerWidth) return;
-        // Removed the 0.95 margin and the '1' maximum scale limit to fill the screen
-        var s = Math.min(window.innerWidth / 820, window.innerHeight / 350);
-        el.style.transform = 'scale(' + s + ')';
-        rectsDirty = true;
-    }
-    window.addEventListener('resize', function() { applyScale(); markRectsDirty(); });
-    window.addEventListener('orientationchange', function() {
-        setTimeout(function() { applyScale(); markRectsDirty(); }, 200);
+      mushrooms.forEach(stick => {
+        let isDragging = false;
+        let startX, startY;
+
+        const startDrag = (e) => {
+          e.preventDefault();
+          isDragging = true;
+          stick.classList.add('dragging');
+          const pointer = e.touches ? e.touches[0] : e;
+          startX = pointer.clientX;
+          startY = pointer.clientY;
+        };
+
+        const doDrag = (e) => {
+          if (!isDragging) return;
+          e.preventDefault();
+          const pointer = e.touches ? e.touches[0] : e;
+          const dx = pointer.clientX - startX;
+          const dy = pointer.clientY - startY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const clampedDistance = Math.min(distance, maxDragRadius);
+          const angle = Math.atan2(dy, dx);
+          
+          const moveX = Math.cos(angle) * clampedDistance;
+          const moveY = Math.sin(angle) * clampedDistance;
+          stick.style.transform = `translate(${moveX}px, ${moveY}px)`;
+        };
+
+        const stopDrag = (e) => {
+          if (!isDragging) return;
+          e.preventDefault();
+          isDragging = false;
+          stick.classList.remove('dragging');
+          stick.style.transform = ''; 
+        };
+
+        stick.addEventListener('touchstart', startDrag, { passive: false });
+        document.addEventListener('touchmove', doDrag, { passive: false });
+        document.addEventListener('touchend', stopDrag, { passive: false });
+        stick.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('mouseup', stopDrag);
+      });
+
     });
-    applyScale();
-
-    // ===================================================================
-    // Speed control — tap shoulder-style buttons or use keyboard (4/5/3 keys)
-    // ===================================================================
-    var SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
-    var speedIdx = 2; // default 1.0×
-
-    function setSpeedIdx(idx) {
-        speedIdx = Math.max(0, Math.min(SPEED_STEPS.length - 1, idx));
-        emuSpeed = SPEED_STEPS[speedIdx];
-        applyEmuSpeed();
-        var sd = document.getElementById('speed-display');
-        sd.textContent = emuSpeed.toFixed(2).replace(/\.?0+$/, '') + '×';
-        sd.classList.add('active');
-        clearTimeout(sd._t);
-        sd._t = setTimeout(function() { sd.classList.remove('active'); }, 1500);
-    }
-
-    // ===================================================================
-    // Volume control — uses IodineGBA key bindings (55 = vol down, 56 = vol up)
-    // ===================================================================
-    var volume = 1.0;
-    var VOL_STEP = 0.1;
-
-    function changeVolume(delta) {
-        volume = Math.max(0, Math.min(1, volume + delta));
-        if (emu.iodine && typeof emu.iodine.changeVolume === 'function') {
-            emu.iodine.changeVolume(volume);
-        }
-        var sd = document.getElementById('speed-display');
-        var pct = Math.round(volume * 100);
-        sd.textContent = 'Vol ' + pct + '%';
-        sd.classList.add('active');
-        clearTimeout(sd._t);
-        sd._t = setTimeout(function() {
-            sd.textContent = emuSpeed.toFixed(2).replace(/\.?0+$/, '') + '×';
-            sd.classList.remove('active');
-        }, 1500);
-    }
-
-    function makeVolBtn(id, delta) {
-        var el = document.getElementById(id);
-        el.addEventListener('touchstart', function(e) {
-            e.stopPropagation(); e.preventDefault();
-            el.classList.add('pressed');
-            changeVolume(delta);
-        }, {passive: false});
-        el.addEventListener('touchend', function(e) {
-            e.stopPropagation(); e.preventDefault();
-            el.classList.remove('pressed');
-        }, {passive: false});
-        el.addEventListener('touchcancel', function(e) {
-            e.stopPropagation();
-            el.classList.remove('pressed');
-        }, {passive: false});
-        el.addEventListener('click', function() { changeVolume(delta); });
-    }
-    makeVolBtn('btn-vol-down', -VOL_STEP);
-    makeVolBtn('btn-vol-up', VOL_STEP);
-
-    window.addEventListener('keydown', function(e) {
-        if (e.key === '4') setSpeedIdx(speedIdx + 1);
-        else if (e.key === '3') setSpeedIdx(speedIdx - 1);
-        else if (e.key === '5') setSpeedIdx(2);
-        else if (e.key === '7') changeVolume(-VOL_STEP);
-        else if (e.key === '8') changeVolume(VOL_STEP);
+  </script>
+    <script>
+  // Register the Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('[GMX SW] Registration successful with scope: ', registration.scope);
+        })
+        .catch((error) => {
+          console.log('[GMX SW] Registration failed: ', error);
+        });
     });
-
-    // Init
-    cacheElements();
-    document.getElementById('loading-overlay').classList.add('hidden');
-    </script>
+  }
+</script>
 </body>
 </html>
