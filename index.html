@@ -1009,6 +1009,7 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
       }
 
       // 3. Joystick Drag Physics + Directional Input
+     // 3. Joystick Drag Physics + Directional Input
       const mushrooms = document.querySelectorAll('.mushroom');
       const maxDragRadius = 12;
       const STICK_THRESHOLD = 5;
@@ -1017,6 +1018,7 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
       mushrooms.forEach((stick, idx) => {
         let isDragging = false;
         let startX, startY;
+        let dragTouchId = null; // Tracks the specific finger on the joystick
         const stickId = 'stick-' + (idx === 0 ? 'left' : 'right');
         stickDir[stickId] = null;
 
@@ -1024,15 +1026,37 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
           e.preventDefault();
           isDragging = true;
           stick.classList.add('dragging');
-          const pointer = e.touches ? e.touches[0] : e;
+          
+          let pointer;
+          if (e.changedTouches) {
+            pointer = e.changedTouches[0];
+            dragTouchId = pointer.identifier; // Lock onto this specific finger
+          } else {
+            pointer = e;
+          }
+          
           startX = pointer.clientX;
           startY = pointer.clientY;
         };
 
         const doDrag = (e) => {
           if (!isDragging) return;
+          
+          let pointer;
+          if (e.changedTouches) {
+            // Find the moving finger that matches our locked ID
+            for (let i = 0; i < e.changedTouches.length; i++) {
+              if (e.changedTouches[i].identifier === dragTouchId) {
+                pointer = e.changedTouches[i];
+                break;
+              }
+            }
+            if (!pointer) return; // The moving finger is not the joystick finger, ignore it
+          } else {
+            pointer = e;
+          }
+          
           e.preventDefault();
-          const pointer = e.touches ? e.touches[0] : e;
           const dx = pointer.clientX - startX;
           const dy = pointer.clientY - startY;
           const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1060,8 +1084,22 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
 
         const stopDrag = (e) => {
           if (!isDragging) return;
+          
+          // Only stop the drag if the finger lifted is the one tracking the joystick
+          if (e.changedTouches) {
+            let matchFound = false;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+              if (e.changedTouches[i].identifier === dragTouchId) {
+                matchFound = true;
+                break;
+              }
+            }
+            if (!matchFound) return; // A different finger was lifted (like releasing 'A')
+          }
+
           e.preventDefault();
           isDragging = false;
+          dragTouchId = null;
           stick.classList.remove('dragging');
           stick.style.transform = '';
           if (stickDir[stickId]) { releaseButton(stickDir[stickId]); stickDir[stickId] = null; }
