@@ -1284,6 +1284,8 @@
         function next() {
           if (i >= list.length) { scriptsLoaded = true; cb(); return; }
           var s = document.createElement('script');
+          // ADD THIS LINE: Tells Safari to treat these as standard size files, bypassing the 7MB padding bug
+          s.crossOrigin = 'anonymous';
           s.src = BASE + list[i++];
           s.onload = next;
           s.onerror = function() { console.warn('Script failed: ' + list[i-1]); next(); };
