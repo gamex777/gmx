@@ -1580,14 +1580,29 @@
       // ===================================================================
       // Storage (IndexedDB + memory fallback)
       // ===================================================================
+      // ===================================================================
+      // Storage (IndexedDB + memory fallback)
+      // ===================================================================
       var DB_NAME = 'GMX_GBA_Storage', STORE = 'library';
       var memFallback = false, memStore = { bios: null, games: {} };
 
       function initDB() {
         return new Promise(function(resolve) {
-          if (memFallback || !window.indexedDB) { memFallback = true; return resolve(null); }
+          if (memFallback) return resolve(null);
+          
+          let idb;
           try {
-            var req = indexedDB.open(DB_NAME, 1);
+            // The sandbox will throw an error right here if it blocks database access
+            idb = window.indexedDB; 
+          } catch(e) {
+            memFallback = true; 
+            return resolve(null);
+          }
+
+          if (!idb) { memFallback = true; return resolve(null); }
+          
+          try {
+            var req = idb.open(DB_NAME, 1);
             req.onupgradeneeded = function(e) { e.target.result.createObjectStore(STORE, { keyPath: 'id' }); };
             req.onsuccess = function() { resolve(req.result); };
             req.onerror = function() { memFallback = true; resolve(null); };
@@ -1695,9 +1710,11 @@
         return initDB().then(function(db) {
           if (!db) { renderGameList(Object.values(memStore.games)); return; }
           return dbGetAll(db).then(renderGameList);
+        }).catch(function(e) {
+          // Absolute safety net: if anything goes wrong, still render the menu so it doesn't freeze!
+          renderGameList(Object.values(memStore.games));
         });
       }
-
       function updateXMB() {
         if (!isOSReady) return;
         var grid = document.getElementById('xmb-grid');
