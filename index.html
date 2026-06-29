@@ -890,7 +890,8 @@
     document.addEventListener('DOMContentLoaded', () => {
 
       // 1. Standard Button Haptics (Switch shell)
-      const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.home):not(.bumper)');
+      // 1. Standard Button Haptics (Switch shell)
+const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.home):not(.bumper):not(.popup-btn)');
       const handlePress = (e, btn) => {
         e.preventDefault();
         btn.classList.add('active');
