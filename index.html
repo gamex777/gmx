@@ -31,6 +31,9 @@
     background-color: #121212;
     overflow: hidden;
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;
+    /* Dynamically pushes content away from the Dynamic Island, notch, and rounded corners */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
   }
 
   /* ============================================================
@@ -118,7 +121,7 @@
       #000;
   }
 
-  /* --- SCREEN & BOOT SEQUENCE --- */
+  /* --- SCREEN & 3D BOOT SEQUENCE --- */
   .screen {
     top: 50%;
     left: 50%;
@@ -252,6 +255,28 @@
   @keyframes p1 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(-0.15em, -0.1em); opacity:0;} }
   @keyframes p2 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(-0.2em, 0.05em); opacity:0;} }
   @keyframes p3 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(0.25em, -0.1em); opacity:0;} }
+
+  /* --- VOLUME OSD --- */
+  #volume-osd {
+    position: absolute;
+    top: 5%;
+    left: 5%;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(5px);
+    border-radius: 15px;
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  #volume-osd.show { opacity: 1; }
+  #volume-osd svg { width: 16px; height: 16px; color: #fff; }
+  .vol-track { width: 80px; height: 6px; background: rgba(255,255,255,0.3); border-radius: 3px; overflow: hidden; }
+  #vol-fill { width: 100%; height: 100%; background: #00c5e2; transition: width 0.1s ease; }
 
   /* --- CONTROLLERS --- */
   .controller {
@@ -667,6 +692,8 @@
   }
 
   .xmb-bg {
+    /* Base configuration for customizable waves */
+    --wave-color: 255, 255, 255;
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
@@ -689,15 +716,15 @@
     position: absolute;
     width: 150%;
     height: 150px;
-    background: rgba(255,255,255,0.01);
-    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(var(--wave-color), 0.01);
+    border-top: 1px solid rgba(var(--wave-color), 0.08);
     border-radius: 50%;
     top: 30%;
     left: -25%;
     transform: rotate(-8deg);
-    box-shadow: 0 -2px 15px rgba(255,255,255,0.02);
+    box-shadow: 0 -2px 15px rgba(var(--wave-color), 0.02);
   }
-  .wave-line:nth-child(3) { top: 40%; transform: rotate(5deg) scaleY(1.2); border-top: 1px solid rgba(255,255,255,0.05); }
+  .wave-line:nth-child(3) { top: 40%; transform: rotate(5deg) scaleY(1.2); border-top: 1px solid rgba(var(--wave-color), 0.05); }
 
   #xmb-ui {
     position: absolute;
@@ -845,6 +872,20 @@
   .popup-btn.install-btn:disabled { opacity: 0.3; pointer-events: none; }
   .popup-btn input[type="file"] { margin: 0; padding: 0; font-size: 999px; pointer-events: auto; }
   .file-name { font-size: 0.65rem; color: #888; margin-top: 4px; word-break: break-all; font-family: monospace; }
+  
+  /* Color Picker Styling */
+  #color-picker-input {
+    -webkit-appearance: none;
+    border: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    cursor: pointer;
+    background: transparent;
+    padding: 0;
+  }
+  #color-picker-input::-webkit-color-swatch-wrapper { padding: 0; }
+  #color-picker-input::-webkit-color-swatch { border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 </style>
 </head>
 <body>
@@ -877,12 +918,18 @@
         <button class="volume"></button>
         <div class="frame"></div>
         <div class="screen" id="screen">
-          
+
+          <!-- VOLUME OSD -->
+          <div id="volume-osd">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            <div class="vol-track"><div id="vol-fill"></div></div>
+          </div>
+
           <!-- NEW 3D BOOT SEQUENCE -->
           <div class="boot-sequence">
             <div class="boot-content">
               <p class="copyright">Gamex computer entertainment</p>
-              <p class="branding">CSD<span class="is-small">®</span> &nbsp; 1</p>
+              <p class="branding">GMX<span class="is-small">®</span> &nbsp; 1</p>
             </div>
             <div class="boot-inner">
               <div class="particles">
@@ -910,6 +957,10 @@
                     <span>Settings</span>
                   </div>
                   <div class="xmb-sub">Insert Core (BIOS)</div>
+                  <!-- 3 NEW COLOR EDITOR ITEMS -->
+                  <div class="xmb-sub">Edit L-Control Color</div>
+                  <div class="xmb-sub">Edit R-Control Color</div>
+                  <div class="xmb-sub">Edit Wave Color</div>
                 </div>
                 <div class="xmb-col" id="game-column">
                   <div class="xmb-main">
@@ -928,7 +979,9 @@
               </div>
               <div id="sys-msg">Press X to execute</div>
             </div>
+            
             <div id="install-popup">
+              <!-- INSTALL GAME -->
               <div class="popup-box" id="popup-box-game" style="display:block;">
                 <h3>Install to Memory Stick</h3>
                 <label class="popup-btn">
@@ -947,6 +1000,8 @@
                 <div class="file-name" id="popup-cover-name"></div>
                 <button class="popup-btn install-btn" id="popup-install" disabled>Install</button>
               </div>
+              
+              <!-- INSERT CORE -->
               <div class="popup-box" id="popup-box-bios" style="display:none;">
                 <h3>Insert Core (BIOS)</h3>
                 <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Required to play games.<br>Upload your GBA BIOS .bin file.</div>
@@ -959,6 +1014,18 @@
                 <div class="file-name" id="popup-bios-name"></div>
                 <button class="popup-btn install-btn" id="popup-install-bios" disabled>Install Core</button>
               </div>
+
+              <!-- EDIT COLORS -->
+              <div class="popup-box" id="popup-box-color" style="display:none;">
+                <h3 id="color-popup-title">Edit Color</h3>
+                <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Tap the circle to open color picker.</div>
+                <div style="display: flex; justify-content: center; margin: 15px 0;">
+                  <input type="color" id="color-picker-input" value="#00c5e2">
+                </div>
+                <button class="popup-btn install-btn" id="popup-save-color">Save Color</button>
+                <button class="popup-btn" id="popup-cancel-color">Cancel</button>
+              </div>
+
             </div>
             <div id="game-area">
               <canvas id="game-canvas" width="240" height="160"></canvas>
@@ -971,6 +1038,33 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+
+      // SAFE LOCALSTORAGE WRAPPERS (Prevents sandboxed iframe crashes)
+      function safeGetItem(key, defaultVal) {
+        try { return localStorage.getItem(key) || defaultVal; } catch(e) { return defaultVal; }
+      }
+      function safeSetItem(key, val) {
+        try { localStorage.setItem(key, val); } catch(e) { console.warn("Storage disabled", e); }
+      }
+
+      // COLOR SAVING & LOADING
+      function hexToRgb(hex) {
+        var bigint = parseInt(hex.replace('#',''), 16);
+        return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255].join(', ');
+      }
+
+      function loadSavedColors() {
+        var article = document.querySelector('article');
+        var xmbBg = document.querySelector('.xmb-bg');
+        var l = safeGetItem('gmx_color_left', null);
+        var r = safeGetItem('gmx_color_right', null);
+        var w = safeGetItem('gmx_color_wave', null);
+        
+        if(l) { article.style.setProperty('--joycon-left', l); article.style.setProperty('--joycon-left-shadow', l + '80'); }
+        if(r) { article.style.setProperty('--joycon-right', r); article.style.setProperty('--joycon-right-shadow', r + '80'); }
+        if(w) { xmbBg.style.setProperty('--wave-color', hexToRgb(w)); }
+      }
+      loadSavedColors(); // Execute immediately upon load
 
       // 0. Dynamic 3D Boot Screen Generator
       const boxesWrapper = document.querySelector('.boxes-wrapper');
@@ -1022,21 +1116,35 @@
         btn.addEventListener('mouseleave', (e) => handleRelease(e, btn));
       });
 
-      // 2. Audio Tracking Engine
+      // 2. Audio Tracking Engine & iOS Unlocker
+      const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
       let globalCtx = null;
       let activeOscillators = [];
       let currentMasterGain = null;
 
-      const initAudioContext = () => {
+      function getUnlockedContext() {
         if (!globalCtx) {
-          globalCtx = new (window.AudioContext || window.webkitAudioContext)();
+          globalCtx = new NativeAudioContext();
         }
         if (globalCtx.state === 'suspended') {
           globalCtx.resume();
         }
+        return globalCtx;
+      }
+
+      window.AudioContext = function() { return getUnlockedContext(); };
+      window.webkitAudioContext = function() { return getUnlockedContext(); };
+
+      const initAudioContext = () => {
+        const ctx = getUnlockedContext();
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        try { source.start(0); } catch(e) {}
       };
 
-      document.addEventListener('touchstart', initAudioContext, { once: true });
+      document.addEventListener('touchstart', initAudioContext, { once: true, passive: true });
       document.addEventListener('mousedown', initAudioContext, { once: true });
 
       function stopBootSound() {
@@ -1120,6 +1228,98 @@
         playString(466.16, now, 4.5, 0.12);
       }
 
+      // --- CUSTOM AUDIO GLUE & VOLUME LOGIC ---
+      let currentVol = 1.0;
+      let volTimeout;
+      const volOsd = document.getElementById('volume-osd');
+      const volFill = document.getElementById('vol-fill');
+      const volBtn = document.querySelector('.volume');
+
+      function showVolume() {
+        volOsd.classList.add('show');
+        volFill.style.width = (currentVol * 100) + '%';
+        clearTimeout(volTimeout);
+        volTimeout = setTimeout(() => volOsd.classList.remove('show'), 2000);
+      }
+
+      function changeVolume(delta) {
+        currentVol = Math.max(0, Math.min(1, currentVol + delta));
+        if (emu.audio) emu.audio.setVolume(currentVol);
+        if (currentMasterGain) {
+          try { currentMasterGain.gain.setValueAtTime(currentVol * 0.5, globalCtx.currentTime); } catch(e) {}
+        }
+        showVolume();
+      }
+
+      const handleVolPress = (e) => {
+        e.preventDefault();
+        const rect = volBtn.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        if (clientX < rect.left + (rect.width / 2)) changeVolume(-0.1); 
+        else changeVolume(0.1);  
+      };
+
+      volBtn.addEventListener('touchstart', handleVolPress, { passive: false });
+      volBtn.addEventListener('mousedown', handleVolPress);
+
+      class AudioGlue {
+        constructor(ctx) {
+          this.ctx = ctx;
+          this.scriptNode = null;
+          this.bufferFrames = 32768; 
+          this.bufferL = new Float32Array(this.bufferFrames);
+          this.bufferR = new Float32Array(this.bufferFrames);
+          this.writeFrame = 0;
+          this.readFrame = 0; 
+          this.volume = currentVol;
+        }
+        initialize(channels, sampleRate, bufferLimit) {
+          if (!this.ctx) return;
+          try {
+            this.scriptNode = this.ctx.createScriptProcessor(4096, 0, channels);
+            const ratio = 32768 / this.ctx.sampleRate; 
+            
+            this.scriptNode.onaudioprocess = (e) => {
+              const left = e.outputBuffer.getChannelData(0);
+              const right = e.outputBuffer.getChannelData(1);
+              const outLen = left.length;
+              
+              for (let i = 0; i < outLen; i++) {
+                let intRead = Math.floor(this.readFrame);
+                let available = this.writeFrame - intRead;
+                if (available < 0) available += this.bufferFrames;
+                
+                if (available > 0) {
+                  left[i] = this.bufferL[intRead] * this.volume;
+                  right[i] = this.bufferR[intRead] * this.volume;
+                  this.readFrame += ratio;
+                  if (this.readFrame >= this.bufferFrames) {
+                    this.readFrame -= this.bufferFrames;
+                  }
+                } else {
+                  left[i] = 0; right[i] = 0;
+                }
+              }
+            };
+            this.scriptNode.connect(this.ctx.destination);
+          } catch(err) { console.error("Audio init error", err); }
+        }
+        setVolume(vol) { this.volume = vol; }
+        getRemainingPayloads() {
+          let intRead = Math.floor(this.readFrame);
+          let remain = this.writeFrame - intRead;
+          if (remain < 0) remain += this.bufferFrames;
+          return remain;
+        }
+        push(array, startPosition, amount) {
+          for (let i = 0; i < amount; i += 2) {
+            this.bufferL[this.writeFrame] = array[startPosition + i];
+            this.bufferR[this.writeFrame] = array[startPosition + i + 1];
+            this.writeFrame = (this.writeFrame + 1) % this.bufferFrames;
+          }
+        }
+      }
+
       // 3. Joystick Drag Physics + Directional Input
       const mushrooms = document.querySelectorAll('.mushroom');
       const maxDragRadius = 12;
@@ -1129,7 +1329,7 @@
       mushrooms.forEach((stick, idx) => {
         let isDragging = false;
         let startX, startY;
-        let dragTouchId = null; // Tracks the specific finger on the joystick
+        let dragTouchId = null; 
         const stickId = 'stick-' + (idx === 0 ? 'left' : 'right');
         stickDir[stickId] = null;
 
@@ -1141,7 +1341,7 @@
           let pointer;
           if (e.changedTouches) {
             pointer = e.changedTouches[0];
-            dragTouchId = pointer.identifier; // Lock onto this specific finger
+            dragTouchId = pointer.identifier; 
           } else {
             pointer = e;
           }
@@ -1155,14 +1355,13 @@
           
           let pointer;
           if (e.changedTouches) {
-            // Find the moving finger that matches our locked ID
             for (let i = 0; i < e.changedTouches.length; i++) {
               if (e.changedTouches[i].identifier === dragTouchId) {
                 pointer = e.changedTouches[i];
                 break;
               }
             }
-            if (!pointer) return; // The moving finger is not the joystick finger, ignore it
+            if (!pointer) return; 
           } else {
             pointer = e;
           }
@@ -1177,7 +1376,6 @@
           const moveY = Math.sin(angle) * clampedDistance;
           stick.style.transform = `translate(${moveX}px, ${moveY}px)`;
 
-          // Determine dominant direction for navigation/emulator input
           let newDir = null;
           if (distance > STICK_THRESHOLD) {
             if (Math.abs(dx) > Math.abs(dy)) {
@@ -1196,7 +1394,6 @@
         const stopDrag = (e) => {
           if (!isDragging) return;
           
-          // Only stop the drag if the finger lifted is the one tracking the joystick
           if (e.changedTouches) {
             let matchFound = false;
             for (let i = 0; i < e.changedTouches.length; i++) {
@@ -1205,7 +1402,7 @@
                 break;
               }
             }
-            if (!matchFound) return; // A different finger was lifted (like releasing 'A')
+            if (!matchFound) return; 
           }
 
           e.preventDefault();
@@ -1245,7 +1442,7 @@
 
       var BTNS = ['btn-up','btn-down','btn-left','btn-right','btn-a','btn-b','btn-select','btn-start','btn-l','btn-r'];
 
-      var emu = { iodine: null, blitter: null, rafId: null, running: false };
+      var emu = { iodine: null, blitter: null, audio: null, rafId: null, running: false };
       var scriptsLoaded = false;
       var emuSpeed = 1.0;
       var TICK_MS = 16;
@@ -1284,8 +1481,7 @@
         function next() {
           if (i >= list.length) { scriptsLoaded = true; cb(); return; }
           var s = document.createElement('script');
-          // ADD THIS LINE: Tells Safari to treat these as standard size files, bypassing the 7MB padding bug
-          s.crossOrigin = 'anonymous';
+          s.crossOrigin = 'anonymous'; 
           s.src = BASE + list[i++];
           s.onload = next;
           s.onerror = function() { console.warn('Script failed: ' + list[i-1]); next(); };
@@ -1297,6 +1493,12 @@
       function stopEmu() {
         emu.running = false;
         if (emu.rafId) { cancelAnimationFrame(emu.rafId); emu.rafId = null; }
+        
+        if (emu.audio && emu.audio.scriptNode) {
+          try { emu.audio.scriptNode.disconnect(); } catch(e) {}
+          emu.audio = null;
+        }
+
         if (emu.iodine) { try { emu.iodine.pause(); } catch(e) {} emu.iodine = null; }
         emu.blitter = null;
         var canvas = document.getElementById('game-canvas');
@@ -1333,9 +1535,14 @@
           emu.iodine.attachSpeedHandler(function() {});
           emu.iodine.attachBIOS(new Uint8Array(biosData));
           emu.iodine.attachROM(new Uint8Array(romData));
+          
           emu.blitter = new GfxGlueCode(240, 160);
           emu.blitter.attachCanvas(document.getElementById('game-canvas'));
           emu.iodine.attachGraphicsFrameHandler(emu.blitter);
+
+          emu.audio = new AudioGlue(globalCtx);
+          emu.iodine.attachAudioHandler(emu.audio);
+
           applyEmuSpeed();
           emu.running = true;
           accumulator = 0;
@@ -1466,10 +1673,12 @@
       }
 
       // ===================================================================
-      // XMB OS
+      // XMB OS & COLOR PICKER LOGIC
       // ===================================================================
-      var isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0, maxRows = [1,1,1];
+      // UPDATED MAX ROWS TO ACCOUNT FOR NEW COLOR SETTINGS (0: Main, 1: Bios, 2: L-Color, 3: R-Color, 4: Wave)
+      var isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0, maxRows = [4,1,1]; 
       var bootTimers = [];
+      var currentColorTarget = '';
 
       function renderGameList(games) {
         var col = document.getElementById('game-column');
@@ -1523,8 +1732,20 @@
       function triggerA() {
         if (!isOSReady || popupVisible()) return;
         var sysMsg = document.getElementById('sys-msg');
-        if (colIdx === 0) { openBiosPopup(); return; }
+        
+        // Settings Column Navigation Maps
+        if (colIdx === 0) { 
+          if (rowIdx === 1) openBiosPopup(); 
+          else if (rowIdx === 2) openColorPopup('left');
+          else if (rowIdx === 3) openColorPopup('right');
+          else if (rowIdx === 4) openColorPopup('wave');
+          return; 
+        }
+
+        // About Column Navigation
         if (colIdx === 2) { sysMsg.innerText = 'Module offline.'; sysMsg.style.opacity = 1; return; }
+        
+        // Game Column Navigation
         var games = document.querySelectorAll('.dynamic-game');
         if (rowIdx > 0 && rowIdx <= games.length) {
           var title = games[rowIdx - 1].querySelector('.game-title').innerText;
@@ -1559,14 +1780,17 @@
       }
 
       // ===================================================================
-      // Install Popups
+      // Install & Color Popups
       // ===================================================================
       var selRom = null, selCover = null, selBios = null;
+
+      function closePopup() { document.getElementById('install-popup').classList.remove('visible'); }
 
       function openPopup() {
         document.getElementById('install-popup').classList.add('visible');
         document.getElementById('popup-box-game').style.display = 'block';
         document.getElementById('popup-box-bios').style.display = 'none';
+        document.getElementById('popup-box-color').style.display = 'none';
         selRom = null; selCover = null;
         document.getElementById('install-rom-upload').value = '';
         document.getElementById('install-cover-upload').value = '';
@@ -1574,17 +1798,69 @@
         document.getElementById('popup-cover-name').textContent = '';
         document.getElementById('popup-install').disabled = true;
       }
+
       function openBiosPopup() {
         document.getElementById('install-popup').classList.add('visible');
         document.getElementById('popup-box-game').style.display = 'none';
+        document.getElementById('popup-box-color').style.display = 'none';
         document.getElementById('popup-box-bios').style.display = 'block';
         selBios = null;
         document.getElementById('install-bios-upload').value = '';
         document.getElementById('popup-bios-name').textContent = '';
         document.getElementById('popup-install-bios').disabled = true;
       }
-      function closePopup() { document.getElementById('install-popup').classList.remove('visible'); }
 
+      function openColorPopup(target) {
+        document.getElementById('install-popup').classList.add('visible');
+        document.getElementById('popup-box-game').style.display = 'none';
+        document.getElementById('popup-box-bios').style.display = 'none';
+        document.getElementById('popup-box-color').style.display = 'block';
+        currentColorTarget = target;
+        
+        var title = document.getElementById('color-popup-title');
+        var input = document.getElementById('color-picker-input');
+        
+        if (target === 'left') {
+            title.innerText = 'L-Control Color';
+            input.value = safeGetItem('gmx_color_left', '#00c5e2');
+        } else if (target === 'right') {
+            title.innerText = 'R-Control Color';
+            input.value = safeGetItem('gmx_color_right', '#ff6658');
+        } else if (target === 'wave') {
+            title.innerText = 'Wave Color';
+            input.value = safeGetItem('gmx_color_wave', '#ffffff');
+        }
+      }
+
+      // Color Picker Interactions
+      document.getElementById('popup-save-color').addEventListener('click', function() {
+        var hex = document.getElementById('color-picker-input').value;
+        var article = document.querySelector('article');
+        var xmbBg = document.querySelector('.xmb-bg');
+        
+        if (currentColorTarget === 'left') {
+            article.style.setProperty('--joycon-left', hex);
+            article.style.setProperty('--joycon-left-shadow', hex + '80');
+            safeSetItem('gmx_color_left', hex);
+        } else if (currentColorTarget === 'right') {
+            article.style.setProperty('--joycon-right', hex);
+            article.style.setProperty('--joycon-right-shadow', hex + '80');
+            safeSetItem('gmx_color_right', hex);
+        } else if (currentColorTarget === 'wave') {
+            xmbBg.style.setProperty('--wave-color', hexToRgb(hex));
+            safeSetItem('gmx_color_wave', hex);
+        }
+        
+        closePopup();
+        var s = document.getElementById('sys-msg');
+        s.innerText = 'Color applied!';
+        s.style.opacity = 1;
+        setTimeout(function() { s.style.opacity = 0; }, 2000);
+      });
+
+      document.getElementById('popup-cancel-color').addEventListener('click', closePopup);
+
+      // System Interactions
       document.getElementById('install-bios-upload').addEventListener('change', function(e) {
         var f = e.target.files[0];
         if (f && f.name.toLowerCase().endsWith('.bin')) { selBios = f; document.getElementById('popup-bios-name').textContent = f.name; document.getElementById('popup-install-bios').disabled = false; }
@@ -1661,8 +1937,8 @@
         'switch-right': 'btn-right',
         'switch-a': 'btn-a',
         'switch-b': 'btn-b',
-        'switch-x': 'btn-a',   // X maps to A (primary action)
-        'switch-y': 'btn-b',   // Y maps to B (secondary action)
+        'switch-x': 'btn-a',   
+        'switch-y': 'btn-b',   
         'switch-l': 'btn-l',
         'switch-r': 'btn-r',
         'switch-minus': 'btn-select',
@@ -1741,14 +2017,12 @@
         if (isPoweredOn) {
           screen.classList.remove('power-off');
           
-          // Trigger the new boot sequence animation
           screen.classList.remove('is-booting');
-          void screen.offsetWidth; // Force CSS reflow to restart animation
+          void screen.offsetWidth; 
           screen.classList.add('is-booting');
           
           playBootSound();
           
-          // Wait 8.5s for 3D animation to complete, then load OS
           bootTimers.push(setTimeout(function() {
             buildXMB().then(function() {
               screen.classList.remove('is-booting');
@@ -1758,7 +2032,7 @@
           }, 8500));
         } else {
           screen.classList.add('power-off');
-          screen.className = 'screen power-off'; // Resets os-ready and is-booting
+          screen.className = 'screen power-off'; 
           document.getElementById('sys-msg').style.opacity = 0;
           stopEmu(); closePopup();
           stopBootSound();
@@ -1796,7 +2070,6 @@
       }
       updateClock(); setInterval(updateClock, 30000);
 
-      // Scale the OS content to fill the Switch screen cavity completely.
       function applyOsScale() {
         var sw = document.querySelector('.screen');
         if (!sw) return;
@@ -1842,7 +2115,7 @@
     });
   </script>
   <script>
-    // Register the Service Worker
+    // Register the Service Worker (Path updated for github.io/gmx/)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
