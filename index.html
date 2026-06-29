@@ -34,7 +34,7 @@
   }
 
   /* ============================================================
-     SWITCH SHELL (from index-2.html)
+     SWITCH SHELL
      ============================================================ */
   article {
     --joycon-left: #00c5e2;
@@ -118,7 +118,7 @@
       #000;
   }
 
-  /* --- SCREEN --- */
+  /* --- SCREEN & BOOT SEQUENCE --- */
   .screen {
     top: 50%;
     left: 50%;
@@ -137,6 +137,121 @@
     background: #020202 !important;
     box-shadow: inset 0 0 20px #000 !important;
   }
+
+  .boot-sequence {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: black;
+    font-family: 'Play', sans-serif;
+    transform-style: preserve-3d;
+    perspective: 0.25em; 
+    overflow: hidden;
+    opacity: 0; 
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 100;
+  }
+
+  .screen.is-booting .boot-sequence {
+    opacity: 1;
+  }
+
+  .boot-inner {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex; flex-wrap: wrap; align-content: flex-start;
+    padding: 1%; padding-top: 10%;
+    transform-style: preserve-3d;
+  }
+
+  .screen.is-booting .boot-inner {
+    animation: boot-enter 8s cubic-bezier(1,0,.4,1) forwards;
+  }
+
+  .boxes-wrapper {
+    display: flex; flex-wrap: wrap; width: 100%; height: 100%;
+    transform-style: preserve-3d;
+  }
+
+  .box-container {
+    width: calc(100% / 14);
+    padding: 1%;
+    position: relative;
+    transform-style: preserve-3d;
+  }
+
+  .box {
+    width: 100%; padding-top: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+  }
+
+  .box .top, .box .bottom, .box .left, .box .right {
+    position: absolute; 
+    width: 100%; height: 100%;
+    box-shadow: inset 0 0 0.005em rgba(0, 255, 255, 0.07);
+  }
+
+  .box .top { height: 0.15em; bottom: 100%; left: 0; transform-origin: 100% 100%; transform: rotateX(90deg); background: linear-gradient(to top, rgba(155,166,198,.9), rgba(0,0,0,0)); }
+  .box .bottom { height: 0.15em; top: 100%; left: 0; transform-origin: 0% 0%; transform: rotateX(-90deg); background: linear-gradient(to bottom, rgba(99,108,148,.9), rgba(0,0,0,0)); }
+  .box .left { width: 0.15em; top: 0; right: 100%; transform-origin: 100% 100%; transform: rotateY(-90deg); background: linear-gradient(to left, rgba(125,136,178,.9), rgba(0,0,0,0)); }
+  .box .right { width: 0.15em; top: 0; left: 100%; transform-origin: 0% 0%; transform: rotateY(90deg); background: linear-gradient(to right, rgba(125,136,178,.9), rgba(0,0,0,0)); }
+
+  .boot-content {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    text-align: center; color: white; z-index: 200;
+  }
+  .screen.is-booting .boot-content {
+    animation: boot-content-bg 8s forwards;
+  }
+  .boot-content p {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0;
+  }
+  .boot-content .copyright {
+    font-size: 0.015em; text-shadow: #000 0px 0px 2px; opacity: 0;
+  }
+  .screen.is-booting .boot-content .copyright {
+    animation: boot-copyright 8s linear forwards;
+  }
+  .boot-content .branding { font-size: 0.04em; opacity: 0; }
+  .screen.is-booting .boot-content .branding {
+    animation: boot-branding 8s cubic-bezier(0,.74,.46,1) forwards;
+  }
+  .boot-content .branding .is-small { font-size: .3em; vertical-align: super; }
+
+  .particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 200; }
+  .particles span { display: block; width: 1px; height: 1px; background: white; position: absolute; border-radius: 50%; opacity: 0; }
+  .particles span:nth-child(1) { left: 70%; top: 70%; box-shadow: 0 0 0.01em 0.005em rgba(255,0,0,.8); }
+  .particles span:nth-child(2) { left: 70%; top: 50%; box-shadow: 0 0 0.01em 0.005em rgba(0,255,0,.8); }
+  .particles span:nth-child(3) { left: 15%; top: 75%; box-shadow: 0 0 0.01em 0.005em rgba(0,0,255,.8); }
+  
+  .screen.is-booting .particles span:nth-child(1) { animation: p1 4s cubic-bezier(0,.74,.46,1) infinite; }
+  .screen.is-booting .particles span:nth-child(2) { animation: p2 4s cubic-bezier(0,.74,.46,1) infinite; }
+  .screen.is-booting .particles span:nth-child(3) { animation: p3 4s cubic-bezier(0,.74,.46,1) infinite; }
+
+  @keyframes boot-enter {
+    0% { transform: rotate(-20deg); }
+    60%, 100% { transform: rotate(100deg) scale(4); }
+  }
+  @keyframes boot-copyright {
+    0%, 5% { opacity: 0; }
+    10%, 35% { opacity: 1; }
+    40%, 100% { opacity: 0; }
+  }
+  @keyframes boot-content-bg {
+    0% { background-color: black; }
+    5%, 43% { background: transparent; }
+    48%, 100% { background-color: black; }
+  }
+  @keyframes boot-branding {
+    0%, 65% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.5); }
+    68%, 93% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1); }
+    96%, 100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.5); }
+  }
+  @keyframes p1 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(-0.15em, -0.1em); opacity:0;} }
+  @keyframes p2 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(-0.2em, 0.05em); opacity:0;} }
+  @keyframes p3 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(0.25em, -0.1em); opacity:0;} }
 
   /* --- CONTROLLERS --- */
   .controller {
@@ -523,9 +638,7 @@
   }
 
   /* ============================================================
-     GBA OS (from tested.html) — wrapped in #os-scale-wrapper
-     All dimensions in this section are in the OS's native 441×294
-     coordinate space. The wrapper scales them to fit the Switch screen.
+     GBA OS — wrapped in #os-scale-wrapper
      ============================================================ */
   #os-scale-wrapper {
     position: absolute;
@@ -538,10 +651,6 @@
     overflow: hidden;
   }
 
-  /* Override article * { position: absolute } for OS flexbox children
-     so they flow correctly inside their flex parents instead of stacking at 0,0 */
-  #os-scale-wrapper #boot-gmx,
-  #os-scale-wrapper #boot-reg,
   #os-scale-wrapper #xmb-clock,
   #os-scale-wrapper .battery-fill,
   #os-scale-wrapper .xmb-col,
@@ -556,44 +665,6 @@
   #os-scale-wrapper #game-canvas {
     position: relative;
   }
-
-  /* Boot screen white flash state */
-  .screen.boot-white {
-    background: #ffffff !important;
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.2) !important;
-  }
-
-  #boot-logo-container {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    opacity: 0;
-    z-index: 20;
-  }
-  #boot-gmx {
-    font-size: 3rem;
-    font-weight: 900;
-    font-style: italic;
-    letter-spacing: -2px;
-    background: linear-gradient(to bottom, #1e1e1e 0%, #444 50%, #1e1e1e 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    position: relative;
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
-  }
-  #boot-reg { font-size: 0.8rem; font-weight: bold; color: #444; margin-top: 8px; margin-left: 4px; opacity: 0; }
-  #boot-gmx::after { content: ''; position: absolute; top: 0; left: -150%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.9), transparent); transform: skewX(-20deg); pointer-events: none; }
-  @keyframes gbaDrop { 0% { transform: translateY(-80px) scale(1.1); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
-  @keyframes glintSweep { 0% { left: -150%; } 100% { left: 200%; } }
-  @keyframes fadeIn { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
-  @keyframes fadeOut { 100% { opacity: 0; } }
-  .do-drop { animation: gbaDrop 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-  .do-glint::after { animation: glintSweep 0.5s ease-in-out forwards; }
-  .do-fade-in { animation: fadeIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-  .do-fade-out { animation: fadeOut 0.5s ease forwards; }
 
   .xmb-bg {
     position: absolute;
@@ -806,11 +877,23 @@
         <button class="volume"></button>
         <div class="frame"></div>
         <div class="screen" id="screen">
+          
+          <!-- NEW 3D BOOT SEQUENCE -->
+          <div class="boot-sequence">
+            <div class="boot-content">
+              <p class="copyright">Gamex computer entertainment</p>
+              <p class="branding">CSD<span class="is-small">®</span> &nbsp; 1</p>
+            </div>
+            <div class="boot-inner">
+              <div class="particles">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="boxes-wrapper"></div>
+            </div>
+          </div>
+
           <!-- GBA OS content, scaled to fit -->
           <div id="os-scale-wrapper">
-            <div id="boot-logo-container">
-              <div id="boot-gmx">GMX</div><div id="boot-reg">&reg;</div>
-            </div>
             <div class="xmb-bg">
               <div id="game-bg-layer" class="xmb-game-bg"></div>
               <div class="wave-line"></div><div class="wave-line"></div>
@@ -889,9 +972,38 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
 
+      // 0. Dynamic 3D Boot Screen Generator
+      const boxesWrapper = document.querySelector('.boxes-wrapper');
+      if (boxesWrapper) {
+        const hiddenBoxes = [41, 40, 47, 48, 46, 95, 94, 102, 101];
+        for (let i = 1; i <= 112; i++) {
+          const container = document.createElement('div');
+          container.className = 'box-container';
+          if (hiddenBoxes.includes(i)) container.style.visibility = 'hidden';
+
+          const box = document.createElement('div');
+          box.className = 'box';
+
+          const zDepth = (Math.random() * 0.15) - 0.15;
+          box.style.transform = `translateZ(${zDepth}em)`;
+
+          const darken = 1 - (Math.random() * 0.4);
+          box.style.backgroundColor = `rgba(${136 * darken}, ${147 * darken}, ${184 * darken}, 0.95)`;
+
+          box.innerHTML = `
+            <div class="top"></div>
+            <div class="bottom"></div>
+            <div class="left"></div>
+            <div class="right"></div>
+          `;
+          
+          container.appendChild(box);
+          boxesWrapper.appendChild(container);
+        }
+      }
+
       // 1. Standard Button Haptics (Switch shell)
-      // 1. Standard Button Haptics (Switch shell)
-const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.home):not(.bumper):not(.popup-btn)');
+      const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.home):not(.bumper):not(.popup-btn)');
       const handlePress = (e, btn) => {
         e.preventDefault();
         btn.classList.add('active');
@@ -910,7 +1022,7 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
         btn.addEventListener('mouseleave', (e) => handleRelease(e, btn));
       });
 
-      // 2. Audio Tracking Engine (from index-2.html)
+      // 2. Audio Tracking Engine
       let globalCtx = null;
       let activeOscillators = [];
       let currentMasterGain = null;
@@ -1009,7 +1121,6 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
       }
 
       // 3. Joystick Drag Physics + Directional Input
-     // 3. Joystick Drag Physics + Directional Input
       const mushrooms = document.querySelectorAll('.mushroom');
       const maxDragRadius = 12;
       const STICK_THRESHOLD = 5;
@@ -1619,7 +1730,6 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
 
       function togglePower(e) {
         if (e) e.preventDefault();
-        var bootCont = document.getElementById('boot-logo-container');
         isPoweredOn = !isPoweredOn; isOSReady = false;
         bootTimers.forEach(clearTimeout); bootTimers = [];
 
@@ -1628,23 +1738,25 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
 
         if (isPoweredOn) {
           screen.classList.remove('power-off');
-          screen.classList.add('boot-white');
+          
+          // Trigger the new boot sequence animation
+          screen.classList.remove('is-booting');
+          void screen.offsetWidth; // Force CSS reflow to restart animation
+          screen.classList.add('is-booting');
+          
           playBootSound();
-          bootTimers.push(setTimeout(function() { bootCont.classList.add('do-drop'); }, 200));
-          bootTimers.push(setTimeout(function() { document.getElementById('boot-gmx').classList.add('do-glint'); document.getElementById('boot-reg').classList.add('do-fade-in'); }, 1000));
-          bootTimers.push(setTimeout(function() { bootCont.classList.add('do-fade-out'); }, 3000));
+          
+          // Wait 8.5s for 3D animation to complete, then load OS
           bootTimers.push(setTimeout(function() {
             buildXMB().then(function() {
-              screen.classList.remove('boot-white'); screen.classList.add('os-ready');
+              screen.classList.remove('is-booting');
+              screen.classList.add('os-ready');
               isOSReady = true; colIdx = 1; rowIdx = 0; updateXMB();
             });
-          }, 3500));
+          }, 8500));
         } else {
           screen.classList.add('power-off');
-          screen.className = 'screen power-off';
-          bootCont.classList.remove('do-drop','do-fade-out');
-          document.getElementById('boot-gmx').classList.remove('do-glint');
-          document.getElementById('boot-reg').classList.remove('do-fade-in');
+          screen.className = 'screen power-off'; // Resets os-ready and is-booting
           document.getElementById('sys-msg').style.opacity = 0;
           stopEmu(); closePopup();
           stopBootSound();
@@ -1683,8 +1795,6 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
       updateClock(); setInterval(updateClock, 30000);
 
       // Scale the OS content to fill the Switch screen cavity completely.
-      // The wrapper's aspect ratio is adjusted to match the screen's so
-      // there are no black gaps — content fills edge to edge.
       function applyOsScale() {
         var sw = document.querySelector('.screen');
         if (!sw) return;
@@ -1708,7 +1818,6 @@ const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.ho
       window.addEventListener('orientationchange', function() {
         setTimeout(applyOsScale, 200);
       });
-      // Apply after a slight delay to ensure the Switch shell has rendered
       setTimeout(applyOsScale, 100);
       setTimeout(applyOsScale, 500);
 
