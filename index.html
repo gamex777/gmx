@@ -233,29 +233,6 @@
   .screen.is-booting .particles span:nth-child(2) { animation: p2 4s cubic-bezier(0,.74,.46,1) infinite; }
   .screen.is-booting .particles span:nth-child(3) { animation: p3 4s cubic-bezier(0,.74,.46,1) infinite; }
 
-  @keyframes boot-enter {
-    0% { transform: rotate(-20deg); }
-    60%, 100% { transform: rotate(100deg) scale(4); }
-  }
-  @keyframes boot-copyright {
-    0%, 5% { opacity: 0; }
-    10%, 35% { opacity: 1; }
-    40%, 100% { opacity: 0; }
-  }
-  @keyframes boot-content-bg {
-    0% { background-color: black; }
-    5%, 43% { background: transparent; }
-    48%, 100% { background-color: black; }
-  }
-  @keyframes boot-branding {
-    0%, 65% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.5); }
-    68%, 93% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1); }
-    96%, 100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.5); }
-  }
-  @keyframes p1 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(-0.15em, -0.1em); opacity:0;} }
-  @keyframes p2 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(-0.2em, 0.05em); opacity:0;} }
-  @keyframes p3 { 0% {opacity:0; transform:none;} 20%, 80% {opacity:1;} 100% {transform: translate(0.25em, -0.1em); opacity:0;} }
-
   /* --- VOLUME OSD --- */
   #volume-osd {
     position: absolute;
@@ -1273,11 +1250,12 @@
           this.readFrame = 0; 
           this.volume = currentVol;
         }
-        initialize(channels, sampleRate, bufferLimit) {
+
+        initialize(channels, sampleRate, bufferLimit, heartBeatCallback, postHeartBeatCallback, errorCallback) {
           if (!this.ctx) return;
           try {
             this.scriptNode = this.ctx.createScriptProcessor(4096, 0, channels);
-            const ratio = 32768 / this.ctx.sampleRate; 
+            const ratio = sampleRate / this.ctx.sampleRate; // Resample GBA 32kHz to iOS 44.1/48kHz
             
             this.scriptNode.onaudioprocess = (e) => {
               const left = e.outputBuffer.getChannelData(0);
@@ -1304,20 +1282,37 @@
             this.scriptNode.connect(this.ctx.destination);
           } catch(err) { console.error("Audio init error", err); }
         }
+
+        // Catches the registration hook so the core doesn't crash
+        register() {} 
+
         setVolume(vol) { this.volume = vol; }
-        getRemainingPayloads() {
+
+        // Core calls this to check if it needs to throttle execution
+        remainingBuffer() {
           let intRead = Math.floor(this.readFrame);
           let remain = this.writeFrame - intRead;
           if (remain < 0) remain += this.bufferFrames;
           return remain;
         }
-        push(array, startPosition, amount) {
-          for (let i = 0; i < amount; i += 2) {
-            this.bufferL[this.writeFrame] = array[startPosition + i];
-            this.bufferR[this.writeFrame] = array[startPosition + i + 1];
+
+        // Adapted to handle Start and End indexes instead of total amount
+        push(array, start, end) {
+          let length = Math.min(array.length, end);
+          for (let i = start; i < length; i += 2) {
+            this.bufferL[this.writeFrame] = array[i];
+            this.bufferR[this.writeFrame] = array[i + 1];
             this.writeFrame = (this.writeFrame + 1) % this.bufferFrames;
           }
         }
+
+        pushDeferred(array, start, end) {
+          this.push(array, start, end);
+        }
+
+        // Dummy methods to catch other internal state requests
+        flush() {}
+        setBufferSpace(amount) {}
       }
 
       // 3. Joystick Drag Physics + Directional Input
