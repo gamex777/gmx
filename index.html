@@ -2107,9 +2107,14 @@
       }
 
       window.addEventListener('keydown', function(e) {
+        // Speed control
         if (e.key === '4') setSpeedIdx(speedIdx + 1);
         else if (e.key === '3') setSpeedIdx(speedIdx - 1);
         else if (e.key === '5') setSpeedIdx(2);
+        
+        // Volume control (8 = Up, 7 = Down)
+        else if (e.key === '8' || e.keyCode === 56) changeVolume(0.1);
+        else if (e.key === '7' || e.keyCode === 55) changeVolume(-0.1);
       });
 
     });
