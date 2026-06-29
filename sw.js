@@ -1,28 +1,26 @@
-const CACHE_NAME = 'gmx-core-v1';
+const CACHE_NAME = 'gmx-core-v3'; // Bumped to v3 to force iPhone to clear the old setup
 
-// The essential files required to boot the OS
+// Static assets we need right away to open the shell app shell
 const CORE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  // If you move your CSS/JS to separate files later, add them here:
-  // '/style.css',
-  // '/engine.js'
+  '/gmx/',
+  '/gmx/index.html',
+  '/gmx/manifest.json',
+  '/gmx/icon-192.png',
+  '/gmx/icon-512.png'
 ];
 
-// 1. Install Event: Cache the core assets
+// 1. Install Event: Cache the initial UI assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[GMX SW] Caching core assets');
+      console.log('[GMX SW] Caching core static assets');
       return cache.addAll(CORE_ASSETS);
     })
   );
-  // Force the waiting service worker to become the active service worker
   self.skipWaiting();
 });
 
-// 2. Activate Event: Clean up old caches if we update the version number
+// 2. Activate Event: Clean up older cache folders
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -35,6 +33,38 @@ self.addEventListener('activate', (event) => {
         })
       );
     })
+  );
+  self.clients.claim();
+});
+
+// 3. Fetch Event: Cache-first, then Network with Dynamic Caching
+self.addEventListener('fetch', (event) => {
+  // Only intercept standard GET requests
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      // If the file (local asset OR external CDN script) is already cached, use it instantly!
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      // If it isn't cached, go pull it from the web
+      return fetch(event.request).then((networkResponse) => {
+        // If we get a valid file back (or an opaque cross-origin script with status 0), save it!
+        if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      }).catch((err) => {
+        console.error('[GMX SW] Network fetch failed resource unavailable offline:', err);
+      });
+    })
+  );
+});    })
   );
   self.clients.claim();
 });
