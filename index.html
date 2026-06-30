@@ -86,6 +86,28 @@
     box-sizing: border-box;
   }
 
+  /* --- AR / CAMERA BACKGROUND --- */
+  #camera-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+
+  body.camera-active {
+    background-color: transparent;
+  }
+
+  body.camera-active #camera-bg {
+    opacity: 1;
+  }
+
   /* ============================================================
      SWITCH SHELL
      ============================================================ */
@@ -940,7 +962,7 @@
 </style>
 </head>
 <body>
-
+  <video id="camera-bg" autoplay playsinline muted></video>
   <main>
     <article aria-label="Drawing of a Nintendo Switch">
       <section class="controller left">
@@ -2037,8 +2059,8 @@
         'switch-right': 'btn-right',
         'switch-a': 'btn-a',
         'switch-b': 'btn-b',
-        'switch-x': 'btn-a',   
-        'switch-y': 'btn-b',   
+        'switch-x': 'btn-a',  
+        'switch-y': 'btn-b',  
         'switch-l': 'btn-l',
         'switch-r': 'btn-r',
         'switch-minus': 'btn-select',
@@ -2185,6 +2207,53 @@
         homeBtn.classList.remove('active');
       }, { passive: false });
       homeBtn.addEventListener('click', togglePower);
+
+      // ===================================================================
+      // AR / Camera Passthrough (Capture Button)
+      // ===================================================================
+      const captureBtn = document.querySelector('.menu');
+      const cameraBg = document.getElementById('camera-bg');
+      const camSysMsg = document.getElementById('sys-msg');
+      let cameraStream = null;
+      let isCameraActive = false;
+
+      captureBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        if (isCameraActive) {
+          if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+          }
+          cameraBg.srcObject = null;
+          document.body.classList.remove('camera-active');
+          isCameraActive = false;
+        } else {
+          try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ 
+              video: { 
+                facingMode: 'environment',
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                frameRate: { ideal: 60 } 
+              },
+              audio: false
+            });
+            
+            cameraBg.srcObject = cameraStream;
+            document.body.classList.add('camera-active');
+            isCameraActive = true;
+            
+          } catch (err) {
+            console.error("Camera access failed:", err);
+            if (camSysMsg) {
+              camSysMsg.innerText = 'CAMERA ACCESS DENIED';
+              camSysMsg.style.opacity = 1;
+              setTimeout(() => camSysMsg.style.opacity = 0, 3000);
+            }
+          }
+        }
+      });
 
       // ===================================================================
       // Clock + Scale
