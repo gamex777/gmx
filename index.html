@@ -11,55 +11,62 @@
 <meta name="apple-mobile-web-app-title" content="GMX">
 <link rel="apple-touch-icon" href="icon-192.png">
 
-<!-- STRICT SYNCHRONOUS SCRIPT LOADING (Legacy Audio Scrubbed) -->
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/includes/TypedArrayShim.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Cartridge.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/DMA.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Emulator.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Graphics.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/RunLoop.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Memory.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/IRQ.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/JoyPad.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Serial.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Sound.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Timer.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Wait.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Saves.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/FIFO.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel1.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel2.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel3.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel4.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU/ARM.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU/THUMB.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU/CPSR.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Renderer.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/RendererShim.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/RendererProxy.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/BGTEXT.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/BG2FrameBuffer.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/BGMatrix.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/AffineBG.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/ColorEffects.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Mosaic.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/OBJ.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/OBJWindow.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Window.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Compositor.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA0.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA1.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA2.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA3.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/SaveDeterminer.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/SRAM.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/FLASH.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/EEPROM.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/GPIO.js"></script>
-
-<!-- Only retaining GfxGlueCode for Graphics Rendering -->
-<script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/GfxGlueCode.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/includes/TypedArrayShim.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Cartridge.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/DMA.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Emulator.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Graphics.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/RunLoop.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Memory.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/IRQ.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/JoyPad.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Serial.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Sound.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Timer.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Wait.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Saves.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/FIFO.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel1.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel2.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel3.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel4.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU/ARM.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU/THUMB.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU/CPSR.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Renderer.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/RendererShim.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/RendererProxy.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/BGTEXT.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/BG2FrameBuffer.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/BGMatrix.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/AffineBG.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/ColorEffects.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Mosaic.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/OBJ.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/OBJWindow.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Window.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Compositor.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA0.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA1.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA2.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA3.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/SaveDeterminer.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/SRAM.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/FLASH.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/EEPROM.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/GPIO.js"></script>
+        <!--Add your webpage scripts below-->
+        <!-- XAudioJS dependencies removed: Replaced with Native Web Audio API -->
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/base64.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/CoreGlueCode.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/GfxGlueCode.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/GUIGlueCode.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/JoyPadGlueCode.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/ROMLoadGlueCode.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/SavesGlueCode.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/WorkerGfxGlueCode.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/WorkerGlueCode.js"></script>
 
 <style>
   @import url('https://fonts.googleapis.com/css?family=Play&display=swap');
@@ -1113,8 +1120,7 @@
       </section>
     </article>
   </main>
-
-  <script>
+<script>
     document.addEventListener('DOMContentLoaded', () => {
 
       // SAFE LOCALSTORAGE WRAPPERS
@@ -1194,6 +1200,9 @@
         btn.addEventListener('mouseleave', (e) => handleRelease(e, btn));
       });
 
+      // ===================================================================
+      // GLOBAL BOOT SOUND CONTEXT (Separate from Emulator to prevent lag)
+      // ===================================================================
       const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
       let globalCtx = null;
       let activeOscillators = [];
@@ -1208,9 +1217,6 @@
         }
         return globalCtx;
       }
-
-      window.AudioContext = function() { return getUnlockedContext(); };
-      window.webkitAudioContext = function() { return getUnlockedContext(); };
 
       const initAudioContext = () => {
         const ctx = getUnlockedContext();
@@ -1305,6 +1311,116 @@
         playString(466.16, now, 4.5, 0.12);
       }
 
+      // ===================================================================
+      // BULLETPROOF NATIVE AUDIO ENGINE (Completely Replaces XAudioJS)
+      // ===================================================================
+      class AudioGlue {
+        constructor() {
+          this.ctx = new NativeAudioContext();
+          this.volume = 1.0;
+          this.scriptNode = null;
+          this.dummyOsc = null;
+          
+          this.bufferFrames = 65536; // Large robust ring buffer to prevent popping
+          this.bufferL = new Float32Array(this.bufferFrames);
+          this.bufferR = new Float32Array(this.bufferFrames);
+          this.writePos = 0;
+          this.readPos = 0;
+        }
+
+        // Must exactly match IodineGBA's callback signature
+        initialize(channelCount, sampleRate, bufferLimit, heartBeatCallback, postHeartBeatCallback, errorCallback) {
+          if (this.ctx.state === 'suspended') this.ctx.resume();
+          
+          this.sampleRate = sampleRate; // GBA operates at approx ~32.7kHz
+          this.heartBeatCallback = heartBeatCallback;
+          this.postHeartBeatCallback = postHeartBeatCallback;
+
+          this.scriptNode = this.ctx.createScriptProcessor(2048, 0, 2);
+          
+          // Audio upsampler ratio (e.g. 32768hz -> 48000hz browser context)
+          const ratio = this.sampleRate / this.ctx.sampleRate; 
+          
+          this.scriptNode.onaudioprocess = (e) => {
+            // Signal IodineGBA to generate a fresh batch of audio frames
+            if (this.heartBeatCallback) this.heartBeatCallback();
+            
+            const outL = e.outputBuffer.getChannelData(0);
+            const outR = e.outputBuffer.getChannelData(1);
+            const frames = outL.length;
+            
+            for (let i = 0; i < frames; i++) {
+              let readIdx = Math.floor(this.readPos);
+              let nextIdx = (readIdx + 1) % this.bufferFrames;
+              let fraction = this.readPos - readIdx;
+              
+              let available = this.writePos - readIdx;
+              if (available < 0) available += this.bufferFrames;
+              
+              if (available > 1) {
+                // Linear Interpolation for pristine sound
+                outL[i] = (this.bufferL[readIdx] + fraction * (this.bufferL[nextIdx] - this.bufferL[readIdx])) * this.volume;
+                outR[i] = (this.bufferR[readIdx] + fraction * (this.bufferR[nextIdx] - this.bufferR[readIdx])) * this.volume;
+                
+                this.readPos += ratio;
+                if (this.readPos >= this.bufferFrames) {
+                  this.readPos -= this.bufferFrames;
+                }
+              } else {
+                outL[i] = 0; 
+                outR[i] = 0;
+              }
+            }
+            if (this.postHeartBeatCallback) this.postHeartBeatCallback();
+          };
+
+          this.scriptNode.connect(this.ctx.destination);
+
+          // Silent oscillator prevents mobile Safari from suspending the context mid-game
+          this.dummyOsc = this.ctx.createOscillator();
+          const dummyGain = this.ctx.createGain();
+          dummyGain.gain.value = 0;
+          this.dummyOsc.connect(dummyGain);
+          dummyGain.connect(this.scriptNode);
+          this.dummyOsc.start(0);
+        }
+
+        setVolume(vol) { this.volume = vol; }
+
+        remainingBuffer() {
+          let readIdx = Math.floor(this.readPos);
+          let remain = this.writePos - readIdx;
+          if (remain < 0) remain += this.bufferFrames;
+          return remain;
+        }
+
+        push(buffer, start, end) {
+          // Iodine gives us interleaved stereo (Left, Right, Left, Right)
+          for (let i = start; i < end; i += 2) {
+            this.bufferL[this.writePos] = buffer[i];
+            this.bufferR[this.writePos] = buffer[i + 1];
+            this.writePos = (this.writePos + 1) % this.bufferFrames;
+          }
+        }
+        
+        pushDeferred(buffer, start, end) { this.push(buffer, start, end); }
+        flush() {}
+        register() {}
+        unregister() {
+          if (this.scriptNode) {
+             this.scriptNode.disconnect();
+             this.scriptNode = null;
+          }
+        }
+        setBufferSpace(bufferAmount) {}
+
+        resume() {
+          if (this.ctx && this.ctx.state === 'suspended') {
+              this.ctx.resume();
+          }
+        }
+      }
+
       // --- CUSTOM AUDIO GLUE & VOLUME LOGIC ---
       let currentVol = 1.0;
       let volTimeout;
@@ -1346,80 +1462,6 @@
       document.querySelector('.vol-hitbox.up').addEventListener('touchstart', handleVolUp, { passive: false });
       document.querySelector('.vol-hitbox.up').addEventListener('mousedown', handleVolUp);
 
-      // ===================================================================
-      // BULLETPROOF NATIVE AUDIO ENGINE (Replaces failing XAudioJS)
-      // ===================================================================
-      class AudioGlue {
-        constructor(ctx) {
-          this.ctx = ctx;
-          this.scriptNode = null;
-          this.bufferFrames = 32768; 
-          this.bufferL = new Float32Array(this.bufferFrames);
-          this.bufferR = new Float32Array(this.bufferFrames);
-          this.writeFrame = 0;
-          this.readFrame = 0; 
-          this.volume = currentVol;
-          this.dummyOsc = null;
-        }
-        initialize(channels, sampleRate, bufferLimit) {
-          if (!this.ctx) return;
-          try {
-            // Channel set to 1 to force iOS to keep processing audio
-            this.scriptNode = this.ctx.createScriptProcessor(4096, 1, channels);
-            const ratio = sampleRate / this.ctx.sampleRate; 
-            
-            this.scriptNode.onaudioprocess = (e) => {
-              const left = e.outputBuffer.getChannelData(0);
-              const right = e.outputBuffer.getChannelData(1);
-              const outLen = left.length;
-              
-              for (let i = 0; i < outLen; i++) {
-                let intRead = Math.floor(this.readFrame);
-                let available = this.writeFrame - intRead;
-                if (available < 0) available += this.bufferFrames;
-                
-                if (available > 0) {
-                  left[i] = this.bufferL[intRead] * this.volume;
-                  if (channels > 1) {
-                      right[i] = this.bufferR[intRead] * this.volume;
-                  }
-                  this.readFrame += ratio;
-                  if (this.readFrame >= this.bufferFrames) {
-                    this.readFrame -= this.bufferFrames;
-                  }
-                } else {
-                  left[i] = 0; 
-                  if (channels > 1) right[i] = 0;
-                }
-              }
-            };
-            this.scriptNode.connect(this.ctx.destination);
-
-            // Create a silent dummy oscillator to ensure mobile Safari never suspends
-            this.dummyOsc = this.ctx.createOscillator();
-            const dummyGain = this.ctx.createGain();
-            dummyGain.gain.value = 0;
-            this.dummyOsc.connect(dummyGain);
-            dummyGain.connect(this.scriptNode);
-            this.dummyOsc.start(0);
-
-          } catch(err) { console.error("Audio init error", err); }
-        }
-        setVolume(vol) { this.volume = vol; }
-        getRemainingPayloads() {
-          let intRead = Math.floor(this.readFrame);
-          let remain = this.writeFrame - intRead;
-          if (remain < 0) remain += this.bufferFrames;
-          return remain;
-        }
-        push(array, startPosition, amount) {
-          for (let i = 0; i < amount; i += 2) {
-            this.bufferL[this.writeFrame] = array[startPosition + i];
-            this.bufferR[this.writeFrame] = array[startPosition + i + 1];
-            this.writeFrame = (this.writeFrame + 1) % this.bufferFrames;
-          }
-        }
-      }
 
       // 3. Joystick Drag Physics + Directional Input
       const mushrooms = document.querySelectorAll('.mushroom');
@@ -1523,7 +1565,7 @@
       });
 
       // ===================================================================
-      // GBA Emulator
+      // GBA Emulator Configuration
       // ===================================================================
       var GBA_BTN = {
         'btn-a':0, 'btn-b':1, 'btn-select':2, 'btn-start':3,
@@ -1556,6 +1598,10 @@
       };
 
       var emu = { iodine: null, blitter: null, audio: null, rafId: null, running: false };
+      
+      // Instantiate your native audio driver immediately!
+      emu.audio = new AudioGlue();
+      
       var scriptsLoaded = false;
       var emuSpeed = 1.0;
       var TICK_MS = 16;
@@ -1607,14 +1653,6 @@
         emu.running = false;
         if (emu.rafId) { cancelAnimationFrame(emu.rafId); emu.rafId = null; }
         if (emu.iodine) { try { emu.iodine.pause(); } catch(e) {} emu.iodine = null; }
-        
-        if (emu.audio && emu.audio.scriptNode) {
-          try { 
-            emu.audio.scriptNode.disconnect(); 
-            if (emu.audio.dummyOsc) emu.audio.dummyOsc.stop();
-          } catch(e) {}
-          emu.audio = null;
-        }
 
         emu.blitter = null;
         var canvas = document.getElementById('game-canvas');
@@ -1647,6 +1685,11 @@
       function startIodine(biosData, romData) {
         try {
           emu.iodine = new GameBoyAdvanceEmulator();
+          
+          // THE MISSING LINK: Actually hook up the engine to the emulator pipe.
+          emu.iodine.attachAudioHandler(emu.audio);
+          emu.iodine.enableAudio();
+
           emu.iodine.attachPlayStatusHandler(function() {});
           emu.iodine.attachSpeedHandler(function() {});
           emu.iodine.attachBIOS(new Uint8Array(biosData));
@@ -1655,11 +1698,6 @@
           emu.blitter = new GfxGlueCode(240, 160);
           emu.blitter.attachCanvas(document.getElementById('game-canvas'));
           emu.iodine.attachGraphicsFrameHandler(emu.blitter);
-
-          // FINALLY FIXED: Natively initializes Web Audio without XAudioJS/Flash
-          emu.audio = new AudioGlue(globalCtx);
-          emu.iodine.attachAudioHandler(emu.audio);
-          emu.audio.setVolume(currentVol);
 
           applyEmuSpeed();
           emu.running = true;
@@ -1849,9 +1887,9 @@
       function triggerA() {
         if (!isOSReady || popupVisible()) return;
         
-        if (globalCtx && globalCtx.state === 'suspended') {
-          globalCtx.resume();
-        }
+        // --- CRITICAL AUDIO AUTOPLAY UNLOCKS ---
+        if (globalCtx && globalCtx.state === 'suspended') globalCtx.resume();
+        if (emu.audio) emu.audio.resume();
 
         var sysMsg = document.getElementById('sys-msg');
         
