@@ -344,6 +344,8 @@
     left: 5%;
     background: rgba(0,0,0,0.75);
     background-color: rgba(0,0,0,0.75);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
     border-radius: 15px;
     padding: 8px 15px;
     display: flex;
@@ -383,7 +385,7 @@
   .controller::before {
     content: "";
     width: 0.00275em;
-    aspect-ratio: 1;
+    height: 0.00275em; /* iOS 12 Fix */
     background: #393537;
     box-shadow: inset 0.0001em 0.00075em 0.0004em #fff3;
     left: 100%;
@@ -515,7 +517,7 @@
   .plus::after {
     content: "";
     width: 35%;
-    aspect-ratio:1 ;
+    height: 0.00824em; /* iOS 12 Fix */
     background:
       radial-gradient(circle at 0 0, #834 20%, #0000 20% 35%, var(--c) 0) 0 0 / 50% 50%,
       conic-gradient(at 0 0, #000, #fff) 1% 1% / 40% 40%,
@@ -535,7 +537,7 @@
   /* --- JOYSTICK PHYSICS --- */
   .mushroom {
     width: 47%;
-    aspect-ratio: 1;
+    height: 0.0651em; /* iOS 12 Fix */
     border: 0.001em solid var(--color-shadow);
     top: 17.5%;
     left: 30%;
@@ -563,7 +565,7 @@
   .mushroom::before {
     content: "";
     width: 80%;
-    aspect-ratio: 1;
+    height: 80%; /* iOS 12 Fix */
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -581,7 +583,7 @@
   .mushroom::after {
     content: "";
     width: 95%;
-    aspect-ratio: 1;
+    height: 95%; /* iOS 12 Fix */
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -605,7 +607,7 @@
     display: grid;
     place-items: center;
     width: 23%;
-    aspect-ratio: 1;
+    height: 0.03185em; /* iOS 12 Fix */
     border: 0.0007em solid var(--color-shadow);
     background:
       linear-gradient(#fff2, #fff0),
@@ -629,12 +631,13 @@
   .arrow::after {
     content: "";
     width: 40%;
+    height: 40%; /* iOS 12 Fix */
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    aspect-ratio: 1;
     border-radius: 50%;
     background: #252525;
+    -webkit-clip-path: polygon(52% -2%, 100% 80%, 0 80%, 48% -2%);
     clip-path: polygon(52% -2%, 100% 80%, 0 80%, 48% -2%);
   }
 
@@ -667,7 +670,7 @@
 
   .menu {
     width: 19.35%;
-    aspect-ratio: 1;
+    height: 0.0268em; /* iOS 12 Fix */
     border: 0.0009em solid var(--color-shadow);
     top: 84.75%;
     left: 60.5%;
@@ -681,7 +684,7 @@
   .menu::before {
     content: "";
     width: 67%;
-    aspect-ratio: 1;
+    height: 67%; /* iOS 12 Fix */
     background: #33393c;
     left: 50%;
     top: 50%;
@@ -699,6 +702,7 @@
     left: 13.3%;
     top: -0.6%;
     border-radius: 0.0005em 0.0005em 0 0;
+    -webkit-clip-path: polygon(-20% -100%, 32% -100%, 32% 0, 33% 35%, 66% 35%, 67% 0%, 67% -100%, 110% -100%, 110% 120%, -20% 120%);
     clip-path: polygon(-20% -100%, 32% -100%, 32% 0, 33% 35%, 66% 35%, 67% 0%, 67% -100%, 110% -100%, 110% 120%, -20% 120%);
     z-index: 10;
     transition: filter 0.1s ease;
@@ -710,7 +714,7 @@
     display: grid;
     place-items: center;
     width: 25%;
-    aspect-ratio: 1;
+    height: 0.03463em; /* iOS 12 Fix */
     border: 0.0007em solid var(--color-shadow);
     background:
       linear-gradient(#0001, #0005),
@@ -898,6 +902,7 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
     image-rendering: pixelated;
     display: block;
     will-change: contents;
@@ -912,6 +917,7 @@
     display: none;
     justify-content: center;
     align-items: center;
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
   }
   #install-popup.visible { display: flex; }
