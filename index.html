@@ -57,7 +57,6 @@
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/EEPROM.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/GPIO.js"></script>
         <!--Add your webpage scripts below-->
-        <!-- XAudioJS dependencies removed: Replaced with Native Web Audio API -->
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/base64.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/CoreGlueCode.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/GfxGlueCode.js"></script>
@@ -81,7 +80,9 @@
   }
 
   body {
+    height: 100vh;
     height: 100dvh;
+    width: 100vw;
     width: 100dvw;
     margin: 0;
     display: grid;
@@ -90,7 +91,6 @@
     overflow: hidden;
     font-family: 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    box-sizing: border-box;
   }
 
   /* --- AR / CAMERA BACKGROUND --- */
@@ -116,7 +116,7 @@
   }
 
   /* ============================================================
-     SWITCH SHELL
+     SWITCH SHELL - FIXED FOR IPHONE 5S TO MODERN ENGINE DEVCES
      ============================================================ */
   article {
     --joycon-left: #00c5e2;
@@ -124,10 +124,12 @@
     --joycon-right: #ff6658;
     --joycon-right-shadow: #c218;
     position: relative;
-    font-size: min(90dvw, 211.4dvh);
+    /* Legacy-safe viewpoint bounds math scaling */
+    font-size: min(90vw, 211.4vh);
     width: 1em;
-    aspect-ratio: 632 / 269;
-    background: #f000;
+    /* Explicitly sizing height by scale factor for engines missing aspect-ratio */
+    height: 0.42563em; 
+    background: transparent;
   }
 
   article *,
@@ -341,7 +343,7 @@
     top: 5%;
     left: 5%;
     background: rgba(0,0,0,0.75);
-    backdrop-filter: blur(5px);
+    background-color: rgba(0,0,0,0.75);
     border-radius: 15px;
     padding: 8px 15px;
     display: flex;
@@ -966,9 +968,36 @@
   }
   #color-picker-input::-webkit-color-swatch-wrapper { padding: 0; }
   #color-picker-input::-webkit-color-swatch { border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+
+  /* Orientation Warning Overlay */
+  #orientation-warning {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #121212;
+    z-index: 10000;
+    color: white;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-family: sans-serif;
+    padding: 20px;
+  }
+  #orientation-warning h2 { margin: 10px 0; font-size: 1.25rem; }
+  #orientation-warning p { color: #888; font-size: 0.85rem; }
+  @media (orientation: portrait) {
+    #orientation-warning { display: flex; }
+  }
 </style>
 </head>
 <body>
+  <div id="orientation-warning">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+    <h2>Landscape Mode Required</h2>
+    <p>Please tilt your device horizontally to display the GMX Switch layout correctly.</p>
+  </div>
+
   <video id="camera-bg" autoplay playsinline muted></video>
   <main>
     <article aria-label="Drawing of a Nintendo Switch">
@@ -1321,28 +1350,25 @@
           this.scriptNode = null;
           this.dummyOsc = null;
           
-          this.bufferFrames = 65536; // Large robust ring buffer to prevent popping
+          this.bufferFrames = 65536; // Robust array sizing limits dropouts on legacy processing hardware
           this.bufferL = new Float32Array(this.bufferFrames);
           this.bufferR = new Float32Array(this.bufferFrames);
           this.writePos = 0;
           this.readPos = 0;
         }
 
-        // Must exactly match IodineGBA's callback signature
         initialize(channelCount, sampleRate, bufferLimit, heartBeatCallback, postHeartBeatCallback, errorCallback) {
           if (this.ctx.state === 'suspended') this.ctx.resume();
           
-          this.sampleRate = sampleRate; // GBA operates at approx ~32.7kHz
+          this.sampleRate = sampleRate; 
           this.heartBeatCallback = heartBeatCallback;
           this.postHeartBeatCallback = postHeartBeatCallback;
 
-          this.scriptNode = this.ctx.createScriptProcessor(2048, 0, 2);
-          
-          // Audio upsampler ratio (e.g. 32768hz -> 48000hz browser context)
+          // 4096 buffer size prevents crackling on A7 processing chips (iPhone 5s)
+          this.scriptNode = this.ctx.createScriptProcessor(4096, 0, 2);
           const ratio = this.sampleRate / this.ctx.sampleRate; 
           
           this.scriptNode.onaudioprocess = (e) => {
-            // Signal IodineGBA to generate a fresh batch of audio frames
             if (this.heartBeatCallback) this.heartBeatCallback();
             
             const outL = e.outputBuffer.getChannelData(0);
@@ -1358,7 +1384,7 @@
               if (available < 0) available += this.bufferFrames;
               
               if (available > 1) {
-                // Linear Interpolation for pristine sound
+                // Linear Interpolation upsampling logic
                 outL[i] = (this.bufferL[readIdx] + fraction * (this.bufferL[nextIdx] - this.bufferL[readIdx])) * this.volume;
                 outR[i] = (this.bufferR[readIdx] + fraction * (this.bufferR[nextIdx] - this.bufferR[readIdx])) * this.volume;
                 
@@ -1376,7 +1402,6 @@
 
           this.scriptNode.connect(this.ctx.destination);
 
-          // Silent oscillator prevents mobile Safari from suspending the context mid-game
           this.dummyOsc = this.ctx.createOscillator();
           const dummyGain = this.ctx.createGain();
           dummyGain.gain.value = 0;
@@ -1395,7 +1420,6 @@
         }
 
         push(buffer, start, end) {
-          // Iodine gives us interleaved stereo (Left, Right, Left, Right)
           for (let i = start; i < end; i += 2) {
             this.bufferL[this.writePos] = buffer[i];
             this.bufferR[this.writePos] = buffer[i + 1];
@@ -1446,14 +1470,12 @@
           try { currentMasterGain.gain.setValueAtTime(currentVol * 0.5, globalCtx.currentTime); } catch(e) {}
         }
 
-        // Visually flash the physical rocker button on the UI
         volBtn.style.filter = 'brightness(0.6)';
         setTimeout(() => volBtn.style.filter = 'none', 100);
 
         showVolume();
       }
 
-      // Bind directly to the Massive Hitboxes instead of the clip-path button
       const handleVolDown = (e) => { e.preventDefault(); changeVolume(-0.1); };
       const handleVolUp = (e) => { e.preventDefault(); changeVolume(0.1); };
 
@@ -1573,33 +1595,20 @@
         'btn-r':8, 'btn-l':9
       };
 
-      // Gamepad Controls
       var KEYCODE_MAP = {
-        88: 'btn-a',      // X
-        90: 'btn-b',      // Z
-        16: 'btn-select', // Shift
-        13: 'btn-start',  // Enter
-        39: 'btn-right',  // Right Arrow
-        37: 'btn-left',   // Left Arrow
-        38: 'btn-up',     // Up Arrow
-        40: 'btn-down',   // Down Arrow
-        83: 'btn-r',      // S
-        65: 'btn-l'       // A
+        88: 'btn-a', 90: 'btn-b', 16: 'btn-select', 13: 'btn-start',
+        39: 'btn-right', 37: 'btn-left', 38: 'btn-up', 40: 'btn-down',
+        83: 'btn-r', 65: 'btn-l'
       };
 
-      // Emulator Controls
       var CONTROL_MAP = {
-        55: 'vol-down',   // 7
-        56: 'vol-up',     // 8
-        52: 'speed-up',   // 4
-        51: 'speed-down', // 3
-        53: 'speed-reset',// 5
-        54: 'fullscreen'  // 6
+        55: 'vol-down', 56: 'vol-up', 52: 'speed-up',
+        51: 'speed-down', 53: 'speed-reset', 54: 'fullscreen'
       };
 
       var emu = { iodine: null, blitter: null, audio: null, rafId: null, running: false };
       
-      // Instantiate your native audio driver immediately!
+      // Initialize layout driver instance directly
       emu.audio = new AudioGlue();
       
       var scriptsLoaded = false;
@@ -1653,7 +1662,6 @@
         emu.running = false;
         if (emu.rafId) { cancelAnimationFrame(emu.rafId); emu.rafId = null; }
         if (emu.iodine) { try { emu.iodine.pause(); } catch(e) {} emu.iodine = null; }
-
         emu.blitter = null;
         var canvas = document.getElementById('game-canvas');
         var ctx = canvas.getContext('2d');
@@ -1686,7 +1694,7 @@
         try {
           emu.iodine = new GameBoyAdvanceEmulator();
           
-          // THE MISSING LINK: Actually hook up the engine to the emulator pipe.
+          // Secure layout routing directly into emulator processing loop
           emu.iodine.attachAudioHandler(emu.audio);
           emu.iodine.enableAudio();
 
@@ -1887,13 +1895,11 @@
       function triggerA() {
         if (!isOSReady || popupVisible()) return;
         
-        // --- CRITICAL AUDIO AUTOPLAY UNLOCKS ---
         if (globalCtx && globalCtx.state === 'suspended') globalCtx.resume();
         if (emu.audio) emu.audio.resume();
 
         var sysMsg = document.getElementById('sys-msg');
         
-        // Settings Column Navigation Maps
         if (colIdx === 0) { 
           if (rowIdx === 1) openBiosPopup(); 
           else if (rowIdx === 2) openColorPopup('left');
@@ -1902,10 +1908,8 @@
           return; 
         }
 
-        // About Column Navigation
         if (colIdx === 2) { sysMsg.innerText = 'Module offline.'; sysMsg.style.opacity = 1; return; }
         
-        // Game Column Navigation
         var games = document.querySelectorAll('.dynamic-game');
         if (rowIdx > 0 && rowIdx <= games.length) {
           var title = games[rowIdx - 1].querySelector('.game-title').innerText;
@@ -1992,7 +1996,6 @@
         }
       }
 
-      // Color Picker Interactions
       document.getElementById('popup-save-color').addEventListener('click', function() {
         var hex = document.getElementById('color-picker-input').value;
         var article = document.querySelector('article');
@@ -2089,20 +2092,13 @@
         if (emu.running) sendInput(id, false);
       }
 
-      // Map Switch shell buttons to GBA button IDs
       var SWITCH_MAP = {
-        'switch-up': 'btn-up',
-        'switch-down': 'btn-down',
-        'switch-left': 'btn-left',
-        'switch-right': 'btn-right',
-        'switch-a': 'btn-a',
-        'switch-b': 'btn-b',
-        'switch-x': 'btn-a',  
-        'switch-y': 'btn-b',  
-        'switch-l': 'btn-l',
-        'switch-r': 'btn-r',
-        'switch-minus': 'btn-select',
-        'switch-plus': 'btn-start'
+        'switch-up': 'btn-up', 'switch-down': 'btn-down',
+        'switch-left': 'btn-left', 'switch-right': 'btn-right',
+        'switch-a': 'btn-a', 'switch-b': 'btn-b',
+        'switch-x': 'btn-a', 'switch-y': 'btn-b',  
+        'switch-l': 'btn-l', 'switch-r': 'btn-r',
+        'switch-minus': 'btn-select', 'switch-plus': 'btn-start'
       };
 
       function bindSwitchButton(switchId) {
@@ -2149,7 +2145,6 @@
         var code = e.keyCode || e.which;
         if ([37, 38, 39, 40, 32].indexOf(code) > -1) e.preventDefault();
 
-        // 1. Game Buttons
         var gameBtn = KEYCODE_MAP[code]; 
         if (gameBtn) {
           if (emu.running) {
@@ -2161,7 +2156,6 @@
           return;
         }
 
-        // 2. Emulator Controls
         var ctrlBtn = CONTROL_MAP[code];
         if (ctrlBtn) {
           if (ctrlBtn === 'vol-up') changeVolume(0.1);
@@ -2329,7 +2323,6 @@
       setTimeout(applyOsScale, 100);
       setTimeout(applyOsScale, 500);
 
-      // Speed control
       var SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
       var speedIdx = 2;
 
@@ -2342,7 +2335,6 @@
     });
   </script>
   <script>
-    // Register the Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
