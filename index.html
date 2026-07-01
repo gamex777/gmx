@@ -465,8 +465,12 @@
 
   /* --- OTHER BUTTONS --- */
   button {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
     border: 0;
-    font-size: 1em;
+    font-size: inherit; /* THE GOLDEN FIX FOR iOS 12 */
+    font-family: inherit;
     padding: 0;
     transition: filter 0.05s ease, transform 0.05s ease;
     cursor: pointer;
