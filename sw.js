@@ -1,146 +1,145 @@
-const CACHE_NAME = 'gmx-local-cache-v1';
-const CDN_CACHE_NAME = 'gmx-cdn-cache-v1';
+const CACHE_NAME = 'gmx-core-cache-v2';
 
-// 1. The Local App Shell
-// These are the files hosted directly on your server/folder that need to be cached immediately.
-const APP_SHELL = [
+// 1. The Ultimate App Shell Pre-Cache List
+// This forces the browser to download absolutely EVERY dependency immediately while online.
+const PRE_CACHE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon-192.png' // Make sure you have this icon in your folder!
+  './icon-192.png',
+  
+  // Core IodineGBA Engine Scripts
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/includes/TypedArrayShim.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Cartridge.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/DMA.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Emulator.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Graphics.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/RunLoop.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Memory.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/IRQ.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/JoyPad.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Serial.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Sound.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Timer.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Wait.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/Saves.js',
+  
+  // Sound Channels
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/FIFO.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel1.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel2.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel3.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/sound/Channel4.js',
+  
+  // CPU Architectures
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU/ARM.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU/THUMB.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/CPU/CPSR.js',
+  
+  // Graphics Processing Core
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Renderer.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/RendererShim.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/RendererProxy.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/BGTEXT.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/BG2FrameBuffer.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/BGMatrix.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/AffineBG.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/ColorEffects.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Mosaic.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/OBJ.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/OBJWindow.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Window.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/graphics/Compositor.js',
+  
+  // DMA Memory Layout
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA0.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA1.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA2.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/memory/DMA3.js',
+  
+  // Cartridges & Saves
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/SaveDeterminer.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/SRAM.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/FLASH.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/EEPROM.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/GPIO.js',
+  
+  // Auxiliary Core Scripting
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/base64.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/CoreGlueCode.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/GfxGlueCode.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/GUIGlueCode.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/JoyPadGlueCode.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/ROMLoadGlueCode.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/SavesGlueCode.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/WorkerGfxGlueCode.js',
+  'https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/WorkerGlueCode.js',
+  
+  // Web Fonts
+  'https://fonts.googleapis.com/css?family=Play&display=swap'
 ];
 
-// 2. Install Event: Cache the App Shell
+// 2. Install Event - Force structural caching sequence
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Forces the waiting service worker to become the active service worker
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[GMX SW] Caching local app shell');
-      return cache.addAll(APP_SHELL);
+      console.log('[GMX SW] Initiating full pre-cache structural dump...');
+      return cache.addAll(PRE_CACHE_ASSETS);
     })
   );
 });
 
-// 3. Activate Event: Clean up old caches if you ever update the version numbers above
+// 3. Activate Event - Flush out residual engine structures
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName !== CDN_CACHE_NAME) {
-            console.log('[GMX SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log('[GMX SW] Flushing outdated cache registry:', key);
+            return caches.delete(key);
           }
         })
       );
     })
   );
-  self.clients.claim(); // Take control of all pages immediately
+  return self.clients.claim();
 });
 
-// 4. Fetch Event: Intercept network requests and apply our caching strategies
+// 4. Fetch Event - Fallback matching for Legacy WebKit Engines
 self.addEventListener('fetch', (event) => {
-  const requestUrl = new URL(event.request.url);
-
-  // STRATEGY A: For CDN links (jsDelivr, Google Fonts)
-  // Action: "Cache First, Fallback to Network"
-  // Why? These external scripts rarely change. We want to grab them from the cache instantly if we have them, guaranteeing offline access.
-  if (requestUrl.hostname === 'cdn.jsdelivr.net' || requestUrl.hostname.includes('fonts.')) {
-    event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse; // We have it! Serve it offline.
-        }
-
-        // We don't have it yet. Fetch it, cache it for next time, and serve it.
-        return fetch(event.request).then((networkResponse) => {
-          // Only cache valid, successful responses
-          if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
-            return networkResponse;
-          }
-
-          // Clone the response because a request stream can only be consumed once
-          const responseToCache = networkResponse.clone();
-          caches.open(CDN_CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
-          return networkResponse;
-        }).catch((err) => {
-          console.error('[GMX SW] CDN Fetch failed and not in cache:', err);
-        });
-      })
-    );
-  } 
-  
-  // STRATEGY B: For Local Files (index.html, images, etc.)
-  // Action: "Stale-While-Revalidate" or "Network First"
-  // Why? This fetches from the cache for speed, but grabs the network version silently to keep your local UI up to date for the *next* visit.
-  else {
-    event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        const fetchPromise = fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return networkResponse;
-        }).catch(() => {
-          // Network failed (offline). We will rely entirely on the cachedResponse we return below.
-        });
-
-        // Return the cached response immediately if we have it, otherwise wait for the network
-        return cachedResponse || fetchPromise;
-      })
-    );
-  }
-});  self.clients.claim();
-});
-
-// 3. Fetch Event: Cache-first, then Network with Dynamic Caching
-self.addEventListener('fetch', (event) => {
-  // Only intercept standard GET requests
+  // Pass non-GET requests immediately
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // If the file (local asset OR external CDN script) is already cached, use it instantly!
       if (cachedResponse) {
         return cachedResponse;
       }
 
-      // If it isn't cached, go pull it from the web
+      // iOS Safari Fix: If requesting domain directory path fallback directly to index file asset
+      const url = new URL(event.request.url);
+      if (url.origin === self.location.origin && (url.pathname === '/' || url.pathname === '/gmx/')) {
+        return caches.match('./index.html');
+      }
+
+      // If not explicitly pre-cached, fetch from network and dynamically store 
       return fetch(event.request).then((networkResponse) => {
-        // If we get a valid file back (or an opaque cross-origin script with status 0), save it!
-        if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+        if (!networkResponse || networkResponse.status !== 200) {
+          return networkResponse;
         }
+
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
         return networkResponse;
       }).catch((err) => {
-        console.error('[GMX SW] Network fetch failed resource unavailable offline:', err);
+        console.warn('[GMX SW] Resource routing offline failure notice:', err);
       });
-    })
-  );
-});    })
-  );
-  self.clients.claim();
-});
-
-// 3. Fetch Event: Serve from cache first, fallback to network
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // If we have it in the offline cache, return it immediately
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      // Otherwise, try to fetch it from the network
-      return fetch(event.request);
     })
   );
 });
