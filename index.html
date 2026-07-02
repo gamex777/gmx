@@ -2117,31 +2117,46 @@
         var gbaId = SWITCH_MAP[switchId];
         if (!gbaId) return;
 
-        el.addEventListener('touchstart', function(e) {
-          e.preventDefault();
+        // 1. Create and inject the invisible iOS haptic toggle
+        var switchEl = document.createElement("input");
+        switchEl.type = "checkbox";
+        switchEl.setAttribute("switch", "");
+        
+        Object.assign(switchEl.style, {
+          position: "absolute",
+          top: 0, left: 0, width: "100%", height: "100%",
+          margin: 0, opacity: 0, cursor: "pointer",
+          touchAction: "manipulation",
+          webkitTapHighlightColor: "transparent"
+        });
+        
+        el.style.position = "relative";
+        el.appendChild(switchEl);
+
+        // 2. Route the interaction to the emulator
+        // CRITICAL: passive is true and no preventDefault(), so the native haptic toggle still fires!
+        switchEl.addEventListener('touchstart', function(e) {
           e.stopPropagation();
           pressButton(gbaId);
-        }, { passive: false });
-        el.addEventListener('touchend', function(e) {
-          e.preventDefault();
+          el.classList.add('active'); // Trigger your visual CSS push-down effect
+        }, { passive: true });
+
+        var release = function(e) {
           e.stopPropagation();
           releaseButton(gbaId);
-        }, { passive: false });
-        el.addEventListener('touchcancel', function(e) {
-          e.stopPropagation();
-          releaseButton(gbaId);
-        }, { passive: false });
-        el.addEventListener('mousedown', function(e) {
-          e.preventDefault();
+          el.classList.remove('active');
+        };
+
+        switchEl.addEventListener('touchend', release, { passive: true });
+        switchEl.addEventListener('touchcancel', release, { passive: true });
+        
+        // Mouse fallbacks for desktop testing
+        switchEl.addEventListener('mousedown', function(e) {
           pressButton(gbaId);
+          el.classList.add('active');
         });
-        el.addEventListener('mouseup', function(e) {
-          e.preventDefault();
-          releaseButton(gbaId);
-        });
-        el.addEventListener('mouseleave', function(e) {
-          releaseButton(gbaId);
-        });
+        switchEl.addEventListener('mouseup', release);
+        switchEl.addEventListener('mouseleave', release);
       }
 
       Object.keys(SWITCH_MAP).forEach(bindSwitchButton);
