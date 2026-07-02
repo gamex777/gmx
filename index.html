@@ -56,6 +56,7 @@
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/FLASH.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/EEPROM.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/IodineGBA/core/cartridge/GPIO.js"></script>
+        <!--Add your webpage scripts below-->
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/base64.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/CoreGlueCode.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/taisel/IodineGBA@master/user_scripts/GfxGlueCode.js"></script>
@@ -1034,6 +1035,7 @@
 
       <section class="body">
         
+        <!-- MASSIVE INVISIBLE HITBOXES (Bypasses CSS Clip-Path Bug) -->
         <div class="vol-hitbox down" style="position: absolute; top: -3%; left: 11.5%; width: 6%; height: 6%; z-index: 9999; cursor: pointer;"></div>
         <div class="vol-hitbox up" style="position: absolute; top: -3%; left: 17.5%; width: 6%; height: 6%; z-index: 9999; cursor: pointer;"></div>
         
@@ -1041,11 +1043,13 @@
         <div class="frame"></div>
         <div class="screen" id="screen">
 
+          <!-- VOLUME OSD -->
           <div id="volume-osd">
             <svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
             <div class="vol-track"><div id="vol-fill"></div></div>
           </div>
 
+          <!-- NEW 3D BOOT SEQUENCE -->
           <div class="boot-sequence">
             <div class="boot-content">
               <p class="copyright">Gamex computer entertainment</p>
@@ -1059,6 +1063,7 @@
             </div>
           </div>
 
+          <!-- GBA OS content, scaled to fit -->
           <div id="os-scale-wrapper">
             <div class="xmb-bg">
               <div id="game-bg-layer" class="xmb-game-bg"></div>
@@ -1076,6 +1081,7 @@
                     <span>Settings</span>
                   </div>
                   <div class="xmb-sub">Insert Core (BIOS)</div>
+                  <!-- 3 NEW COLOR EDITOR ITEMS -->
                   <div class="xmb-sub">Edit L-Control Color</div>
                   <div class="xmb-sub">Edit R-Control Color</div>
                   <div class="xmb-sub">Edit Wave Color</div>
@@ -1099,6 +1105,7 @@
             </div>
             
             <div id="install-popup">
+              <!-- INSTALL GAME -->
               <div class="popup-box" id="popup-box-game" style="display:block;">
                 <h3>Install to Memory Stick</h3>
                 <label class="popup-btn">
@@ -1118,6 +1125,7 @@
                 <button class="popup-btn install-btn" id="popup-install" disabled>Install</button>
               </div>
               
+              <!-- INSERT CORE -->
               <div class="popup-box" id="popup-box-bios" style="display:none;">
                 <h3>Insert Core (BIOS)</h3>
                 <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Required to play games.<br>Upload your GBA BIOS .bin file.</div>
@@ -1131,6 +1139,7 @@
                 <button class="popup-btn install-btn" id="popup-install-bios" disabled>Install Core</button>
               </div>
 
+              <!-- EDIT COLORS -->
               <div class="popup-box" id="popup-box-color" style="display:none;">
                 <h3 id="color-popup-title">Edit Color</h3>
                 <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Tap the circle to open color picker.</div>
@@ -1152,15 +1161,6 @@
   </main>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-
-      // GUARD TO PREVENT DUPLICATE MOUSE CLICKS AFTER TOUCH
-      let isTouchDevice = false;
-      document.addEventListener('touchstart', () => { isTouchDevice = true; }, { passive: true, capture: true });
-
-      // HELPER TO IDENTIFY HAPTIC INPUTS
-      function isHapticTarget(e) {
-        return e.target && e.target.tagName === 'INPUT' && e.target.hasAttribute('switch');
-      }
 
       // SAFE LOCALSTORAGE WRAPPERS
       function safeGetItem(key, defaultVal) {
@@ -1190,46 +1190,27 @@
       loadSavedColors(); 
 
       // ===================================================================
-      // HAPTIC ENGINE (iOS Safari Switch Hack)
+      // PROGRAMMATIC HAPTIC ENGINE (Bypasses iOS touch & visibility rules)
       // ===================================================================
-      function hapticTrigger(element) {
-        if (!element) return;
-
-        const switchEl = document.createElement("input");
-        switchEl.type = "checkbox";
-        switchEl.setAttribute("switch", "");
-
-        const styles = {
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          margin: 0,
-          opacity: 0.001, // 0.001 instead of 0 to ensure interaction isn't swallowed by Safari
-          cursor: "pointer",
-          zIndex: 9999, 
-          borderRadius: "inherit", 
-          touchAction: "manipulation",
-          outline: "none" // Prevents focus ring when toggled
-        };
-
-        Object.assign(switchEl.style, styles);
-        switchEl.style.setProperty("-webkit-tap-highlight-color", "transparent");
-
-        // Force relative positioning if the element isn't already positioned
-        if (window.getComputedStyle(element).position === 'static') {
-          element.style.position = "relative";
+      function triggerHaptic() {
+        // Fallback for Android / Standard web browsers
+        if (typeof navigator.vibrate === 'function') {
+          try { navigator.vibrate(10); } catch(e) {}
         }
-
-        element.insertAdjacentElement("beforeend", switchEl);
+        // Programmatic iOS label click trick
+        const label = document.createElement('label');
+        const sw = document.createElement('input');
+        sw.type = 'checkbox';
+        sw.setAttribute('switch', '');
+        label.appendChild(sw);
+        document.body.appendChild(label);
+        try {
+          label.click();
+        } catch(e) {
+        } finally {
+          label.remove();
+        }
       }
-
-      // Grab all buttons EXCEPT joysticks, PLUS the invisible volume hitboxes
-      const hapticTargets = document.querySelectorAll('button:not(.mushroom), .vol-hitbox');
-      
-      // Apply the invisible haptic switches
-      hapticTargets.forEach(btn => hapticTrigger(btn));
 
       // 0. Dynamic 3D Boot Screen Generator
       const boxesWrapper = document.querySelector('.boxes-wrapper');
@@ -1264,11 +1245,12 @@
       // 1. Standard Button Haptics (Switch shell)
       const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.home):not(.bumper):not(.popup-btn)');
       const handlePress = (e, btn) => {
-        if (!isHapticTarget(e)) e.preventDefault(); // BYPASS preventDefault FOR HAPTICS
+        e.preventDefault();
+        triggerHaptic(); // Trigger clean haptic bump on every button tap
         btn.classList.add('active');
       };
       const handleRelease = (e, btn) => {
-        if (!isHapticTarget(e)) e.preventDefault(); // BYPASS preventDefault FOR HAPTICS
+        e.preventDefault();
         btn.classList.remove('active');
       };
 
@@ -1276,9 +1258,9 @@
         btn.addEventListener('touchstart', (e) => handlePress(e, btn), { passive: false });
         btn.addEventListener('touchend', (e) => handleRelease(e, btn), { passive: false });
         btn.addEventListener('touchcancel', (e) => handleRelease(e, btn), { passive: false });
-        btn.addEventListener('mousedown', (e) => { if (isTouchDevice) return; handlePress(e, btn); });
-        btn.addEventListener('mouseup', (e) => { if (isTouchDevice) return; handleRelease(e, btn); });
-        btn.addEventListener('mouseleave', (e) => { if (isTouchDevice) return; handleRelease(e, btn); });
+        btn.addEventListener('mousedown', (e) => handlePress(e, btn));
+        btn.addEventListener('mouseup', (e) => handleRelease(e, btn));
+        btn.addEventListener('mouseleave', (e) => handleRelease(e, btn));
       });
 
       // ===================================================================
@@ -1528,13 +1510,13 @@
         showVolume();
       }
 
-      const handleVolDown = (e) => { if (!isHapticTarget(e)) e.preventDefault(); changeVolume(-0.1); };
-      const handleVolUp = (e) => { if (!isHapticTarget(e)) e.preventDefault(); changeVolume(0.1); };
+      const handleVolDown = (e) => { e.preventDefault(); triggerHaptic(); changeVolume(-0.1); };
+      const handleVolUp = (e) => { e.preventDefault(); triggerHaptic(); changeVolume(0.1); };
 
       document.querySelector('.vol-hitbox.down').addEventListener('touchstart', handleVolDown, { passive: false });
-      document.querySelector('.vol-hitbox.down').addEventListener('mousedown', (e) => { if(isTouchDevice) return; handleVolDown(e); });
+      document.querySelector('.vol-hitbox.down').addEventListener('mousedown', handleVolDown);
       document.querySelector('.vol-hitbox.up').addEventListener('touchstart', handleVolUp, { passive: false });
-      document.querySelector('.vol-hitbox.up').addEventListener('mousedown', (e) => { if(isTouchDevice) return; handleVolUp(e); });
+      document.querySelector('.vol-hitbox.up').addEventListener('mousedown', handleVolUp);
 
 
       // 3. Joystick Drag Physics + Directional Input
@@ -2123,6 +2105,7 @@
       function pressButton(id) {
         if (held[id]) return;
         held[id] = true;
+        triggerHaptic(); // Fires clean haptics for D-Pad, A, B, L, R, Select, Start
         if (emu.running) {
           sendInput(id, true);
         } else {
@@ -2160,13 +2143,13 @@
         if (!gbaId) return;
 
         el.addEventListener('touchstart', function(e) {
-          if (!isHapticTarget(e)) e.preventDefault(); // BYPASS preventDefault FOR HAPTICS
+          e.preventDefault();
           e.stopPropagation();
           pressButton(gbaId);
         }, { passive: false });
         
         el.addEventListener('touchend', function(e) {
-          if (!isHapticTarget(e)) e.preventDefault(); // BYPASS preventDefault FOR HAPTICS
+          e.preventDefault();
           e.stopPropagation();
           releaseButton(gbaId);
         }, { passive: false });
@@ -2177,19 +2160,16 @@
         }, { passive: false });
         
         el.addEventListener('mousedown', function(e) {
-          if (isTouchDevice) return; // Prevent duplicate mouse inputs
           e.preventDefault();
           pressButton(gbaId);
         });
         
         el.addEventListener('mouseup', function(e) {
-          if (isTouchDevice) return; // Prevent duplicate mouse inputs
           e.preventDefault();
           releaseButton(gbaId);
         });
         
         el.addEventListener('mouseleave', function(e) {
-          if (isTouchDevice) return; // Prevent duplicate mouse inputs
           releaseButton(gbaId);
         });
       }
@@ -2248,6 +2228,7 @@
 
       function togglePower(e) {
         if (e) e.preventDefault();
+        triggerHaptic();
         isPoweredOn = !isPoweredOn; isOSReady = false;
         bootTimers.forEach(clearTimeout); bootTimers = [];
 
@@ -2311,6 +2292,7 @@
 
       captureBtn.addEventListener('click', async (e) => {
         e.preventDefault();
+        triggerHaptic();
         
         if (isCameraActive) {
           if (cameraStream) {
