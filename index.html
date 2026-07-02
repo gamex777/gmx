@@ -1189,40 +1189,6 @@
       }
       loadSavedColors(); 
 
-      // ===================================================================
-      // GLOBAL HAPTIC ENGINE (Modern Label Click Hack)
-      // ===================================================================
-      const hapticSwitch = document.createElement("input");
-      hapticSwitch.type = "checkbox";
-      hapticSwitch.setAttribute("switch", "");
-      hapticSwitch.id = "gmx-haptic-switch";
-      
-      const hapticLabel = document.createElement("label");
-      hapticLabel.htmlFor = "gmx-haptic-switch";
-
-      // Safely hide it without using display:none or opacity:0, 
-      // which iOS uses to block haptic exploits.
-      Object.assign(hapticSwitch.style, {
-        position: "fixed",
-        top: "-9999px",
-        left: "-9999px",
-        opacity: "0.1",
-        pointerEvents: "none"
-      });
-
-      document.body.appendChild(hapticSwitch);
-      document.body.appendChild(hapticLabel);
-
-      function fireHaptic() {
-        // Android / Chrome standard Vibration API
-        if (navigator.vibrate) { 
-          navigator.vibrate(15); 
-          return; 
-        }
-        // iOS Safari Trick: Clicking the linked label toggles the switch synchronously
-        hapticLabel.click();
-      }
-
       // 0. Dynamic 3D Boot Screen Generator
       const boxesWrapper = document.querySelector('.boxes-wrapper');
       if (boxesWrapper) {
@@ -1253,14 +1219,14 @@
         }
       }
 
-      // 1. Standard Button Visual States (Switch shell)
+      // 1. Standard Button Haptics (Switch shell)
       const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.home):not(.bumper):not(.popup-btn)');
       const handlePress = (e, btn) => {
-        e.preventDefault(); 
+        e.preventDefault();
         btn.classList.add('active');
       };
       const handleRelease = (e, btn) => {
-        e.preventDefault(); 
+        e.preventDefault();
         btn.classList.remove('active');
       };
 
@@ -1274,7 +1240,7 @@
       });
 
       // ===================================================================
-      // GLOBAL BOOT SOUND CONTEXT
+      // GLOBAL BOOT SOUND CONTEXT (Separate from Emulator to prevent lag)
       // ===================================================================
       const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
       let globalCtx = null;
@@ -1394,7 +1360,7 @@
           this.scriptNode = null;
           this.dummyOsc = null;
           
-          this.bufferFrames = 65536; 
+          this.bufferFrames = 65536; // Robust array sizing limits dropouts on legacy processing hardware
           this.bufferL = new Float32Array(this.bufferFrames);
           this.bufferR = new Float32Array(this.bufferFrames);
           this.writePos = 0;
@@ -1408,6 +1374,7 @@
           this.heartBeatCallback = heartBeatCallback;
           this.postHeartBeatCallback = postHeartBeatCallback;
 
+          // 4096 buffer size prevents crackling on A7 processing chips (iPhone 5s)
           this.scriptNode = this.ctx.createScriptProcessor(4096, 0, 2);
           const ratio = this.sampleRate / this.ctx.sampleRate; 
           
@@ -1427,6 +1394,7 @@
               if (available < 0) available += this.bufferFrames;
               
               if (available > 1) {
+                // Linear Interpolation upsampling logic
                 outL[i] = (this.bufferL[readIdx] + fraction * (this.bufferL[nextIdx] - this.bufferL[readIdx])) * this.volume;
                 outR[i] = (this.bufferR[readIdx] + fraction * (this.bufferR[nextIdx] - this.bufferR[readIdx])) * this.volume;
                 
@@ -1518,8 +1486,8 @@
         showVolume();
       }
 
-      const handleVolDown = (e) => { e.preventDefault(); fireHaptic(); changeVolume(-0.1); };
-      const handleVolUp = (e) => { e.preventDefault(); fireHaptic(); changeVolume(0.1); };
+      const handleVolDown = (e) => { e.preventDefault(); changeVolume(-0.1); };
+      const handleVolUp = (e) => { e.preventDefault(); changeVolume(0.1); };
 
       document.querySelector('.vol-hitbox.down').addEventListener('touchstart', handleVolDown, { passive: false });
       document.querySelector('.vol-hitbox.down').addEventListener('mousedown', handleVolDown);
@@ -1650,6 +1618,7 @@
 
       var emu = { iodine: null, blitter: null, audio: null, rafId: null, running: false };
       
+      // Initialize layout driver instance directly
       emu.audio = new AudioGlue();
       
       var scriptsLoaded = false;
@@ -1735,6 +1704,7 @@
         try {
           emu.iodine = new GameBoyAdvanceEmulator();
           
+          // Secure layout routing directly into emulator processing loop
           emu.iodine.attachAudioHandler(emu.audio);
           emu.iodine.enableAudio();
 
@@ -2063,6 +2033,7 @@
 
       document.getElementById('popup-cancel-color').addEventListener('click', closePopup);
 
+      // System Interactions
       document.getElementById('install-bios-upload').addEventListener('change', function(e) {
         var f = e.target.files[0];
         if (f && f.name.toLowerCase().endsWith('.bin')) { selBios = f; document.getElementById('popup-bios-name').textContent = f.name; document.getElementById('popup-install-bios').disabled = false; }
@@ -2097,6 +2068,7 @@
       // ===================================================================
       var held = {};
       var osHeld = {};
+
       var repeatTimers = {};
       var NAV_REPEAT = ['btn-left','btn-right','btn-up','btn-down'];
 
@@ -2109,10 +2081,6 @@
       function pressButton(id) {
         if (held[id]) return;
         held[id] = true;
-        
-        // --- TRIGGER HAPTIC FOR ALL STANDARD BUTTON PRESSES ---
-        fireHaptic(); 
-
         if (emu.running) {
           sendInput(id, true);
         } else {
@@ -2150,32 +2118,27 @@
         if (!gbaId) return;
 
         el.addEventListener('touchstart', function(e) {
-          e.preventDefault(); 
+          e.preventDefault();
           e.stopPropagation();
           pressButton(gbaId);
         }, { passive: false });
-        
         el.addEventListener('touchend', function(e) {
-          e.preventDefault(); 
+          e.preventDefault();
           e.stopPropagation();
           releaseButton(gbaId);
         }, { passive: false });
-        
         el.addEventListener('touchcancel', function(e) {
           e.stopPropagation();
           releaseButton(gbaId);
         }, { passive: false });
-        
         el.addEventListener('mousedown', function(e) {
           e.preventDefault();
           pressButton(gbaId);
         });
-        
         el.addEventListener('mouseup', function(e) {
           e.preventDefault();
           releaseButton(gbaId);
         });
-        
         el.addEventListener('mouseleave', function(e) {
           releaseButton(gbaId);
         });
@@ -2235,10 +2198,6 @@
 
       function togglePower(e) {
         if (e) e.preventDefault();
-        
-        // --- POWER BUTTON HAPTIC ---
-        fireHaptic();
-        
         isPoweredOn = !isPoweredOn; isOSReady = false;
         bootTimers.forEach(clearTimeout); bootTimers = [];
 
@@ -2384,6 +2343,19 @@
       }
 
     });
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((registration) => {
+            console.log('[GMX SW] Registration successful with scope: ', registration.scope);
+          })
+          .catch((error) => {
+            console.log('[GMX SW] Registration failed: ', error);
+          });
+      });
+    }
   </script>
 </body>
 </html>
