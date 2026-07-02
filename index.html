@@ -2117,40 +2117,51 @@
         var gbaId = SWITCH_MAP[switchId];
         if (!gbaId) return;
 
-        // 1. Create and inject the invisible iOS haptic toggle
+        // 1. INJECT YOUR EXACT HAPTIC TRIGGER HACK
         var switchEl = document.createElement("input");
         switchEl.type = "checkbox";
         switchEl.setAttribute("switch", "");
-        
-        Object.assign(switchEl.style, {
-          position: "absolute",
-          top: 0, left: 0, width: "100%", height: "100%",
-          margin: 0, opacity: 0, cursor: "pointer",
-          touchAction: "manipulation",
-          webkitTapHighlightColor: "transparent"
-        });
-        
-        el.style.position = "relative";
-        el.appendChild(switchEl);
 
-        // 2. Route the interaction to the emulator
-        // CRITICAL: passive is true and no preventDefault(), so the native haptic toggle still fires!
+        var styles = {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          margin: 0,
+          opacity: 0,
+          cursor: "pointer",
+          clipPath: "inset(0 round 999px)",
+          touchAction: "manipulation"
+        };
+
+        Object.assign(switchEl.style, styles);
+        switchEl.style.setProperty("-webkit-tap-highlight-color", "transparent");
+
+        // Ensure the parent element can contain the absolute switch
+        if (window.getComputedStyle(el).position === 'static') {
+          el.style.position = "relative";
+        }
+        el.insertAdjacentElement("beforeend", switchEl);
+
+        // 2. ROUTE THE INPUTS TO THE GBA CORE
+        // passive: true ensures iOS doesn't block the native toggle that fires the hardware bump
         switchEl.addEventListener('touchstart', function(e) {
           e.stopPropagation();
-          pressButton(gbaId);
-          el.classList.add('active'); // Trigger your visual CSS push-down effect
+          pressButton(gbaId);           // Tell emulator button is pressed
+          el.classList.add('active');   // Trigger visual CSS push-down
         }, { passive: true });
 
         var release = function(e) {
           e.stopPropagation();
-          releaseButton(gbaId);
+          releaseButton(gbaId);         // Tell emulator button is released
           el.classList.remove('active');
         };
 
         switchEl.addEventListener('touchend', release, { passive: true });
         switchEl.addEventListener('touchcancel', release, { passive: true });
         
-        // Mouse fallbacks for desktop testing
+        // Desktop mouse fallbacks
         switchEl.addEventListener('mousedown', function(e) {
           pressButton(gbaId);
           el.classList.add('active');
@@ -2159,6 +2170,7 @@
         switchEl.addEventListener('mouseleave', release);
       }
 
+      // This loop applies the hack to D-Pad, A/B/X/Y, Bumpers, +, and -
       Object.keys(SWITCH_MAP).forEach(bindSwitchButton);
 
       // ===================================================================
