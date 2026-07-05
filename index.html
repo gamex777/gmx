@@ -2117,60 +2117,33 @@
         var gbaId = SWITCH_MAP[switchId];
         if (!gbaId) return;
 
-        // 1. INJECT YOUR EXACT HAPTIC TRIGGER HACK
-        var switchEl = document.createElement("input");
-        switchEl.type = "checkbox";
-        switchEl.setAttribute("switch", "");
-
-        var styles = {
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          margin: 0,
-          opacity: 0,
-          cursor: "pointer",
-          clipPath: "inset(0 round 999px)",
-          touchAction: "manipulation"
-        };
-
-        Object.assign(switchEl.style, styles);
-        switchEl.style.setProperty("-webkit-tap-highlight-color", "transparent");
-
-        // Ensure the parent element can contain the absolute switch
-        if (window.getComputedStyle(el).position === 'static') {
-          el.style.position = "relative";
-        }
-        el.insertAdjacentElement("beforeend", switchEl);
-
-        // 2. ROUTE THE INPUTS TO THE GBA CORE
-        // passive: true ensures iOS doesn't block the native toggle that fires the hardware bump
-        switchEl.addEventListener('touchstart', function(e) {
+        el.addEventListener('touchstart', function(e) {
+          e.preventDefault();
           e.stopPropagation();
-          pressButton(gbaId);           // Tell emulator button is pressed
-          el.classList.add('active');   // Trigger visual CSS push-down
-        }, { passive: true });
-
-        var release = function(e) {
-          e.stopPropagation();
-          releaseButton(gbaId);         // Tell emulator button is released
-          el.classList.remove('active');
-        };
-
-        switchEl.addEventListener('touchend', release, { passive: true });
-        switchEl.addEventListener('touchcancel', release, { passive: true });
-        
-        // Desktop mouse fallbacks
-        switchEl.addEventListener('mousedown', function(e) {
           pressButton(gbaId);
-          el.classList.add('active');
+        }, { passive: false });
+        el.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          releaseButton(gbaId);
+        }, { passive: false });
+        el.addEventListener('touchcancel', function(e) {
+          e.stopPropagation();
+          releaseButton(gbaId);
+        }, { passive: false });
+        el.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          pressButton(gbaId);
         });
-        switchEl.addEventListener('mouseup', release);
-        switchEl.addEventListener('mouseleave', release);
+        el.addEventListener('mouseup', function(e) {
+          e.preventDefault();
+          releaseButton(gbaId);
+        });
+        el.addEventListener('mouseleave', function(e) {
+          releaseButton(gbaId);
+        });
       }
 
-      // This loop applies the hack to D-Pad, A/B/X/Y, Bumpers, +, and -
       Object.keys(SWITCH_MAP).forEach(bindSwitchButton);
 
       // ===================================================================
