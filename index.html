@@ -309,7 +309,7 @@
   .particles span:nth-child(1) { left: 70%; top: 70%; box-shadow: 0 0 0.01em 0.005em rgba(255,0,0,.8); }
   .particles span:nth-child(2) { left: 70%; top: 50%; box-shadow: 0 0 0.01em 0.005em rgba(0,255,0,.8); }
   .particles span:nth-child(3) { left: 15%; top: 75%; box-shadow: 0 0 0.01em 0.005em rgba(0,0,255,.8); }
-  
+ 
   .screen.is-booting .particles span:nth-child(1) { animation: p1 4s cubic-bezier(0,.74,.46,1) infinite; }
   .screen.is-booting .particles span:nth-child(2) { animation: p2 4s cubic-bezier(0,.74,.46,1) infinite; }
   .screen.is-booting .particles span:nth-child(3) { animation: p3 4s cubic-bezier(0,.74,.46,1) infinite; }
@@ -965,7 +965,7 @@
   .popup-btn.install-btn:disabled { opacity: 0.3; pointer-events: none; }
   .popup-btn input[type="file"] { margin: 0; padding: 0; font-size: 999px; pointer-events: auto; }
   .file-name { font-size: 0.65rem; color: #888; margin-top: 4px; word-break: break-all; font-family: monospace; }
-  
+ 
   /* Color Picker Styling */
   #color-picker-input {
     -webkit-appearance: none;
@@ -1013,6 +1013,14 @@
   @media (orientation: portrait) {
     #orientation-warning { display: flex; }
   }
+
+  /* Fix for Start (+) button invisible hitbox not covering the vertical cross */
+  #switch-plus input {
+    top: -200% !important;
+    left: -50% !important;
+    width: 200% !important;
+    height: 500% !important;
+  }
 </style>
 </head>
 <body>
@@ -1048,11 +1056,11 @@
       </section>
 
       <section class="body">
-        
+       
         <!-- MASSIVE INVISIBLE HITBOXES (Bypasses CSS Clip-Path Bug) -->
         <div class="vol-hitbox down" style="position: absolute; top: -3%; left: 11.5%; width: 6%; height: 6%; z-index: 9999; cursor: pointer;"></div>
         <div class="vol-hitbox up" style="position: absolute; top: -3%; left: 17.5%; width: 6%; height: 6%; z-index: 9999; cursor: pointer;"></div>
-        
+       
         <button class="volume"></button>
         <div class="frame"></div>
         <div class="screen" id="screen">
@@ -1089,17 +1097,17 @@
                 <div class="battery-icon"><div class="battery-fill"></div></div>
               </div>
               <div id="xmb-grid">
-                
+               
                 <!-- SETTINGS COLUMN -->
                 <div class="xmb-col">
                   <div class="xmb-main">
                     <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M17 6h-2V4c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2v2H7c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2h2v2h-2V4z M19 18H5V11h14v7z M5 9V8h14v1H5z"/></svg>
                     <span>Settings</span>
                   </div>
-                  <div class="xmb-sub">Insert Core (BIOS)</div>
-                  <div class="xmb-sub">Edit L-Control Color</div>
-                  <div class="xmb-sub">Edit R-Control Color</div>
-                  <div class="xmb-sub">Edit Wallpaper</div>
+                  <div class="xmb-sub">BIOS</div>
+                  <div class="xmb-sub">L-SKIN</div>
+                  <div class="xmb-sub">R-SKIN</div>
+                  <div class="xmb-sub">Wallpaper</div>
                 </div>
 
                 <!-- GAME COLUMN -->
@@ -1110,7 +1118,7 @@
                   </div>
                   <div class="xmb-sub" id="memory-stick">Memory Stick (Install)</div>
                 </div>
-                
+               
                 <!-- NEW GALLERY COLUMN -->
                 <div class="xmb-col" id="gallery-column">
                   <div class="xmb-main">
@@ -1132,7 +1140,7 @@
               </div>
               <div id="sys-msg">Press X to execute</div>
             </div>
-            
+           
             <div id="install-popup">
               <!-- INSTALL GAME -->
               <div class="popup-box" id="popup-box-game" style="display:block;">
@@ -1153,7 +1161,7 @@
                 <div class="file-name" id="popup-cover-name"></div>
                 <button class="popup-btn install-btn" id="popup-install" disabled>Install</button>
               </div>
-              
+             
               <!-- INSERT CORE -->
               <div class="popup-box" id="popup-box-bios" style="display:none;">
                 <h3>Insert Core (BIOS)</h3>
@@ -1242,7 +1250,7 @@
         var l = safeGetItem('gmx_color_left', null);
         var r = safeGetItem('gmx_color_right', null);
         var wp = safeGetItem('gmx_wallpaper', null);
-        
+       
         if(l) { article.style.setProperty('--joycon-left', l); article.style.setProperty('--joycon-left-shadow', l + '80'); }
         if(r) { article.style.setProperty('--joycon-right', r); article.style.setProperty('--joycon-right-shadow', r + '80'); }
         if(wp) {
@@ -1278,7 +1286,7 @@
             <div class="left"></div>
             <div class="right"></div>
           `;
-          
+         
           container.appendChild(box);
           boxesWrapper.appendChild(container);
         }
@@ -1395,7 +1403,7 @@
           this.volume = 1.0;
           this.scriptNode = null;
           this.dummyOsc = null;
-          
+         
           this.bufferFrames = 65536; 
           this.bufferL = new Float32Array(this.bufferFrames);
           this.bufferR = new Float32Array(this.bufferFrames);
@@ -1405,33 +1413,33 @@
 
         initialize(channelCount, sampleRate, bufferLimit, heartBeatCallback, postHeartBeatCallback, errorCallback) {
           if (this.ctx.state === 'suspended') this.ctx.resume();
-          
+         
           this.sampleRate = sampleRate; 
           this.heartBeatCallback = heartBeatCallback;
           this.postHeartBeatCallback = postHeartBeatCallback;
 
           this.scriptNode = this.ctx.createScriptProcessor(4096, 0, 2);
           const ratio = this.sampleRate / this.ctx.sampleRate; 
-          
+         
           this.scriptNode.onaudioprocess = (e) => {
             if (this.heartBeatCallback) this.heartBeatCallback();
-            
+           
             const outL = e.outputBuffer.getChannelData(0);
             const outR = e.outputBuffer.getChannelData(1);
             const frames = outL.length;
-            
+           
             for (let i = 0; i < frames; i++) {
               let readIdx = Math.floor(this.readPos);
               let nextIdx = (readIdx + 1) % this.bufferFrames;
               let fraction = this.readPos - readIdx;
-              
+             
               let available = this.writePos - readIdx;
               if (available < 0) available += this.bufferFrames;
-              
+             
               if (available > 1) {
                 outL[i] = (this.bufferL[readIdx] + fraction * (this.bufferL[nextIdx] - this.bufferL[readIdx])) * this.volume;
                 outR[i] = (this.bufferR[readIdx] + fraction * (this.bufferR[nextIdx] - this.bufferR[readIdx])) * this.volume;
-                
+               
                 this.readPos += ratio;
                 if (this.readPos >= this.bufferFrames) {
                   this.readPos -= this.bufferFrames;
@@ -1470,7 +1478,7 @@
             this.writePos = (this.writePos + 1) % this.bufferFrames;
           }
         }
-        
+       
         pushDeferred(buffer, start, end) { this.push(buffer, start, end); }
         flush() {}
         register() {}
@@ -1505,11 +1513,11 @@
 
       function changeVolume(delta) {
         currentVol = Math.max(0, Math.min(1, currentVol + delta));
-        
+       
         if (emu.audio && typeof emu.audio.setVolume === 'function') {
             emu.audio.setVolume(currentVol);
         }
-        
+       
         if (currentMasterGain) {
           try { currentMasterGain.gain.setValueAtTime(currentVol * 0.5, globalCtx.currentTime); } catch(e) {}
         }
@@ -1546,7 +1554,7 @@
           e.preventDefault();
           isDragging = true;
           stick.classList.add('dragging');
-          
+         
           let pointer;
           if (e.changedTouches) {
             pointer = e.changedTouches[0];
@@ -1554,14 +1562,14 @@
           } else {
             pointer = e;
           }
-          
+         
           startX = pointer.clientX;
           startY = pointer.clientY;
         };
 
         const doDrag = (e) => {
           if (!isDragging) return;
-          
+         
           let pointer;
           if (e.changedTouches) {
             for (let i = 0; i < e.changedTouches.length; i++) {
@@ -1574,7 +1582,7 @@
           } else {
             pointer = e;
           }
-          
+         
           e.preventDefault();
           const dx = pointer.clientX - startX;
           const dy = pointer.clientY - startY;
@@ -1602,7 +1610,7 @@
 
         const stopDrag = (e) => {
           if (!isDragging) return;
-          
+         
           if (e.changedTouches) {
             let matchFound = false;
             for (let i = 0; i < e.changedTouches.length; i++) {
@@ -1651,10 +1659,10 @@
       };
 
       var emu = { iodine: null, blitter: null, audio: null, rafId: null, running: false };
-      
+     
       // Initialize layout driver instance directly
       emu.audio = new AudioGlue();
-      
+     
       var scriptsLoaded = false;
       var emuSpeed = 1.0;
       var TICK_MS = 16;
@@ -1721,7 +1729,7 @@
       function startIodine(biosData, romData) {
         try {
           emu.iodine = new GameBoyAdvanceEmulator();
-          
+         
           emu.iodine.attachAudioHandler(emu.audio);
           emu.iodine.enableAudio();
 
@@ -1729,7 +1737,7 @@
           emu.iodine.attachSpeedHandler(function() {});
           emu.iodine.attachBIOS(new Uint8Array(biosData));
           emu.iodine.attachROM(new Uint8Array(romData));
-          
+         
           emu.blitter = new GfxGlueCode(240, 160);
           emu.blitter.attachCanvas(document.getElementById('game-canvas'));
           emu.iodine.attachGraphicsFrameHandler(emu.blitter);
@@ -1932,12 +1940,12 @@
 
       function triggerA() {
         if (!isOSReady || popupVisible()) return;
-        
+       
         if (globalCtx && globalCtx.state === 'suspended') globalCtx.resume();
         if (emu.audio) emu.audio.resume();
 
         var sysMsg = document.getElementById('sys-msg');
-        
+       
         // COL 0: SETTINGS
         if (colIdx === 0) { 
           if (rowIdx === 1) openBiosPopup(); 
@@ -1956,7 +1964,7 @@
 
         // COL 3: ABOUT
         if (colIdx === 3) { sysMsg.innerText = 'Module offline.'; sysMsg.style.opacity = 1; return; }
-        
+       
         // COL 1: GAME
         var games = document.querySelectorAll('.dynamic-game');
         if (rowIdx > 0 && rowIdx <= games.length) {
@@ -2124,10 +2132,10 @@
         document.querySelectorAll('.popup-box').forEach(box => box.style.display = 'none');
         document.getElementById('popup-box-color').style.display = 'block';
         currentColorTarget = target;
-        
+       
         var title = document.getElementById('color-popup-title');
         var input = document.getElementById('color-picker-input');
-        
+       
         if (target === 'left') {
             title.innerText = 'L-Control Color';
             input.value = safeGetItem('gmx_color_left', '#00c5e2');
@@ -2146,7 +2154,7 @@
       document.getElementById('popup-save-color').addEventListener('click', function() {
         var hex = document.getElementById('color-picker-input').value;
         var article = document.querySelector('article');
-        
+       
         if (currentColorTarget === 'left') {
             article.style.setProperty('--joycon-left', hex);
             article.style.setProperty('--joycon-left-shadow', hex + '80');
@@ -2156,7 +2164,7 @@
             article.style.setProperty('--joycon-right-shadow', hex + '80');
             safeSetItem('gmx_color_right', hex);
         }
-        
+       
         closePopup();
         var s = document.getElementById('sys-msg');
         s.innerText = 'Color applied!';
@@ -2305,7 +2313,7 @@
         el.insertAdjacentElement("beforeend", switchEl);
 
         switchEl.addEventListener('touchstart', function(e) { e.stopPropagation(); pressButton(gbaId); el.classList.add('active'); }, { passive: true });
-        
+       
         var release = function(e) { e.stopPropagation(); releaseButton(gbaId); el.classList.remove('active'); };
 
         switchEl.addEventListener('touchend', release, { passive: true });
@@ -2322,7 +2330,7 @@
       // ===================================================================
       window.addEventListener('keydown', function(e) {
         if (popupVisible()) return;
-        
+       
         var code = e.keyCode || e.which;
         if ([37, 38, 39, 40, 32].indexOf(code) > -1) e.preventDefault();
 
@@ -2355,7 +2363,7 @@
         var code = e.keyCode || e.which;
         var gameBtn = KEYCODE_MAP[code]; 
         if (!gameBtn) return;
-        
+       
         delete osHeld[gameBtn];
         releaseButton(gameBtn);
       });
@@ -2380,13 +2388,13 @@
 
         if (isPoweredOn) {
           screen.classList.remove('power-off');
-          
+         
           screen.classList.remove('is-booting');
           void screen.offsetWidth; 
           screen.classList.add('is-booting');
-          
+         
           playBootSound();
-          
+         
           bootTimers.push(setTimeout(function() {
             buildXMB().then(function() {
               screen.classList.remove('is-booting');
@@ -2428,7 +2436,7 @@
       captureBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         triggerHaptic();
-        
+       
         if (isCameraActive) {
           if (cameraStream) {
             cameraStream.getTracks().forEach(track => track.stop());
