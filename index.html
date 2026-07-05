@@ -853,17 +853,17 @@
     transition: transform 0.12s cubic-bezier(0.25, 1, 0.5, 1);
     will-change: transform;
   }
-  .xmb-col { display: flex; flex-direction: column; align-items: center; gap: 40px; transition: opacity 0.12s, transform 0.12s; opacity: 0.3; transform: scale(0.85); }
+  .xmb-col { display: flex; flex-direction: column; align-items: flex-start; gap: 40px; transition: opacity 0.12s, transform 0.12s; opacity: 0.3; transform: scale(0.85); }
   .xmb-col.active-col { opacity: 1; transform: scale(1); }
   .xmb-main { position: relative; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
   .xmb-icon { width: 40px; height: 40px; fill: #ffffff; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); transition: all 0.2s; }
   .xmb-main span { position: absolute; left: 130%; top: 50%; transform: translateY(-50%); font-size: 0.9rem; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity 0.2s; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
   .active-col .active-item.xmb-main .xmb-icon { transform: scale(1.3); filter: drop-shadow(0 0 20px rgba(255,255,255,0.6)); }
   .active-col .active-item.xmb-main span { opacity: 1; }
-  .xmb-sub { font-size: 0.85rem; font-weight: 500; opacity: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.9); transition: all 0.2s; white-space: nowrap; }
+  .xmb-sub { font-size: 0.85rem; font-weight: 500; opacity: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.9); transition: all 0.2s; white-space: nowrap; text-align: left; width: 100%; }
   .active-col .xmb-sub { opacity: 0.5; }
   .active-col .active-item.xmb-sub { opacity: 1; transform: scale(1.15); font-weight: 700; }
-  .game-item { display: flex; align-items: center; justify-content: center; position: relative; }
+  .game-item { display: flex; align-items: center; justify-content: flex-start; position: relative; width: 100%; }
   .box-art { width: 60px; height: 40px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.8); }
   .active-col .active-item.game-item .box-art { border: 2px solid #fff; box-shadow: 0 0 20px rgba(255,255,255,0.5), 0 8px 15px rgba(0,0,0,0.8); transform: scale(1.1); }
   .game-details { position: absolute; left: 80px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; opacity: 0; transition: opacity 0.2s; }
@@ -937,6 +937,7 @@
     box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.05);
     font-family: inherit;
   }
+
   .popup-box h3 { font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; color: #ddd; }
   .popup-btn {
     display: block;
@@ -978,6 +979,19 @@
   }
   #color-picker-input::-webkit-color-swatch-wrapper { padding: 0; }
   #color-picker-input::-webkit-color-swatch { border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+
+  /* Cyber-shot Photo Gallery App Styling */
+  #photo-gallery-app {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #050505; z-index: 50; display: none; color: #fff;
+    font-family: 'Courier New', Courier, monospace; font-weight: bold; text-shadow: 1px 1px 0 #000;
+  }
+  #photo-gallery-app.active { display: block; }
+  #pg-img, #pg-video { width: 100%; height: 100%; object-fit: contain; }
+  .pg-osd { position: absolute; font-size: 0.65rem; color: #fff; z-index: 51; }
+  .pg-bottom-left { bottom: 10px; left: 15px; }
+  .pg-top-right { top: 10px; right: 15px; color: #888; }
+  .pg-empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #888; font-family: sans-serif; }
 
   /* Orientation Warning Overlay */
   #orientation-warning {
@@ -1075,17 +1089,20 @@
                 <div class="battery-icon"><div class="battery-fill"></div></div>
               </div>
               <div id="xmb-grid">
+                
+                <!-- SETTINGS COLUMN -->
                 <div class="xmb-col">
                   <div class="xmb-main">
                     <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M17 6h-2V4c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2v2H7c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2h2v2h-2V4z M19 18H5V11h14v7z M5 9V8h14v1H5z"/></svg>
                     <span>Settings</span>
                   </div>
                   <div class="xmb-sub">Insert Core (BIOS)</div>
-                  <!-- 3 NEW COLOR EDITOR ITEMS -->
                   <div class="xmb-sub">Edit L-Control Color</div>
                   <div class="xmb-sub">Edit R-Control Color</div>
-                  <div class="xmb-sub">Edit Wave Color</div>
+                  <div class="xmb-sub">Edit Wallpaper</div>
                 </div>
+
+                <!-- GAME COLUMN -->
                 <div class="xmb-col" id="game-column">
                   <div class="xmb-main">
                     <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h4l2-2h6l2 2h4c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm6.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm2-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
@@ -1093,6 +1110,18 @@
                   </div>
                   <div class="xmb-sub" id="memory-stick">Memory Stick (Install)</div>
                 </div>
+                
+                <!-- NEW GALLERY COLUMN -->
+                <div class="xmb-col" id="gallery-column">
+                  <div class="xmb-main">
+                    <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                    <span>Gallery</span>
+                  </div>
+                  <div class="xmb-sub" id="gallery-launch">Launch Gallery</div>
+                  <div class="xmb-sub" id="gallery-upload-btn">Upload Media</div>
+                </div>
+
+                <!-- ABOUT COLUMN -->
                 <div class="xmb-col">
                   <div class="xmb-main">
                     <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
@@ -1150,7 +1179,33 @@
                 <button class="popup-btn" id="popup-cancel-color">Cancel</button>
               </div>
 
+              <!-- EDIT WALLPAPER -->
+              <div class="popup-box" id="popup-box-wallpaper" style="display:none;">
+                <h3>Edit Wallpaper</h3>
+                <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Upload an image to set as the emulator background.</div>
+                <label class="popup-btn">
+                    Select Image
+                    <input type="file" id="wallpaper-upload" accept="image/*"
+                           style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                                  opacity: 0; cursor: pointer; touch-action: manipulation;">
+                </label>
+                <button class="popup-btn install-btn" id="popup-clear-wallpaper">Reset to Default</button>
+                <button class="popup-btn" id="popup-cancel-wallpaper">Cancel</button>
+              </div>
             </div>
+
+            <!-- HIDDEN FILE INPUT FOR PHOTOS -->
+            <input type="file" id="import-photo-input" accept="image/*,video/*" multiple style="display:none;">
+
+            <!-- CYBER-SHOT PHOTO GALLERY (Single Item Slider) -->
+            <div id="photo-gallery-app">
+              <img id="pg-img" src="" style="display:none;">
+              <video id="pg-video" muted loop playsinline style="display:none;"></video>
+              <div class="pg-osd pg-bottom-left" id="pg-date">2026 1 1 12:00PM</div>
+              <div class="pg-osd pg-top-right">GALLERY | B: EXIT</div>
+              <div id="pg-empty-msg" class="pg-empty">NO MEDIA UPLOADED</div>
+            </div>
+
             <div id="game-area">
               <canvas id="game-canvas" width="240" height="160"></canvas>
             </div>
@@ -1161,6 +1216,11 @@
   </main>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+
+      // HAPTIC FEEDBACK HANDLER
+      const triggerHaptic = () => {
+        if (navigator.vibrate) navigator.vibrate(15);
+      };
 
       // SAFE LOCALSTORAGE WRAPPERS
       function safeGetItem(key, defaultVal) {
@@ -1181,11 +1241,16 @@
         var xmbBg = document.querySelector('.xmb-bg');
         var l = safeGetItem('gmx_color_left', null);
         var r = safeGetItem('gmx_color_right', null);
-        var w = safeGetItem('gmx_color_wave', null);
+        var wp = safeGetItem('gmx_wallpaper', null);
         
         if(l) { article.style.setProperty('--joycon-left', l); article.style.setProperty('--joycon-left-shadow', l + '80'); }
         if(r) { article.style.setProperty('--joycon-right', r); article.style.setProperty('--joycon-right-shadow', r + '80'); }
-        if(w) { xmbBg.style.setProperty('--wave-color', hexToRgb(w)); }
+        if(wp) {
+            xmbBg.style.backgroundImage = 'url(' + wp + ')';
+            xmbBg.style.backgroundSize = 'cover';
+            xmbBg.style.backgroundPosition = 'center';
+            document.querySelectorAll('.wave-line').forEach(el => el.style.display = 'none');
+        }
       }
       loadSavedColors(); 
 
@@ -1219,36 +1284,16 @@
         }
       }
 
-      // 1. Standard Button Haptics (Switch shell)
-      const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.home):not(.bumper):not(.popup-btn)');
-      const handlePress = (e, btn) => {
-        e.preventDefault();
-        btn.classList.add('active');
-      };
-      const handleRelease = (e, btn) => {
-        e.preventDefault();
-        btn.classList.remove('active');
-      };
-
-      standardButtons.forEach(btn => {
-        btn.addEventListener('touchstart', (e) => handlePress(e, btn), { passive: false });
-        btn.addEventListener('touchend', (e) => handleRelease(e, btn), { passive: false });
-        btn.addEventListener('touchcancel', (e) => handleRelease(e, btn), { passive: false });
-        btn.addEventListener('mousedown', (e) => handlePress(e, btn));
-        btn.addEventListener('mouseup', (e) => handleRelease(e, btn));
-        btn.addEventListener('mouseleave', (e) => handleRelease(e, btn));
-      });
-
       // ===================================================================
-      // GLOBAL BOOT SOUND CONTEXT (Separate from Emulator to prevent lag)
+      // GLOBAL BOOT SOUND CONTEXT
       // ===================================================================
-      const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
       let globalCtx = null;
       let activeOscillators = [];
       let currentMasterGain = null;
 
       function getUnlockedContext() {
         if (!globalCtx) {
+          const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
           globalCtx = new NativeAudioContext();
         }
         if (globalCtx.state === 'suspended') {
@@ -1257,14 +1302,7 @@
         return globalCtx;
       }
 
-      const initAudioContext = () => {
-        const ctx = getUnlockedContext();
-        const buffer = ctx.createBuffer(1, 1, 22050);
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        try { source.start(0); } catch(e) {}
-      };
+      const initAudioContext = () => { getUnlockedContext(); };
 
       document.addEventListener('touchstart', initAudioContext, { once: true, passive: true });
       document.addEventListener('mousedown', initAudioContext, { once: true });
@@ -1277,15 +1315,12 @@
           currentMasterGain.gain.setValueAtTime(currentMasterGain.gain.value, now);
           currentMasterGain.gain.linearRampToValueAtTime(0.0001, now + 0.05);
         }
-        activeOscillators.forEach(osc => {
-          try { osc.stop(now + 0.06); } catch (e) {}
-        });
+        activeOscillators.forEach(osc => { try { osc.stop(now + 0.06); } catch (e) {} });
         activeOscillators = [];
       }
 
       function playBootSound() {
-        initAudioContext();
-        const ctx = globalCtx;
+        const ctx = getUnlockedContext();
         const now = ctx.currentTime;
         const totalDuration = 8.5;
 
@@ -1355,12 +1390,13 @@
       // ===================================================================
       class AudioGlue {
         constructor() {
+          const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
           this.ctx = new NativeAudioContext();
           this.volume = 1.0;
           this.scriptNode = null;
           this.dummyOsc = null;
           
-          this.bufferFrames = 65536; // Robust array sizing limits dropouts on legacy processing hardware
+          this.bufferFrames = 65536; 
           this.bufferL = new Float32Array(this.bufferFrames);
           this.bufferR = new Float32Array(this.bufferFrames);
           this.writePos = 0;
@@ -1374,7 +1410,6 @@
           this.heartBeatCallback = heartBeatCallback;
           this.postHeartBeatCallback = postHeartBeatCallback;
 
-          // 4096 buffer size prevents crackling on A7 processing chips (iPhone 5s)
           this.scriptNode = this.ctx.createScriptProcessor(4096, 0, 2);
           const ratio = this.sampleRate / this.ctx.sampleRate; 
           
@@ -1394,7 +1429,6 @@
               if (available < 0) available += this.bufferFrames;
               
               if (available > 1) {
-                // Linear Interpolation upsampling logic
                 outL[i] = (this.bufferL[readIdx] + fraction * (this.bufferL[nextIdx] - this.bufferL[readIdx])) * this.volume;
                 outR[i] = (this.bufferR[readIdx] + fraction * (this.bufferR[nextIdx] - this.bufferR[readIdx])) * this.volume;
                 
@@ -1486,8 +1520,8 @@
         showVolume();
       }
 
-      const handleVolDown = (e) => { e.preventDefault(); changeVolume(-0.1); };
-      const handleVolUp = (e) => { e.preventDefault(); changeVolume(0.1); };
+      const handleVolDown = (e) => { e.preventDefault(); changeVolume(-0.1); triggerHaptic(); };
+      const handleVolUp = (e) => { e.preventDefault(); changeVolume(0.1); triggerHaptic(); };
 
       document.querySelector('.vol-hitbox.down').addEventListener('touchstart', handleVolDown, { passive: false });
       document.querySelector('.vol-hitbox.down').addEventListener('mousedown', handleVolDown);
@@ -1678,22 +1712,6 @@
         ctx.clearRect(0, 0, 240, 160);
       }
 
-      function renderError(title, msg) {
-        document.getElementById('screen').classList.add('game-running');
-        var canvas = document.getElementById('game-canvas');
-        var ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, 240, 160);
-        ctx.fillStyle = '#ff4444'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(title, 8, 70);
-        ctx.fillStyle = '#aaa'; ctx.font = '9px monospace';
-        var words = msg.split(' '), line = '', y = 88;
-        for (var w = 0; w < words.length; w++) {
-          var t = line + (line ? ' ' : '') + words[w];
-          if (ctx.measureText(t).width > 224 && line) { ctx.fillText(line, 8, y); line = words[w]; y += 12; }
-          else line = t;
-        }
-        if (line) ctx.fillText(line, 8, y);
-      }
-
       function applyEmuSpeed() {
         if (!emu.iodine) return;
         var rate = Math.max(1, Math.round(TICK_MS / emuSpeed));
@@ -1704,7 +1722,6 @@
         try {
           emu.iodine = new GameBoyAdvanceEmulator();
           
-          // Secure layout routing directly into emulator processing loop
           emu.iodine.attachAudioHandler(emu.audio);
           emu.iodine.enableAudio();
 
@@ -1737,7 +1754,10 @@
           emu.rafId = requestAnimationFrame(rafLoop);
           emu.iodine.play();
         } catch(e) {
-          renderError('BOOT FAILED', String(e));
+          document.getElementById('screen').classList.add('game-running');
+          var canvas = document.getElementById('game-canvas');
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ff4444'; ctx.fillText('BOOT FAILED', 8, 70);
         }
       }
 
@@ -1757,17 +1777,25 @@
       }
 
       // ===================================================================
-      // Storage (IndexedDB + memory fallback)
+      // Storage (IndexedDB + memory fallback) v3
       // ===================================================================
       var DB_NAME = 'GMX_GBA_Storage', STORE = 'library';
-      var memFallback = false, memStore = { bios: null, games: {} };
+      var memFallback = false, memStore = { bios: null, games: {}, photos: [] };
 
       function initDB() {
         return new Promise(function(resolve) {
           if (memFallback || !window.indexedDB) { memFallback = true; return resolve(null); }
           try {
-            var req = indexedDB.open(DB_NAME, 1);
-            req.onupgradeneeded = function(e) { e.target.result.createObjectStore(STORE, { keyPath: 'id' }); };
+            var req = indexedDB.open(DB_NAME, 3);
+            req.onupgradeneeded = function(e) {
+                var db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE)) {
+                    db.createObjectStore(STORE, { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains('photos')) {
+                    db.createObjectStore('photos', { keyPath: 'id' });
+                }
+            };
             req.onsuccess = function() { resolve(req.result); };
             req.onerror = function() { memFallback = true; resolve(null); };
           } catch(e) { memFallback = true; resolve(null); }
@@ -1847,9 +1875,9 @@
       }
 
       // ===================================================================
-      // XMB OS & COLOR PICKER LOGIC
+      // XMB OS NAVIGATION
       // ===================================================================
-      var isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0, maxRows = [4,1,1]; 
+      var isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0, maxRows = [4, 1, 2, 1]; // 4 columns total
       var bootTimers = [];
       var currentColorTarget = '';
 
@@ -1859,7 +1887,7 @@
         col.querySelectorAll('.dynamic-game').forEach(function(el) { el.remove(); });
         var count = 1;
         games.forEach(function(g) {
-          if (g.id === '__bios__') return;
+          if (g.id === '__bios__' || g.id.startsWith('__img__')) return;
           var d = document.createElement('div');
           d.className = 'xmb-sub game-item dynamic-game';
           d.innerHTML = '<img src="' + g.cover + '" class="box-art"><div class="game-details"><span class="game-title">' + g.title + '</span></div>';
@@ -1898,7 +1926,7 @@
 
       function popupVisible() { return document.getElementById('install-popup').classList.contains('visible'); }
       function navLeft()  { if (colIdx > 0 && isOSReady && !popupVisible()) { colIdx--; rowIdx = 0; updateXMB(); } }
-      function navRight() { if (colIdx < 2 && isOSReady && !popupVisible()) { colIdx++; rowIdx = 0; updateXMB(); } }
+      function navRight() { if (colIdx < 3 && isOSReady && !popupVisible()) { colIdx++; rowIdx = 0; updateXMB(); } }
       function navUp()    { if (rowIdx > 0 && isOSReady && !popupVisible()) { rowIdx--; updateXMB(); } }
       function navDown()  { if (rowIdx < maxRows[colIdx] && isOSReady && !popupVisible()) { rowIdx++; updateXMB(); } }
 
@@ -1910,16 +1938,26 @@
 
         var sysMsg = document.getElementById('sys-msg');
         
+        // COL 0: SETTINGS
         if (colIdx === 0) { 
           if (rowIdx === 1) openBiosPopup(); 
           else if (rowIdx === 2) openColorPopup('left');
           else if (rowIdx === 3) openColorPopup('right');
-          else if (rowIdx === 4) openColorPopup('wave');
+          else if (rowIdx === 4) openWallpaperPopup();
           return; 
         }
 
-        if (colIdx === 2) { sysMsg.innerText = 'Module offline.'; sysMsg.style.opacity = 1; return; }
+        // COL 2: GALLERY
+        if (colIdx === 2) { 
+          if (rowIdx === 1) openPhotoApp();
+          else if (rowIdx === 2) document.getElementById('import-photo-input').click();
+          return; 
+        }
+
+        // COL 3: ABOUT
+        if (colIdx === 3) { sysMsg.innerText = 'Module offline.'; sysMsg.style.opacity = 1; return; }
         
+        // COL 1: GAME
         var games = document.querySelectorAll('.dynamic-game');
         if (rowIdx > 0 && rowIdx <= games.length) {
           var title = games[rowIdx - 1].querySelector('.game-title').innerText;
@@ -1939,8 +1977,11 @@
       function triggerB() {
         if (popupVisible()) { closePopup(); return; }
         if (!isOSReady) return;
+        if (colIdx !== 1) return; // Only delete items when hovering over games column
+
         var games = document.querySelectorAll('.dynamic-game');
-        if (colIdx !== 1 || rowIdx < 1 || rowIdx > games.length) return;
+        if (rowIdx < 1 || rowIdx > games.length) return;
+
         var title = games[rowIdx - 1].querySelector('.game-title').innerText;
         var sysMsg = document.getElementById('sys-msg');
         sysMsg.innerText = 'Deleting ' + title + '...'; sysMsg.style.opacity = 1;
@@ -1954,7 +1995,103 @@
       }
 
       // ===================================================================
-      // Install & Color Popups
+      // PHOTO GALLERY LOGIC (Single Image Cyber-shot Slider)
+      // ===================================================================
+      var isPhotoAppOpen = false;
+      var photosList = [];
+      var currentPhotoIdx = 0;
+      var pgApp = document.getElementById('photo-gallery-app');
+      var pgImg = document.getElementById('pg-img');
+      var pgVideo = document.getElementById('pg-video');
+      var pgDate = document.getElementById('pg-date');
+      var pgEmptyMsg = document.getElementById('pg-empty-msg');
+
+      function loadPhotosList() {
+        return initDB().then(db => {
+          if (!db) return memStore.photos;
+          return new Promise(res => {
+            var tx = db.transaction('photos', 'readonly');
+            var req = tx.objectStore('photos').getAll();
+            req.onsuccess = () => res(req.result || []);
+          });
+        });
+      }
+
+      function renderPhoto() {
+        if (photosList.length === 0) {
+          pgImg.style.display = 'block';
+          pgVideo.style.display = 'none';
+          pgImg.src = '';
+          pgEmptyMsg.style.display = 'block';
+          pgDate.innerText = '---';
+        } else {
+          pgEmptyMsg.style.display = 'none';
+          var p = photosList[currentPhotoIdx];
+          var isVideo = p.data && p.data.startsWith('data:video');
+
+          if (isVideo) {
+             pgImg.style.display = 'none';
+             pgVideo.style.display = 'block';
+             pgVideo.src = p.data;
+             pgVideo.play().catch(e=>{});
+          } else {
+             pgVideo.style.display = 'none';
+             pgImg.style.display = 'block';
+             pgImg.src = p.data;
+          }
+          pgDate.innerText = p.date || new Date().toLocaleString();
+        }
+      }
+
+      function openPhotoApp() {
+        isPhotoAppOpen = true;
+        pgApp.classList.add('active');
+        document.getElementById('sys-msg').style.opacity = 0;
+        loadPhotosList().then(list => {
+          photosList = list;
+          currentPhotoIdx = photosList.length > 0 ? photosList.length - 1 : 0;
+          renderPhoto();
+        });
+      }
+
+      function closePhotoApp() {
+        isPhotoAppOpen = false;
+        pgApp.classList.remove('active');
+        pgImg.src = ''; 
+        pgVideo.src = '';
+      }
+
+      document.getElementById('import-photo-input').addEventListener('change', function(e) {
+        var files = e.target.files;
+        if (!files.length) return;
+        var sysMsg = document.getElementById('sys-msg');
+        sysMsg.innerText = 'IMPORTING MEDIA...'; 
+        sysMsg.style.opacity = 1;
+        var promises = [];
+        for(let i=0; i<files.length; i++) {
+          promises.push(new Promise((res) => {
+            var reader = new FileReader();
+            reader.onload = function(evt) {
+              var rec = { id: Date.now() + i, data: evt.target.result, date: new Date().toLocaleString() };
+              initDB().then(db => {
+                 if (db) { var tx = db.transaction('photos', 'readwrite'); tx.objectStore('photos').put(rec); tx.oncomplete = res; }
+                 else { memStore.photos.push(rec); res(); }
+              });
+            };
+            reader.readAsDataURL(files[i]);
+          }));
+        }
+        Promise.all(promises).then(() => {
+          sysMsg.innerText = files.length + ' MEDIA IMPORTED';
+          setTimeout(() => { 
+            sysMsg.style.opacity = 0; 
+            openPhotoApp(); // Auto-launch exactly as requested
+          }, 1500);
+        });
+      });
+
+      // ===================================================================
+      // Install Popups & Settings
       // ===================================================================
       var selRom = null, selCover = null, selBios = null;
 
@@ -1962,9 +2099,8 @@
 
       function openPopup() {
         document.getElementById('install-popup').classList.add('visible');
+        document.querySelectorAll('.popup-box').forEach(box => box.style.display = 'none');
         document.getElementById('popup-box-game').style.display = 'block';
-        document.getElementById('popup-box-bios').style.display = 'none';
-        document.getElementById('popup-box-color').style.display = 'none';
         selRom = null; selCover = null;
         document.getElementById('install-rom-upload').value = '';
         document.getElementById('install-cover-upload').value = '';
@@ -1975,8 +2111,7 @@
 
       function openBiosPopup() {
         document.getElementById('install-popup').classList.add('visible');
-        document.getElementById('popup-box-game').style.display = 'none';
-        document.getElementById('popup-box-color').style.display = 'none';
+        document.querySelectorAll('.popup-box').forEach(box => box.style.display = 'none');
         document.getElementById('popup-box-bios').style.display = 'block';
         selBios = null;
         document.getElementById('install-bios-upload').value = '';
@@ -1986,8 +2121,7 @@
 
       function openColorPopup(target) {
         document.getElementById('install-popup').classList.add('visible');
-        document.getElementById('popup-box-game').style.display = 'none';
-        document.getElementById('popup-box-bios').style.display = 'none';
+        document.querySelectorAll('.popup-box').forEach(box => box.style.display = 'none');
         document.getElementById('popup-box-color').style.display = 'block';
         currentColorTarget = target;
         
@@ -2000,16 +2134,18 @@
         } else if (target === 'right') {
             title.innerText = 'R-Control Color';
             input.value = safeGetItem('gmx_color_right', '#ff6658');
-        } else if (target === 'wave') {
-            title.innerText = 'Wave Color';
-            input.value = safeGetItem('gmx_color_wave', '#ffffff');
         }
+      }
+
+      function openWallpaperPopup() {
+        document.getElementById('install-popup').classList.add('visible');
+        document.querySelectorAll('.popup-box').forEach(box => box.style.display = 'none');
+        document.getElementById('popup-box-wallpaper').style.display = 'block';
       }
 
       document.getElementById('popup-save-color').addEventListener('click', function() {
         var hex = document.getElementById('color-picker-input').value;
         var article = document.querySelector('article');
-        var xmbBg = document.querySelector('.xmb-bg');
         
         if (currentColorTarget === 'left') {
             article.style.setProperty('--joycon-left', hex);
@@ -2019,9 +2155,6 @@
             article.style.setProperty('--joycon-right', hex);
             article.style.setProperty('--joycon-right-shadow', hex + '80');
             safeSetItem('gmx_color_right', hex);
-        } else if (currentColorTarget === 'wave') {
-            xmbBg.style.setProperty('--wave-color', hexToRgb(hex));
-            safeSetItem('gmx_color_wave', hex);
         }
         
         closePopup();
@@ -2033,7 +2166,6 @@
 
       document.getElementById('popup-cancel-color').addEventListener('click', closePopup);
 
-      // System Interactions
       document.getElementById('install-bios-upload').addEventListener('change', function(e) {
         var f = e.target.files[0];
         if (f && f.name.toLowerCase().endsWith('.bin')) { selBios = f; document.getElementById('popup-bios-name').textContent = f.name; document.getElementById('popup-install-bios').disabled = false; }
@@ -2046,6 +2178,7 @@
           setTimeout(function() { s.style.opacity = 0; }, 2000);
         });
       });
+
       document.getElementById('install-rom-upload').addEventListener('change', function(e) {
         var f = e.target.files[0];
         if (f && f.name.toLowerCase().endsWith('.gba')) { selRom = f; document.getElementById('popup-rom-name').textContent = f.name; document.getElementById('popup-install').disabled = false; }
@@ -2063,16 +2196,55 @@
         }).catch(function() { s.innerText = 'Install Failed'; });
       });
 
+      document.getElementById('wallpaper-upload').addEventListener('change', function(e) {
+        var f = e.target.files[0];
+        if (f) {
+          var reader = new FileReader();
+          reader.onload = function(evt) {
+            var dataUrl = evt.target.result;
+            safeSetItem('gmx_wallpaper', dataUrl);
+            var xmbBg = document.querySelector('.xmb-bg');
+            xmbBg.style.backgroundImage = 'url(' + dataUrl + ')';
+            xmbBg.style.backgroundSize = 'cover';
+            xmbBg.style.backgroundPosition = 'center';
+            document.querySelectorAll('.wave-line').forEach(el => el.style.display = 'none');
+            closePopup();
+            var s = document.getElementById('sys-msg');
+            s.innerText = 'Wallpaper applied!'; s.style.opacity = 1;
+            setTimeout(function() { s.style.opacity = 0; }, 2000);
+          };
+          reader.readAsDataURL(f);
+        }
+      });
+      document.getElementById('popup-clear-wallpaper').addEventListener('click', function() {
+        localStorage.removeItem('gmx_wallpaper');
+        var xmbBg = document.querySelector('.xmb-bg');
+        xmbBg.style.backgroundImage = 'linear-gradient(135deg, #181926 0%, #0f101a 50%, #08080d 100%)';
+        document.querySelectorAll('.wave-line').forEach(el => el.style.display = 'block');
+        closePopup();
+        var s = document.getElementById('sys-msg');
+        s.innerText = 'Wallpaper reset!'; s.style.opacity = 1;
+        setTimeout(function() { s.style.opacity = 0; }, 2000);
+      });
+      document.getElementById('popup-cancel-wallpaper').addEventListener('click', closePopup);
+
+
       // ===================================================================
-      // Switch button → GBA/OS input routing
+      // Switch button → Router Logic
       // ===================================================================
       var held = {};
       var osHeld = {};
-
       var repeatTimers = {};
       var NAV_REPEAT = ['btn-left','btn-right','btn-up','btn-down'];
 
       function doNavAction(id) {
+        if (isPhotoAppOpen) {
+           if (id === 'btn-left') { if (currentPhotoIdx > 0) { currentPhotoIdx--; renderPhoto(); } }
+           else if (id === 'btn-right') { if (currentPhotoIdx < photosList.length - 1) { currentPhotoIdx++; renderPhoto(); } }
+           else if (id === 'btn-b') closePhotoApp();
+           return;
+        }
+
         if (id==='btn-left') navLeft(); else if (id==='btn-right') navRight();
         else if (id==='btn-up') navUp(); else if (id==='btn-down') navDown();
         else if (id==='btn-a') triggerA(); else if (id==='btn-b') triggerB();
@@ -2081,6 +2253,7 @@
       function pressButton(id) {
         if (held[id]) return;
         held[id] = true;
+        triggerHaptic(); 
         if (emu.running) {
           sendInput(id, true);
         } else {
@@ -2117,31 +2290,29 @@
         var gbaId = SWITCH_MAP[switchId];
         if (!gbaId) return;
 
-        el.addEventListener('touchstart', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          pressButton(gbaId);
-        }, { passive: false });
-        el.addEventListener('touchend', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          releaseButton(gbaId);
-        }, { passive: false });
-        el.addEventListener('touchcancel', function(e) {
-          e.stopPropagation();
-          releaseButton(gbaId);
-        }, { passive: false });
-        el.addEventListener('mousedown', function(e) {
-          e.preventDefault();
-          pressButton(gbaId);
-        });
-        el.addEventListener('mouseup', function(e) {
-          e.preventDefault();
-          releaseButton(gbaId);
-        });
-        el.addEventListener('mouseleave', function(e) {
-          releaseButton(gbaId);
-        });
+        var switchEl = document.createElement("input");
+        switchEl.type = "checkbox";
+        switchEl.setAttribute("switch", "");
+
+        var styles = {
+          position: "absolute", top: 0, left: 0, width: "100%", height: "100%", margin: 0,
+          opacity: 0, cursor: "pointer", clipPath: "inset(0 round 999px)", touchAction: "manipulation"
+        };
+        Object.assign(switchEl.style, styles);
+        switchEl.style.setProperty("-webkit-tap-highlight-color", "transparent");
+
+        if (window.getComputedStyle(el).position === 'static') { el.style.position = "relative"; }
+        el.insertAdjacentElement("beforeend", switchEl);
+
+        switchEl.addEventListener('touchstart', function(e) { e.stopPropagation(); pressButton(gbaId); el.classList.add('active'); }, { passive: true });
+        
+        var release = function(e) { e.stopPropagation(); releaseButton(gbaId); el.classList.remove('active'); };
+
+        switchEl.addEventListener('touchend', release, { passive: true });
+        switchEl.addEventListener('touchcancel', release, { passive: true });
+        switchEl.addEventListener('mousedown', function(e) { pressButton(gbaId); el.classList.add('active'); });
+        switchEl.addEventListener('mouseup', release);
+        switchEl.addEventListener('mouseleave', release);
       }
 
       Object.keys(SWITCH_MAP).forEach(bindSwitchButton);
@@ -2201,7 +2372,10 @@
         isPoweredOn = !isPoweredOn; isOSReady = false;
         bootTimers.forEach(clearTimeout); bootTimers = [];
 
+        getUnlockedContext(); // BRUTE FORCE UNLOCK AUDIO IMMEDIATELY
+
         homeBtn.classList.add('active');
+        triggerHaptic();
         setTimeout(function() { homeBtn.classList.remove('active'); }, 150);
 
         if (isPoweredOn) {
@@ -2224,7 +2398,7 @@
           screen.classList.add('power-off');
           screen.className = 'screen power-off'; 
           document.getElementById('sys-msg').style.opacity = 0;
-          stopEmu(); closePopup();
+          stopEmu(); closePopup(); closePhotoApp();
           stopBootSound();
         }
       }
@@ -2232,21 +2406,13 @@
       screen.classList.add('power-off');
 
       homeBtn.addEventListener('touchstart', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        _powerTouched = true;
-        homeBtn.classList.add('active');
+        e.stopPropagation(); e.preventDefault(); _powerTouched = true; homeBtn.classList.add('active'); triggerHaptic();
       }, { passive: false });
       homeBtn.addEventListener('touchend', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        homeBtn.classList.remove('active');
-        if (_powerTouched) { _powerTouched = false; togglePower(null); }
+        e.stopPropagation(); e.preventDefault(); homeBtn.classList.remove('active'); if (_powerTouched) { _powerTouched = false; togglePower(null); }
       }, { passive: false });
       homeBtn.addEventListener('touchcancel', function(e) {
-        e.stopPropagation();
-        _powerTouched = false;
-        homeBtn.classList.remove('active');
+        e.stopPropagation(); _powerTouched = false; homeBtn.classList.remove('active');
       }, { passive: false });
       homeBtn.addEventListener('click', togglePower);
 
@@ -2261,6 +2427,7 @@
 
       captureBtn.addEventListener('click', async (e) => {
         e.preventDefault();
+        triggerHaptic();
         
         if (isCameraActive) {
           if (cameraStream) {
@@ -2273,19 +2440,11 @@
         } else {
           try {
             cameraStream = await navigator.mediaDevices.getUserMedia({ 
-              video: { 
-                facingMode: 'environment',
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                frameRate: { ideal: 60 } 
-              },
-              audio: false
+              video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } }, audio: false
             });
-            
             cameraBg.srcObject = cameraStream;
             document.body.classList.add('camera-active');
             isCameraActive = true;
-            
           } catch (err) {
             console.error("Camera access failed:", err);
             if (camSysMsg) {
@@ -2327,11 +2486,8 @@
       }
 
       window.addEventListener('resize', applyOsScale);
-      window.addEventListener('orientationchange', function() {
-        setTimeout(applyOsScale, 200);
-      });
-      setTimeout(applyOsScale, 100);
-      setTimeout(applyOsScale, 500);
+      window.addEventListener('orientationchange', function() { setTimeout(applyOsScale, 200); });
+      setTimeout(applyOsScale, 100); setTimeout(applyOsScale, 500);
 
       var SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
       var speedIdx = 2;
@@ -2348,12 +2504,8 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-          .then((registration) => {
-            console.log('[GMX SW] Registration successful with scope: ', registration.scope);
-          })
-          .catch((error) => {
-            console.log('[GMX SW] Registration failed: ', error);
-          });
+          .then((registration) => { console.log('[GMX SW] Registration successful with scope: ', registration.scope); })
+          .catch((error) => { console.log('[GMX SW] Registration failed: ', error); });
       });
     }
   </script>
