@@ -1225,10 +1225,40 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-      // HAPTIC FEEDBACK HANDLER
+      // HAPTIC FEEDBACK HANDLER (Upgraded for simultaneous presses)
+      let hapticTimer = null;
       const triggerHaptic = () => {
-        if (navigator.vibrate) navigator.vibrate(15);
+        if (navigator.vibrate) {
+          // Instantly cut off any ongoing vibration to allow overlapping haptics
+          navigator.vibrate(0);
+          if (hapticTimer) clearTimeout(hapticTimer);
+          // Small 2ms coalescing timeout allows UI buttons and nested hitboxes 
+          // to perfectly register a sharp single bump without double-firing.
+          hapticTimer = setTimeout(() => {
+            navigator.vibrate(15);
+          }, 2);
+        }
       };
+
+      // GLOBAL HAPTIC LISTENER (Covers OS, UI, and overlapping presses)
+      const handleGlobalHaptics = (e) => {
+        if (!e.target || !e.target.closest) return;
+        
+        // Spare the joysticks: If the interaction starts on a joystick, abort.
+        if (e.target.closest('.mushroom')) return; 
+
+        // Identify if what we touched is a button, a hitbox, an OS item, or a popup control
+        const isButton = e.target.closest('button, .hitbox, .vol-hitbox, .popup-btn, .xmb-sub, input, label');
+        
+        if (isButton) {
+          triggerHaptic();
+        }
+      };
+
+      // By using capture: true, this listens to everything before preventDefault() or stopPropagation() 
+      // can block it, ensuring perfect, non-disruptive coverage across the entire emulator.
+      document.addEventListener('touchstart', handleGlobalHaptics, { passive: true, capture: true });
+      document.addEventListener('mousedown', handleGlobalHaptics, { passive: true, capture: true });
 
       // SAFE LOCALSTORAGE WRAPPERS
       function safeGetItem(key, defaultVal) {
@@ -1531,12 +1561,10 @@
       const handleVolDown = (e) => { 
         if (e.type === 'touchstart') e.preventDefault(); 
         changeVolume(-0.1); 
-        triggerHaptic(); 
       };
       const handleVolUp = (e) => { 
         if (e.type === 'touchstart') e.preventDefault(); 
         changeVolume(0.1); 
-        triggerHaptic(); 
       };
 
       document.querySelector('.vol-hitbox.down').addEventListener('touchstart', handleVolDown, { passive: false });
@@ -2269,6 +2297,7 @@
       function pressButton(id) {
         if (held[id]) return;
         held[id] = true;
+        // Allows keyboard strokes to also trigger the haptic bump
         triggerHaptic(); 
         if (emu.running) {
           sendInput(id, true);
@@ -2414,7 +2443,7 @@
         getUnlockedContext(); // BRUTE FORCE UNLOCK AUDIO IMMEDIATELY
 
         homeBtn.classList.add('active');
-        triggerHaptic();
+        // triggerHaptic called via global listener already, but we keep the visual class addition
         setTimeout(function() { homeBtn.classList.remove('active'); }, 150);
 
         if (isPoweredOn) {
@@ -2449,7 +2478,6 @@
         e.stopPropagation(); 
         _powerTouched = true; 
         homeBtn.classList.add('active'); 
-        triggerHaptic();
       }, { passive: false });
       
       homeBtn.addEventListener('touchend', function(e) {
@@ -2468,7 +2496,6 @@
       homeBtn.addEventListener('mousedown', function(e) {
         _powerTouched = true; 
         homeBtn.classList.add('active'); 
-        triggerHaptic();
       });
       
       homeBtn.addEventListener('mouseup', function(e) {
@@ -2492,7 +2519,6 @@
 
       captureBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        triggerHaptic();
         
         if (isCameraActive) {
           if (cameraStream) {
