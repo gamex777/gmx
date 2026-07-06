@@ -1225,10 +1225,78 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-      // HAPTIC FEEDBACK HANDLER
-      const triggerHaptic = () => {
-        if (navigator.vibrate) navigator.vibrate(15);
+      // ===================================================================
+      // HAPTIC FEEDBACK ENGINE
+      // Non-blocking, per-button-type vibration patterns.
+      // Multiple simultaneous presses each fire independently.
+      // ===================================================================
+
+      // Distinct vibration patterns for each button category.
+      // Patterns are arrays of [vibrate_ms, pause_ms, vibrate_ms, ...].
+      var HAPTIC_PATTERNS = {
+        // D-pad arrows: short crisp tap
+        'dpad':        [12],
+        // Face buttons (A/B/X/Y): slightly firmer pulse
+        'face':        [18],
+        // Shoulder buttons (L/R): longer bump
+        'shoulder':    [25],
+        // Joystick grab start: micro-tick
+        'stick-start': [10],
+        // Joystick direction change during drag: micro-flick
+        'stick-move':  [8],
+        // Home/Power button: distinctive double-pulse
+        'home':        [20, 30, 20],
+        // Volume up/down: light tick
+        'volume':      [10],
+        // Camera/capture button: medium tap
+        'capture':     [15],
+        // Start/Select (menu): short tap
+        'menu':        [15],
+        // Default fallback
+        'default':     [12]
       };
+
+      // Maps internal GBA button IDs to haptic categories.
+      // Used by pressButton() so both touch and keyboard paths
+      // get the correct per-button haptic type.
+      var BTN_HAPTIC_TYPE = {
+        'btn-up':    'dpad',
+        'btn-down':  'dpad',
+        'btn-left':  'dpad',
+        'btn-right': 'dpad',
+        'btn-a':     'face',
+        'btn-b':     'face',
+        'btn-l':     'shoulder',
+        'btn-r':     'shoulder',
+        'btn-select': 'menu',
+        'btn-start':  'menu'
+      };
+
+      /**
+       * Fires a haptic vibration for the given named type.
+       * Completely non-blocking: no await, no Promise, no callback.
+       * Silently skips on devices without navigator.vibrate support.
+       * Multiple simultaneous calls each trigger independently.
+       *
+       * @param {string} type - Key into HAPTIC_PATTERNS
+       */
+      function haptic(type) {
+        // Guard: skip entirely if the Vibration API is unavailable
+        if (typeof navigator === 'undefined' || !navigator.vibrate) return;
+
+        // Look up the pattern; fall back to 'default' if unknown type
+        var pattern = HAPTIC_PATTERNS[type] || HAPTIC_PATTERNS['default'];
+
+        // Fire-and-forget — navigator.vibrate returns immediately.
+        // It does NOT block the main thread or delay any input processing.
+        // Each call stacks independently so simultaneous buttons
+        // (e.g. Up + A) each produce their own vibration.
+        try {
+          navigator.vibrate(pattern);
+        } catch (e) {
+          // Swallow any errors silently — haptics must never break input
+        }
+      }
 
       // SAFE LOCALSTORAGE WRAPPERS
       function safeGetItem(key, defaultVal) {
@@ -1531,12 +1599,12 @@
       const handleVolDown = (e) => { 
         if (e.type === 'touchstart') e.preventDefault(); 
         changeVolume(-0.1); 
-        triggerHaptic(); 
+        haptic('volume'); 
       };
       const handleVolUp = (e) => { 
         if (e.type === 'touchstart') e.preventDefault(); 
         changeVolume(0.1); 
-        triggerHaptic(); 
+        haptic('volume'); 
       };
 
       document.querySelector('.vol-hitbox.down').addEventListener('touchstart', handleVolDown, { passive: false });
@@ -1562,6 +1630,8 @@
           e.preventDefault();
           isDragging = true;
           stick.classList.add('dragging');
+          // Haptic: micro-tick when the joystick is first grabbed
+          haptic('stick-start');
           
           let pointer;
           if (e.changedTouches) {
@@ -1612,7 +1682,11 @@
           if (newDir !== stickDir[stickId]) {
             if (stickDir[stickId]) releaseButton(stickDir[stickId]);
             stickDir[stickId] = newDir;
-            if (newDir) pressButton(newDir);
+            if (newDir) {
+              pressButton(newDir);
+              // Haptic: micro-flick when the stick crosses into a new direction
+              haptic('stick-move');
+            }
           }
         };
 
@@ -2269,7 +2343,9 @@
       function pressButton(id) {
         if (held[id]) return;
         held[id] = true;
-        triggerHaptic(); 
+        // Typed haptic: looks up the correct vibration pattern for this button.
+        // Non-blocking fire-and-forget — does not delay sendInput or doNavAction.
+        haptic(BTN_HAPTIC_TYPE[id] || 'default'); 
         if (emu.running) {
           sendInput(id, true);
         } else {
@@ -2414,7 +2490,8 @@
         getUnlockedContext(); // BRUTE FORCE UNLOCK AUDIO IMMEDIATELY
 
         homeBtn.classList.add('active');
-        triggerHaptic();
+        // Home button haptic: distinctive double-pulse pattern
+        haptic('home');
         setTimeout(function() { homeBtn.classList.remove('active'); }, 150);
 
         if (isPoweredOn) {
@@ -2449,7 +2526,8 @@
         e.stopPropagation(); 
         _powerTouched = true; 
         homeBtn.classList.add('active'); 
-        triggerHaptic();
+        // Home button touch-start haptic: double-pulse
+        haptic('home');
       }, { passive: false });
       
       homeBtn.addEventListener('touchend', function(e) {
@@ -2468,7 +2546,8 @@
       homeBtn.addEventListener('mousedown', function(e) {
         _powerTouched = true; 
         homeBtn.classList.add('active'); 
-        triggerHaptic();
+        // Home button mouse-down haptic: double-pulse
+        haptic('home');
       });
       
       homeBtn.addEventListener('mouseup', function(e) {
@@ -2492,7 +2571,8 @@
 
       captureBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        triggerHaptic();
+        // Capture button haptic: medium tap
+        haptic('capture');
         
         if (isCameraActive) {
           if (cameraStream) {
