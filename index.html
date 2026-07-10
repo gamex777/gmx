@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>GMX Switch - GBA Edition</title>
+<title>GMX Switch - Multi-System iPhone PWA Fix</title>
 <!-- GMX multisystem runtime fix: matched official EmulatorJS loader + core tree -->
-<link rel="manifest" href="manifest.json">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -120,6 +119,37 @@
   main {
     transform: translateX(1vw);
   }
+  /* iPhone/PWA native picker fix: never inherit the global touch-action:none reset. */
+  input[type="file"], input[type="color"], label.popup-btn {
+    touch-action: manipulation !important;
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+
+  /* iOS 18+ native switch controls provide the only WebKit-native tap haptic
+     available to ordinary web content. These transparent proxies do not alter
+     the console's physical appearance. They are created only on iPhone/iPad. */
+  #ios-haptic-layer {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    pointer-events: none;
+    z-index: 2147483000;
+  }
+  #ios-haptic-layer .ios-haptic-switch {
+    position: fixed !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0.001 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    border: 0 !important;
+    z-index: 2147483001 !important;
+  }
+
 
   /* ============================================================
      SWITCH SHELL - FIXED FOR IPHONE 5S TO MODERN ENGINE DEVCES
@@ -1503,7 +1533,7 @@
                 <h3>Install Game</h3>
                 <label class="popup-btn">
                     Select Game ROM
-                    <input type="file" id="install-rom-upload" accept=".nes,.sfc,.smc,.swc,.n64,.z64,.v64,.gb,.gbc,.gba,.nds,.md,.gen,.smd,.bin"
+                    <input type="file" id="install-rom-upload"
                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                                   opacity: 0; cursor: pointer; touch-action: manipulation;">
                 </label>
@@ -1564,7 +1594,7 @@
             </div>
             <div id="game-area">
               <canvas id="game-canvas" width="240" height="160"></canvas>
-              <iframe id="multi-core-frame" title="Multi-system game emulator" allow="autoplay; fullscreen; gamepad" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-popups"></iframe>
+              <iframe id="multi-core-frame" title="Multi-system game emulator" allow="autoplay; fullscreen; gamepad"></iframe>
             </div>
           </div>
         </div>
@@ -1601,7 +1631,10 @@
       }
       loadSavedColors(); 
 
-      // UNIVERSAL HAPTIC FEEDBACK (graceful no-op on unsupported browsers)
+      // PLATFORM-AWARE HAPTIC FEEDBACK
+      // Android/compatible browsers: Vibration API.
+      // iOS/iPadOS: navigator.vibrate is not exposed; native switch haptic
+      // proxies are installed later over tap controls without changing visuals.
       var HAPTIC_PATTERNS = {
         soft: 8,
         tick: 12,
@@ -1609,6 +1642,10 @@
         confirm: 28,
         warning: [18, 28, 22]
       };
+      var IS_APPLE_TOUCH = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var IS_STANDALONE_PWA = !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        navigator.standalone === true;
 
       function haptic(kind) {
         var vibrate = navigator.vibrate || navigator.webkitVibrate;
@@ -2285,30 +2322,28 @@
           '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">' +
           '<style>html,body,#game{margin:0;width:100%;height:100%;overflow:hidden;background:#000}body{touch-action:none}#game{position:fixed;inset:0}.gmx-loader{position:fixed;inset:0;display:grid;place-items:center;color:#b9cfff;background:#000;font:11px monospace;letter-spacing:.08em;text-align:center;padding:20px;z-index:9999}</style>' +
           '</head><body><div id="game"></div><div id="gmx-loader" class="gmx-loader">PREPARING EMULATOR...</div><script>' +
-          'var GMX_CFG=' + json + ';var GMX_BOOTED=false;var GMX_ROM_URL="";' +
+          'var GMX_CFG=' + json + ';var GMX_BOOTED=false;var GMX_ROM_BLOB=null;' +
+          'var GMX_IS_APPLE=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);' +
           'var GMX_RUNTIMES=[' +
             '{name:"OFFICIAL STABLE",loader:"https://cdn.emulatorjs.org/stable/data/loader.js",data:"https://cdn.emulatorjs.org/stable/data/"},' +
             '{name:"OFFICIAL 4.2.3",loader:"https://cdn.emulatorjs.org/4.2.3/data/loader.js",data:"https://cdn.emulatorjs.org/4.2.3/data/"}' +
           '];var GMX_ACTIVE_RUNTIME=null;' +
           'function gmxStatus(t){var n=document.getElementById("gmx-loader");if(n)n.textContent=t}' +
           'function gmxError(m){parent.postMessage({type:"gmx-ejs-error",message:String(m||"Unknown emulator error")} ,"*")}' +
-          'function gmxCoreProbeUrl(r){return r.data+"cores/"+GMX_CFG.core+"-wasm.data"}' +
-          'function gmxInjectLoader(i){if(i>=GMX_RUNTIMES.length){gmxError("Could not reach a matched EmulatorJS runtime/core set. The current host may be blocking WebAssembly core downloads. Download this HTML and run it from http://localhost instead of the ChatGPT preview.");return;}' +
+          'function gmxInjectLoader(i){if(i>=GMX_RUNTIMES.length){gmxError("Could not load EmulatorJS. Check that this PWA has internet access to cdn.emulatorjs.org.");return;}' +
           'var r=GMX_RUNTIMES[i];GMX_ACTIVE_RUNTIME=r;' +
           'EJS_pathtodata=r.data;window.EJS_paths=undefined;EJS_DEBUG_XX=false;' +
           'gmxStatus("LOADING "+r.name+"...");' +
-          'var s=document.createElement("script");s.src=r.loader;s.async=true;s.crossOrigin="anonymous";' +
+          'var s=document.createElement("script");s.src=r.loader;s.async=true;' +
           's.onload=function(){parent.postMessage({type:"gmx-ejs-loader-ok",source:r.loader,runtime:r.name},"*")};' +
           's.onerror=function(){try{s.remove()}catch(e){}gmxInjectLoader(i+1)};' +
           'document.body.appendChild(s)}' +
-          'function gmxLoadRuntime(i){var r=GMX_RUNTIMES[i];if(!r){gmxInjectLoader(i);return;}' +
-          'var probe=gmxCoreProbeUrl(r);gmxStatus("CHECKING "+GMX_CFG.core.toUpperCase()+" CORE...");' +
-          'fetch(probe,{method:"HEAD",mode:"cors",cache:"no-store"}).then(function(resp){if(!resp.ok)throw new Error("HTTP "+resp.status);gmxInjectLoader(i)}).catch(function(){gmxLoadRuntime(i+1)})}' +
           'var EJS_player="#game";' +
           'var EJS_core=GMX_CFG.core;' +
           'var EJS_gameName=GMX_CFG.gameName;' +
           'var EJS_gameID=GMX_CFG.gameID;' +
-          'var EJS_startOnLoaded=true;' +
+          'var EJS_startOnLoaded=!GMX_IS_APPLE;' +
+          'var EJS_browserMode=GMX_IS_APPLE?"mobile":undefined;' +
           'var EJS_volume=GMX_CFG.volume;' +
           'var EJS_color="#69a7ff";' +
           'var EJS_backgroundColor="#000";' +
@@ -2316,21 +2351,19 @@
           'var EJS_noAutoFocus=true;' +
           'var EJS_askBeforeExit=false;' +
           'var EJS_defaultControls=GMX_CFG.controls;' +
-          'var EJS_threads=false;var EJS_forceLegacyCores=false;' +
-          'var EJS_ready=function(){var n=document.getElementById("gmx-loader");if(n)n.style.display="none";parent.postMessage({type:"gmx-ejs-ready"},"*")};' +
+          'var EJS_threads=false;var EJS_forceLegacyCores=GMX_IS_APPLE;' +
+          'var EJS_ready=function(){var n=document.getElementById("gmx-loader");if(n)n.style.display="none";parent.postMessage({type:"gmx-ejs-ready",manualStart:GMX_IS_APPLE},"*")};' +
           'var EJS_onGameStart=function(){var n=document.getElementById("gmx-loader");if(n)n.style.display="none";parent.postMessage({type:"gmx-ejs-started"},"*")};' +
-          'window.addEventListener("error",function(ev){var m=String(ev.message||"Runtime error");if(m.indexOf("both async and sync fetching of the wasm failed")!==-1){var r=GMX_ACTIVE_RUNTIME;gmxError("WebAssembly core download failed"+(r?" from "+r.data:"")+". This usually means the host preview or a content blocker denied the core request. Run the downloaded HTML through http://localhost and allow cdn.emulatorjs.org.");return;}if(m.indexOf("Script error")===-1)gmxError(m)});' +
+          'window.addEventListener("error",function(ev){var m=String(ev.message||"Runtime error");if(m.indexOf("both async and sync fetching of the wasm failed")!==-1){var r=GMX_ACTIVE_RUNTIME;gmxError("WebAssembly core download failed"+(r?" from "+r.data:"")+". The PWA must be online and allowed to reach cdn.emulatorjs.org.");return;}if(m.indexOf("Script error")===-1)gmxError(m)});' +
           'window.addEventListener("unhandledrejection",function(ev){gmxError(String((ev.reason&&ev.reason.message)||ev.reason||"Core load failed"))});' +
-          'window.addEventListener("beforeunload",function(){if(GMX_ROM_URL)try{URL.revokeObjectURL(GMX_ROM_URL)}catch(e){}});' +
           'window.addEventListener("message",function(ev){var d=ev.data||{};' +
           'if(d.type==="gmx-boot"&&!GMX_BOOTED){GMX_BOOTED=true;try{' +
           'var bytes=d.rom instanceof ArrayBuffer?new Uint8Array(d.rom):(ArrayBuffer.isView(d.rom)?new Uint8Array(d.rom.buffer,d.rom.byteOffset,d.rom.byteLength):null);' +
           'if(!bytes||!bytes.byteLength)throw new Error("ROM transfer was empty");' +
-          'var ext=String(GMX_CFG.extension||"rom").replace(/[^a-z0-9]/gi,"")||"rom";' +
-          'GMX_ROM_URL=URL.createObjectURL(new Blob([bytes],{type:"application/octet-stream"}));' +
-          'EJS_gameUrl=GMX_ROM_URL;' +
+          'GMX_ROM_BLOB=new Blob([bytes],{type:"application/octet-stream"});' +
+          'EJS_gameUrl=GMX_ROM_BLOB;' +
           'parent.postMessage({type:"gmx-ejs-rom-received",size:bytes.byteLength},"*");' +
-          'gmxLoadRuntime(0);}catch(err){gmxError(String(err&&err.message||err))}return;}' +
+          'gmxInjectLoader(0);}catch(err){gmxError(String(err&&err.message||err))}return;}' +
           'if(d.type!=="gmx-input")return;' +
           'var opts={key:d.key,code:d.code||"",bubbles:true,cancelable:true,repeat:false};' +
           'window.dispatchEvent(new KeyboardEvent(d.down?"keydown":"keyup",opts));});' +
@@ -2464,9 +2497,15 @@
         if (emu.bootTimer) { clearTimeout(emu.bootTimer); emu.bootTimer = null; }
         var msg = document.getElementById('sys-msg');
         if (!msg) return;
-        msg.innerText = type === 'gmx-ejs-started' ? 'GAME STARTED' : 'CORE READY';
+        if (type === 'gmx-ejs-started') {
+          msg.innerText = 'GAME STARTED';
+        } else if (IS_APPLE_TOUCH && e.data && e.data.manualStart) {
+          msg.innerText = 'CORE READY · TAP THE GAME SCREEN TO START';
+        } else {
+          msg.innerText = 'CORE READY';
+        }
         msg.style.opacity = 1;
-        setTimeout(function() { if (emu.running) msg.style.opacity = 0; }, 1400);
+        setTimeout(function() { if (emu.running && type === 'gmx-ejs-started') msg.style.opacity = 0; }, 1600);
       });
 
       // ===================================================================
@@ -2969,13 +3008,23 @@
           setTimeout(function() { s.style.opacity = 0; }, 2000);
         });
       });
-      document.getElementById('install-rom-upload').addEventListener('change', function(e) {
+      var romPicker = document.getElementById('install-rom-upload');
+      // Do not use an accept= extension list here: iOS Files can gray out custom
+      // ROM extensions even though JavaScript can read them perfectly well.
+      romPicker.removeAttribute('accept');
+      romPicker.addEventListener('click', function() {
+        // Allows choosing the same ROM twice after a failed/aborted install.
+        this.value = '';
+      });
+      romPicker.addEventListener('change', function(e) {
         var f = e.target.files && e.target.files[0];
         var def = f ? detectSystem(f.name) : null;
         selRom = def ? f : null;
         selSystem = def;
         document.getElementById('popup-rom-name').textContent = f ? f.name : '';
-        document.getElementById('popup-system-name').textContent = def ? ('Detected: ' + def.label) : (f ? 'Unsupported ROM type' : '');
+        document.getElementById('popup-system-name').textContent = def
+          ? ('Detected: ' + def.label)
+          : (f ? 'Unsupported ROM type: .' + (extensionOf(f.name) || '?') : '');
         document.getElementById('popup-install').disabled = !def;
       });
       document.getElementById('install-cover-upload').addEventListener('change', function(e) {
@@ -2988,7 +3037,10 @@
         saveGame(selRom, selCover).then(function() {
           s.innerText = 'Install Complete!';
           setTimeout(function() { s.style.opacity = 0; buildXMB().then(updateXMB); }, 1500);
-        }).catch(function() { s.innerText = 'Install Failed'; });
+        }).catch(function(err) {
+          s.innerText = 'Install Failed: ' + String(err && err.message || err || 'storage error');
+          s.style.opacity = 1;
+        });
       });
 
       // ===================================================================
@@ -3081,6 +3133,100 @@
       }
 
       Object.keys(SWITCH_MAP).forEach(bindSwitchButton);
+
+      // ===================================================================
+      // iOS / iPadOS native haptic proxy layer
+      // WebKit does not expose navigator.vibrate() on iPhone. Safari 18+
+      // does provide a native haptic when the user directly taps an
+      // <input type="checkbox" switch>. Transparent proxies are placed over
+      // tap controls only on Apple touch devices; shell visuals are unchanged.
+      // ===================================================================
+      function installAppleHapticProxies() {
+        if (!IS_APPLE_TOUCH) return;
+        var layer = document.createElement('div');
+        layer.id = 'ios-haptic-layer';
+        layer.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(layer);
+
+        var specs = [];
+        Object.keys(SWITCH_MAP).forEach(function(targetId) {
+          specs.push({
+            target: document.getElementById(targetId),
+            down: function() { pressButton(SWITCH_MAP[targetId]); },
+            up: function() { releaseButton(SWITCH_MAP[targetId]); }
+          });
+        });
+
+        // Power, camera, and volume are also direct emulator inputs.
+        specs.push({
+          target: document.getElementById('switch-home'),
+          down: function() { var t=document.getElementById('switch-home'); if(t)t.classList.add('active'); },
+          up: function() { var t=document.getElementById('switch-home'); if(t)t.classList.remove('active'); togglePower(null); }
+        });
+        specs.push({
+          target: document.querySelector('.menu'),
+          down: function() { var t=document.querySelector('.menu'); if(t)t.classList.add('active'); },
+          up: function() { var t=document.querySelector('.menu'); if(t){t.classList.remove('active'); t.click();} }
+        });
+        specs.push({ target: document.querySelector('.vol-hitbox.down'), down: function(){ changeVolume(-0.1); }, up: function(){} });
+        specs.push({ target: document.querySelector('.vol-hitbox.up'), down: function(){ changeVolume(0.1); }, up: function(){} });
+
+        function place(proxy, target) {
+          if (!target || !target.isConnected) return;
+          var r = target.getBoundingClientRect();
+          proxy.style.left = r.left + 'px';
+          proxy.style.top = r.top + 'px';
+          proxy.style.width = Math.max(1, r.width) + 'px';
+          proxy.style.height = Math.max(1, r.height) + 'px';
+          proxy.style.borderRadius = getComputedStyle(target).borderRadius || '0';
+        }
+
+        specs.forEach(function(spec, idx) {
+          if (!spec.target) return;
+          var proxy = document.createElement('input');
+          proxy.type = 'checkbox';
+          proxy.setAttribute('switch', '');
+          proxy.className = 'ios-haptic-switch';
+          proxy.tabIndex = -1;
+          proxy.setAttribute('aria-hidden', 'true');
+          proxy.dataset.proxyIndex = String(idx);
+          layer.appendChild(proxy);
+          spec.proxy = proxy;
+
+          var active = false;
+          proxy.addEventListener('touchstart', function(e) {
+            // Do not preventDefault: the native switch default action is what
+            // asks iOS to produce its built-in tap haptic.
+            e.stopPropagation();
+            active = true;
+            try { spec.down(); } catch(err) {}
+          }, { passive: true });
+          proxy.addEventListener('touchend', function(e) {
+            e.stopPropagation();
+            if (!active) return;
+            active = false;
+            try { spec.up(); } catch(err) {}
+          }, { passive: true });
+          proxy.addEventListener('touchcancel', function(e) {
+            e.stopPropagation();
+            if (!active) return;
+            active = false;
+            try { spec.up(); } catch(err) {}
+          }, { passive: true });
+          proxy.addEventListener('click', function(e) { e.stopPropagation(); });
+          place(proxy, spec.target);
+        });
+
+        function refresh() {
+          specs.forEach(function(spec) { if (spec.proxy) place(spec.proxy, spec.target); });
+        }
+        window.addEventListener('resize', refresh);
+        window.addEventListener('orientationchange', function(){ setTimeout(refresh, 250); });
+        setTimeout(refresh, 100);
+        setTimeout(refresh, 700);
+      }
+
+      installAppleHapticProxies();
 
       // ===================================================================
       // Keyboard Events 
@@ -3284,15 +3430,21 @@
     });
   </script>
   <script>
+    // iPhone repair build: do not register the old app-shell service worker.
+    // Unregister only the legacy ./sw.js for this folder so a stale cached HTML
+    // build cannot keep reopening from the Home Screen icon.
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then((registration) => {
-            console.log('[GMX SW] Registration successful with scope: ', registration.scope);
-          })
-          .catch((error) => {
-            console.log('[GMX SW] Registration failed: ', error);
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          const folderScope = new URL('./', location.href).href;
+          registrations.forEach((registration) => {
+            const worker = registration.active || registration.waiting || registration.installing;
+            const scriptURL = worker && worker.scriptURL ? worker.scriptURL : '';
+            if (registration.scope === folderScope && /\/sw\.js(?:$|[?#])/.test(scriptURL)) {
+              registration.unregister().catch(() => {});
+            }
           });
+        }).catch(() => {});
       });
     }
   </script>
