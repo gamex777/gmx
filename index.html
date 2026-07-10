@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>GMX Switch - GBA Edition</title>
+<!-- GMX multisystem runtime fix: matched official EmulatorJS loader + core tree -->
 <link rel="manifest" href="manifest.json">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -115,6 +116,11 @@
     opacity: 1;
   }
 
+  /* Slight whole-emulator offset; internal layout and hitboxes remain unchanged. */
+  main {
+    transform: translateX(1vw);
+  }
+
   /* ============================================================
      SWITCH SHELL - FIXED FOR IPHONE 5S TO MODERN ENGINE DEVCES
      ============================================================ */
@@ -139,9 +145,9 @@
     box-sizing: border-box;
   }
 
-  /* GLOBALLY PREVENTS DASHED OUTLINE ON CLICKS */
   :focus {
-    outline: none !important;
+    outline: 1px dashed;
+    outline-offset: 2px;
   }
 
   .round { border-radius: 50%; }
@@ -309,7 +315,7 @@
   .particles span:nth-child(1) { left: 70%; top: 70%; box-shadow: 0 0 0.01em 0.005em rgba(255,0,0,.8); }
   .particles span:nth-child(2) { left: 70%; top: 50%; box-shadow: 0 0 0.01em 0.005em rgba(0,255,0,.8); }
   .particles span:nth-child(3) { left: 15%; top: 75%; box-shadow: 0 0 0.01em 0.005em rgba(0,0,255,.8); }
- 
+  
   .screen.is-booting .particles span:nth-child(1) { animation: p1 4s cubic-bezier(0,.74,.46,1) infinite; }
   .screen.is-booting .particles span:nth-child(2) { animation: p2 4s cubic-bezier(0,.74,.46,1) infinite; }
   .screen.is-booting .particles span:nth-child(3) { animation: p3 4s cubic-bezier(0,.74,.46,1) infinite; }
@@ -782,16 +788,70 @@
   }
 
   .xmb-bg {
-    /* Base configuration for customizable waves */
+    /* PSP/XMB-inspired screen layer only — console shell remains untouched */
     --wave-color: 255, 255, 255;
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
     opacity: 0;
+    overflow: hidden;
     transition: opacity 0.8s ease;
-    background: linear-gradient(135deg, #181926 0%, #0f101a 50%, #08080d 100%);
+    background:
+      radial-gradient(circle at 78% 14%, rgba(117, 163, 255, 0.22), transparent 28%),
+      radial-gradient(circle at 16% 88%, rgba(95, 62, 195, 0.16), transparent 36%),
+      linear-gradient(155deg, #263f90 0%, #1a2c72 35%, #111b4c 70%, #0a1234 100%);
     z-index: 1;
   }
+
+  .xmb-bg::before {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.09) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 65% 35%, rgba(255,255,255,0.08) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 80% 75%, rgba(255,255,255,0.06) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 35% 78%, rgba(255,255,255,0.07) 0 1px, transparent 1.5px);
+    background-size: 73px 63px, 97px 87px, 121px 111px, 151px 141px;
+    opacity: 0.55;
+    animation: xmbStarsDrift 24s linear infinite;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .xmb-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.03), rgba(0,0,0,0.12) 68%, rgba(0,0,0,0.28));
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  .xmb-wallpaper {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .xmb-wallpaper.has-wallpaper { opacity: 1; }
+
+  .xmb-wallpaper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to right, rgba(8,14,42,0.42), rgba(8,14,42,0.12) 58%, rgba(8,14,42,0.26)),
+      linear-gradient(to bottom, rgba(0,0,0,0.04), rgba(0,0,0,0.24));
+    pointer-events: none;
+  }
+
   .xmb-game-bg {
     position: absolute;
     top: 0; left: 0;
@@ -799,22 +859,68 @@
     background-size: cover;
     background-position: center right;
     opacity: 0;
-    transition: opacity 0.4s ease;
-    z-index: -1;
+    transition: opacity 0.45s ease, filter 0.45s ease;
+    filter: saturate(0.82) brightness(0.82);
+    z-index: 2;
   }
+
+  .xmb-sheen {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(112deg, transparent 0 31%, rgba(255,255,255,0.035) 42%, transparent 52%),
+      radial-gradient(ellipse at 50% 58%, rgba(255,255,255,0.055), transparent 57%);
+    mix-blend-mode: screen;
+    z-index: 5;
+    pointer-events: none;
+  }
+
   .wave-line {
     position: absolute;
-    width: 150%;
-    height: 150px;
-    background: rgba(var(--wave-color), 0.01);
-    border-top: 1px solid rgba(var(--wave-color), 0.08);
+    width: 156%;
+    height: 112px;
+    left: -28%;
     border-radius: 50%;
-    top: 30%;
-    left: -25%;
-    transform: rotate(-8deg);
-    box-shadow: 0 -2px 15px rgba(var(--wave-color), 0.02);
+    background: transparent;
+    border-top: 1.5px solid rgba(var(--wave-color), 0.33);
+    box-shadow:
+      0 -1px 7px rgba(var(--wave-color), 0.16),
+      inset 0 10px 26px rgba(var(--wave-color), 0.025);
+    filter: drop-shadow(0 -1px 4px rgba(var(--wave-color), 0.18));
+    opacity: 0.82;
+    transform-origin: center center;
+    pointer-events: none;
+    z-index: 3;
+    animation: xmbWaveFloat 8s ease-in-out infinite alternate;
   }
-  .wave-line:nth-child(3) { top: 40%; transform: rotate(5deg) scaleY(1.2); border-top: 1px solid rgba(var(--wave-color), 0.05); }
+
+  .wave-line.wave-1 { top: 42%; transform: rotate(-7deg) scaleY(0.72); animation-duration: 8.5s; }
+  .wave-line.wave-2 { top: 48%; transform: rotate(5deg) scaleY(0.95); opacity: 0.55; animation-duration: 10.5s; animation-direction: alternate-reverse; }
+  .wave-line.wave-3 { top: 52%; transform: rotate(-2deg) scaleY(1.18); opacity: 0.36; animation-duration: 12s; }
+  .wave-line.wave-4 { top: 57%; transform: rotate(8deg) scaleY(0.78); opacity: 0.26; animation-duration: 14s; animation-direction: alternate-reverse; }
+
+  .wave-line::after {
+    content: '';
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: -3px;
+    height: 5px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, transparent, rgba(var(--wave-color), 0.18), rgba(255,255,255,0.22), rgba(var(--wave-color), 0.14), transparent);
+    filter: blur(4px);
+  }
+
+  @keyframes xmbWaveFloat {
+    0% { margin-left: -10px; margin-top: -4px; }
+    50% { margin-left: 8px; margin-top: 3px; }
+    100% { margin-left: 18px; margin-top: -2px; }
+  }
+
+  @keyframes xmbStarsDrift {
+    from { transform: translate3d(0,0,0); }
+    to { transform: translate3d(56px,34px,0); }
+  }
 
   #xmb-ui {
     position: absolute;
@@ -825,66 +931,314 @@
     pointer-events: none;
     color: #fff;
   }
+
   #screen.os-ready .xmb-bg { opacity: 1; }
   #screen.os-ready #xmb-ui { opacity: 1; pointer-events: auto; }
 
-  #xmb-header {
+  #xmb-status-left {
     position: absolute;
-    top: 8%;
-    right: 4%;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    top: 7.5%;
+    left: 5.2%;
     display: flex;
     align-items: center;
-    gap: 10px;
-    opacity: 0.8;
+    gap: 7px;
+    font-family: 'Play', 'Century Gothic', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0.72;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.65);
   }
-  .battery-icon { width: 22px; height: 10px; border: 1.5px solid #fff; border-radius: 2px; position: relative; }
-  .battery-icon::after { content: ''; position: absolute; right: -4px; top: 1.5px; width: 2px; height: 4px; background: #fff; border-radius: 0 2px 2px 0; }
-  .battery-fill { width: 100%; height: 100%; background: #fff; border: 1px solid transparent; background-clip: content-box; }
+
+  #xmb-status-left .status-orb {
+    position: relative;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 8px rgba(255,255,255,0.8);
+  }
+
+  #xmb-header {
+    position: absolute;
+    top: 7.2%;
+    right: 5%;
+    font-size: 0.67rem;
+    font-weight: 500;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    opacity: 0.92;
+  }
+
+  .battery-icon {
+    width: 20px;
+    height: 9px;
+    border: 1px solid rgba(255,255,255,0.95);
+    border-radius: 1px;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.45);
+  }
+  .battery-icon::after {
+    content: '';
+    position: absolute;
+    right: -3px;
+    top: 2px;
+    width: 2px;
+    height: 3px;
+    background: #fff;
+    border-radius: 0 1px 1px 0;
+  }
+  .battery-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0.86), #fff);
+    border: 1px solid transparent;
+    background-clip: content-box;
+  }
 
   #xmb-grid {
     position: absolute;
-    top: 40%;
+    top: 35.8%;
     left: 50%;
     display: flex;
-    gap: 80px;
-    transition: transform 0.12s cubic-bezier(0.25, 1, 0.5, 1);
+    align-items: flex-start;
+    gap: 92px;
+    transition: transform 0.2s cubic-bezier(0.2, 0.82, 0.2, 1);
     will-change: transform;
   }
-  .xmb-col { display: flex; flex-direction: column; align-items: flex-start; gap: 40px; transition: opacity 0.12s, transform 0.12s; opacity: 0.3; transform: scale(0.85); }
-  .xmb-col.active-col { opacity: 1; transform: scale(1); }
-  .xmb-main { position: relative; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
-  .xmb-icon { width: 40px; height: 40px; fill: #ffffff; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); transition: all 0.2s; }
-  .xmb-main span { position: absolute; left: 130%; top: 50%; transform: translateY(-50%); font-size: 0.9rem; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity 0.2s; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
-  .active-col .active-item.xmb-main .xmb-icon { transform: scale(1.3); filter: drop-shadow(0 0 20px rgba(255,255,255,0.6)); }
-  .active-col .active-item.xmb-main span { opacity: 1; }
-  .xmb-sub { font-size: 0.85rem; font-weight: 500; opacity: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.9); transition: all 0.2s; white-space: nowrap; text-align: left; width: 100%; }
-  .active-col .xmb-sub { opacity: 0.5; }
-  .active-col .active-item.xmb-sub { opacity: 1; transform: scale(1.15); font-weight: 700; }
-  .game-item { display: flex; align-items: center; justify-content: flex-start; position: relative; width: 100%; }
-  .box-art { width: 60px; height: 40px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.8); }
-  .active-col .active-item.game-item .box-art { border: 2px solid #fff; box-shadow: 0 0 20px rgba(255,255,255,0.5), 0 8px 15px rgba(0,0,0,0.8); transform: scale(1.1); }
-  .game-details { position: absolute; left: 80px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; opacity: 0; transition: opacity 0.2s; }
-  .active-col .active-item.game-item .game-details { opacity: 1; }
-  .game-title { font-size: 0.85rem; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.9); }
+
+  .xmb-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    min-width: 74px;
+    transition: opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
+    opacity: 0.34;
+    transform: scale(0.84);
+    filter: blur(0.15px);
+  }
+
+  .xmb-col.active-col {
+    opacity: 1;
+    transform: scale(1);
+    filter: none;
+  }
+
+  .xmb-main {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 52px;
+    height: 52px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .xmb-icon {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    fill: #fff;
+    opacity: 0.86;
+    filter: drop-shadow(0 3px 5px rgba(0,0,0,0.72));
+    transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease, filter 0.2s ease, transform 0.2s ease;
+  }
+
+  .xmb-main span {
+    position: absolute;
+    left: 50%;
+    top: 58px;
+    transform: translateX(-50%) translateY(3px);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.9);
+  }
+
+  .active-col .active-item.xmb-main .xmb-icon {
+    width: 46px;
+    height: 46px;
+    opacity: 1;
+    transform: translateY(-2px);
+    filter:
+      drop-shadow(0 0 5px rgba(255,255,255,0.85))
+      drop-shadow(0 6px 9px rgba(0,0,0,0.7));
+  }
+
+  .active-col .active-item.xmb-main span {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .xmb-sub {
+    position: relative;
+    width: 172px;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 4px 8px 4px 24px;
+    border-radius: 3px;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    opacity: 0;
+    color: rgba(255,255,255,0.88);
+    text-shadow: 0 2px 5px rgba(0,0,0,0.9);
+    transition: opacity 0.18s ease, transform 0.18s ease, color 0.18s ease, text-shadow 0.18s ease;
+    white-space: nowrap;
+  }
+
+  .xmb-sub::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    transform: translateY(-50%) scale(0.6);
+    background: rgba(255,255,255,0.58);
+    opacity: 0;
+    box-shadow: 0 0 6px rgba(255,255,255,0.35);
+    transition: opacity 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .active-col .xmb-sub { opacity: 0.42; }
+
+  .active-col .active-item.xmb-sub {
+    opacity: 1;
+    color: #fff;
+    transform: translateX(9px) scale(1.04);
+    font-weight: 500;
+    text-shadow: 0 0 7px rgba(255,255,255,0.42), 0 2px 6px rgba(0,0,0,0.9);
+  }
+
+  .active-col .active-item.xmb-sub::before {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+    box-shadow: 0 0 8px rgba(255,255,255,0.82);
+  }
+
+  .game-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 44px;
+    padding-left: 8px;
+  }
+
+  .game-item::before { display: none; }
+
+  .box-art {
+    position: relative;
+    width: 58px;
+    height: 38px;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 2px;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.65);
+    opacity: 0.72;
+  }
+
+  .active-col .active-item.game-item .box-art {
+    border-color: rgba(255,255,255,0.96);
+    box-shadow: 0 0 10px rgba(255,255,255,0.45), 0 7px 14px rgba(0,0,0,0.75);
+    transform: scale(1.08);
+    opacity: 1;
+  }
+
+  .game-details {
+    position: absolute;
+    left: 76px;
+    top: 50%;
+    transform: translateY(-50%) translateX(-2px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .active-col .active-item.game-item .game-details {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+
+  .game-title {
+    position: relative;
+    max-width: 118px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.73rem;
+    font-weight: 600;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.95);
+  }
+
+  #xmb-help {
+    position: absolute;
+    right: 5%;
+    bottom: 6.5%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.56rem;
+    color: rgba(255,255,255,0.78);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.85);
+  }
+
+  #xmb-help span {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  #xmb-help b {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    border: 1px solid rgba(255,255,255,0.75);
+    border-radius: 50%;
+    font-size: 0.48rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0,0,0,0.12);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+  }
 
   #sys-msg {
     position: absolute;
-    bottom: 8%;
+    bottom: 15%;
     left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 1px;
+    transform: translateX(-50%) translateY(4px);
+    padding: 4px 9px;
+    border-radius: 2px;
+    background: rgba(0,0,0,0.16);
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.25s ease, transform 0.25s ease;
     z-index: 50;
     text-transform: uppercase;
-    color: #aaa;
+    color: rgba(255,255,255,0.82);
+    text-shadow: 0 2px 5px rgba(0,0,0,0.9);
     white-space: nowrap;
   }
+
+  #sys-msg[style*="opacity: 1"] { transform: translateX(-50%) translateY(0); }
 
   #game-area {
     position: absolute;
@@ -912,6 +1266,35 @@
     will-change: contents;
   }
 
+  /* Multi-system core host: screen-only; shell geometry is untouched. */
+  #multi-core-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    display: none;
+    background: #000;
+  }
+  #game-area.multi-core #multi-core-frame { display: block; }
+  #game-area.multi-core #game-canvas { display: none; }
+
+  .system-badge {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.72);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  }
+  #popup-system-name {
+    min-height: 0.8rem;
+    margin-top: 5px;
+    font-size: 0.62rem;
+    color: #9ec7ff;
+    letter-spacing: 0.4px;
+  }
+
   #install-popup {
     position: absolute;
     width: 100%; height: 100%;
@@ -937,7 +1320,6 @@
     box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.05);
     font-family: inherit;
   }
-
   .popup-box h3 { font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; color: #ddd; }
   .popup-btn {
     display: block;
@@ -965,7 +1347,7 @@
   .popup-btn.install-btn:disabled { opacity: 0.3; pointer-events: none; }
   .popup-btn input[type="file"] { margin: 0; padding: 0; font-size: 999px; pointer-events: auto; }
   .file-name { font-size: 0.65rem; color: #888; margin-top: 4px; word-break: break-all; font-family: monospace; }
- 
+  
   /* Color Picker Styling */
   #color-picker-input {
     -webkit-appearance: none;
@@ -979,19 +1361,6 @@
   }
   #color-picker-input::-webkit-color-swatch-wrapper { padding: 0; }
   #color-picker-input::-webkit-color-swatch { border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-
-  /* Cyber-shot Photo Gallery App Styling */
-  #photo-gallery-app {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: #050505; z-index: 50; display: none; color: #fff;
-    font-family: 'Courier New', Courier, monospace; font-weight: bold; text-shadow: 1px 1px 0 #000;
-  }
-  #photo-gallery-app.active { display: block; }
-  #pg-img, #pg-video { width: 100%; height: 100%; object-fit: contain; }
-  .pg-osd { position: absolute; font-size: 0.65rem; color: #fff; z-index: 51; }
-  .pg-bottom-left { bottom: 10px; left: 15px; }
-  .pg-top-right { top: 10px; right: 15px; color: #888; }
-  .pg-empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #888; font-family: sans-serif; }
 
   /* Orientation Warning Overlay */
   #orientation-warning {
@@ -1012,14 +1381,6 @@
   #orientation-warning p { color: #888; font-size: 0.85rem; }
   @media (orientation: portrait) {
     #orientation-warning { display: flex; }
-  }
-
-  /* Fix for Start (+) button invisible hitbox not covering the vertical cross */
-  #switch-plus .hitbox {
-    top: -200% !important;
-    left: -50% !important;
-    width: 200% !important;
-    height: 500% !important;
   }
 </style>
 </head>
@@ -1085,11 +1446,16 @@
             </div>
           </div>
 
-          <!-- GBA OS content, scaled to fit -->
+          <!-- GMX XMB OS content, scaled to fit -->
           <div id="os-scale-wrapper">
             <div class="xmb-bg">
+              <div id="wallpaper-layer" class="xmb-wallpaper"></div>
               <div id="game-bg-layer" class="xmb-game-bg"></div>
-              <div class="wave-line"></div><div class="wave-line"></div>
+              <div class="wave-line wave-1"></div>
+              <div class="wave-line wave-2"></div>
+              <div class="wave-line wave-3"></div>
+              <div class="wave-line wave-4"></div>
+              <div class="xmb-sheen"></div>
             </div>
             <div id="xmb-ui">
               <div id="xmb-header">
@@ -1097,20 +1463,18 @@
                 <div class="battery-icon"><div class="battery-fill"></div></div>
               </div>
               <div id="xmb-grid">
-                
-                <!-- SETTINGS COLUMN -->
                 <div class="xmb-col">
                   <div class="xmb-main">
                     <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M17 6h-2V4c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2v2H7c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2h2v2h-2V4z M19 18H5V11h14v7z M5 9V8h14v1H5z"/></svg>
                     <span>Settings</span>
                   </div>
-                  <div class="xmb-sub">BIOS</div>
-                  <div class="xmb-sub">L-SKIN</div>
-                  <div class="xmb-sub">R-SKIN</div>
-                  <div class="xmb-sub">Wallpaper</div>
+                  <div class="xmb-sub">Legacy GBA BIOS (Optional)</div>
+                  <!-- 3 NEW COLOR EDITOR ITEMS -->
+                  <div class="xmb-sub">Edit L-Control Color</div>
+                  <div class="xmb-sub">Edit R-Control Color</div>
+                  <div class="xmb-sub">Edit Wave Color</div>
+                  <div class="xmb-sub">Change Screen Wallpaper</div>
                 </div>
-
-                <!-- GAME COLUMN -->
                 <div class="xmb-col" id="game-column">
                   <div class="xmb-main">
                     <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h4l2-2h6l2 2h4c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm6.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm2-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
@@ -1118,40 +1482,34 @@
                   </div>
                   <div class="xmb-sub" id="memory-stick">Memory Stick (Install)</div>
                 </div>
-                
-                <!-- NEW GALLERY COLUMN -->
-                <div class="xmb-col" id="gallery-column">
-                  <div class="xmb-main">
-                    <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                    <span>Gallery</span>
-                  </div>
-                  <div class="xmb-sub" id="gallery-launch">Launch Gallery</div>
-                  <div class="xmb-sub" id="gallery-upload-btn">Upload Media</div>
-                </div>
-
-                <!-- ABOUT COLUMN -->
                 <div class="xmb-col">
                   <div class="xmb-main">
                     <svg class="xmb-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                     <span>About</span>
                   </div>
-                  <div class="xmb-sub">Version 2.0 (GBA)</div>
+                  <div class="xmb-sub">Version 3.0 (Multi-System)</div>
                 </div>
               </div>
-              <div id="sys-msg">Press X to execute</div>
+              <div id="xmb-help">
+                <span><b>A</b><span id="xmb-help-primary">Enter</span></span>
+                <span><b>B</b><span id="xmb-help-secondary">Back</span></span>
+              </div>
+              <div id="sys-msg">Ready</div>
             </div>
             
             <div id="install-popup">
               <!-- INSTALL GAME -->
               <div class="popup-box" id="popup-box-game" style="display:block;">
-                <h3>Install to Memory Stick</h3>
+                <h3>Install Game</h3>
                 <label class="popup-btn">
-                    Select .GBA ROM
-                    <input type="file" id="install-rom-upload" accept=".gba,.GBA"
+                    Select Game ROM
+                    <input type="file" id="install-rom-upload" accept=".nes,.sfc,.smc,.swc,.n64,.z64,.v64,.gb,.gbc,.gba,.nds,.md,.gen,.smd,.bin"
                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                                   opacity: 0; cursor: pointer; touch-action: manipulation;">
                 </label>
                 <div class="file-name" id="popup-rom-name"></div>
+                <div id="popup-system-name"></div>
+                <div style="font-size:0.56rem;color:#777;margin:6px 0 10px;line-height:1.35;">NES · SNES · N64 · GB/GBC · GBA · Nintendo DS · Genesis/Mega Drive</div>
                 <label class="popup-btn">
                     Select Cover Art
                     <input type="file" id="install-cover-upload" accept="image/*"
@@ -1164,8 +1522,8 @@
               
               <!-- INSERT CORE -->
               <div class="popup-box" id="popup-box-bios" style="display:none;">
-                <h3>Insert Core (BIOS)</h3>
-                <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Required to play games.<br>Upload your GBA BIOS .bin file.</div>
+                <h3>Legacy GBA BIOS</h3>
+                <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Optional legacy GBA BIOS.<br>Multi-system games use browser cores and do not require this file.</div>
                 <label class="popup-btn">
                     Select BIOS .bin
                     <input type="file" id="install-bios-upload" accept=".bin,.BIN"
@@ -1187,35 +1545,26 @@
                 <button class="popup-btn" id="popup-cancel-color">Cancel</button>
               </div>
 
-              <!-- EDIT WALLPAPER -->
+              <!-- CHANGE SCREEN WALLPAPER -->
               <div class="popup-box" id="popup-box-wallpaper" style="display:none;">
-                <h3>Edit Wallpaper</h3>
-                <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Upload an image to set as the emulator background.</div>
+                <h3>Screen Wallpaper</h3>
+                <div style="font-size:0.7rem;color:#888;margin-bottom:12px;">Choose an image for the XMB screen background.</div>
                 <label class="popup-btn">
                     Select Image
                     <input type="file" id="wallpaper-upload" accept="image/*"
                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                                   opacity: 0; cursor: pointer; touch-action: manipulation;">
                 </label>
-                <button class="popup-btn install-btn" id="popup-clear-wallpaper">Reset to Default</button>
+                <div class="file-name" id="wallpaper-file-name"></div>
+                <button class="popup-btn install-btn" id="popup-apply-wallpaper" disabled>Apply Wallpaper</button>
+                <button class="popup-btn" id="popup-remove-wallpaper">Remove Wallpaper</button>
                 <button class="popup-btn" id="popup-cancel-wallpaper">Cancel</button>
               </div>
+
             </div>
-
-            <!-- HIDDEN FILE INPUT FOR PHOTOS -->
-            <input type="file" id="import-photo-input" accept="image/*,video/*" multiple style="display:none;">
-
-            <!-- CYBER-SHOT PHOTO GALLERY (Single Item Slider) -->
-            <div id="photo-gallery-app">
-              <img id="pg-img" src="" style="display:none;">
-              <video id="pg-video" muted loop playsinline style="display:none;"></video>
-              <div class="pg-osd pg-bottom-left" id="pg-date">2026 1 1 12:00PM</div>
-              <div class="pg-osd pg-top-right">GALLERY | B: EXIT</div>
-              <div id="pg-empty-msg" class="pg-empty">NO MEDIA UPLOADED</div>
-            </div>
-
             <div id="game-area">
               <canvas id="game-canvas" width="240" height="160"></canvas>
+              <iframe id="multi-core-frame" title="Multi-system game emulator" allow="autoplay; fullscreen; gamepad" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-popups"></iframe>
             </div>
           </div>
         </div>
@@ -1224,79 +1573,6 @@
   </main>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-
-      // ===================================================================
-      // HAPTIC FEEDBACK ENGINE
-      // Non-blocking, per-button-type vibration patterns.
-      // Multiple simultaneous presses each fire independently.
-      // ===================================================================
-
-      // Distinct vibration patterns for each button category.
-      // Patterns are arrays of [vibrate_ms, pause_ms, vibrate_ms, ...].
-      var HAPTIC_PATTERNS = {
-        // D-pad arrows: short crisp tap
-        'dpad':        [12],
-        // Face buttons (A/B/X/Y): slightly firmer pulse
-        'face':        [18],
-        // Shoulder buttons (L/R): longer bump
-        'shoulder':    [25],
-        // Joystick grab start: micro-tick
-        'stick-start': [10],
-        // Joystick direction change during drag: micro-flick
-        'stick-move':  [8],
-        // Home/Power button: distinctive double-pulse
-        'home':        [20, 30, 20],
-        // Volume up/down: light tick
-        'volume':      [10],
-        // Camera/capture button: medium tap
-        'capture':     [15],
-        // Start/Select (menu): short tap
-        'menu':        [15],
-        // Default fallback
-        'default':     [12]
-      };
-
-      // Maps internal GBA button IDs to haptic categories.
-      // Used by pressButton() so both touch and keyboard paths
-      // get the correct per-button haptic type.
-      var BTN_HAPTIC_TYPE = {
-        'btn-up':    'dpad',
-        'btn-down':  'dpad',
-        'btn-left':  'dpad',
-        'btn-right': 'dpad',
-        'btn-a':     'face',
-        'btn-b':     'face',
-        'btn-l':     'shoulder',
-        'btn-r':     'shoulder',
-        'btn-select': 'menu',
-        'btn-start':  'menu'
-      };
-
-      /**
-       * Fires a haptic vibration for the given named type.
-       * Completely non-blocking: no await, no Promise, no callback.
-       * Silently skips on devices without navigator.vibrate support.
-       * Multiple simultaneous calls each trigger independently.
-       *
-       * @param {string} type - Key into HAPTIC_PATTERNS
-       */
-      function haptic(type) {
-        // Guard: skip entirely if the Vibration API is unavailable
-        if (typeof navigator === 'undefined' || !navigator.vibrate) return;
-
-        // Look up the pattern; fall back to 'default' if unknown type
-        var pattern = HAPTIC_PATTERNS[type] || HAPTIC_PATTERNS['default'];
-
-        // Fire-and-forget — navigator.vibrate returns immediately.
-        // It does NOT block the main thread or delay any input processing.
-        // Each call stacks independently so simultaneous buttons
-        // (e.g. Up + A) each produce their own vibration.
-        try {
-          navigator.vibrate(pattern);
-        } catch (e) {
-          // Swallow any errors silently — haptics must never break input
-        }
-      }
 
       // SAFE LOCALSTORAGE WRAPPERS
       function safeGetItem(key, defaultVal) {
@@ -1317,18 +1593,29 @@
         var xmbBg = document.querySelector('.xmb-bg');
         var l = safeGetItem('gmx_color_left', null);
         var r = safeGetItem('gmx_color_right', null);
-        var wp = safeGetItem('gmx_wallpaper', null);
+        var w = safeGetItem('gmx_color_wave', null);
         
         if(l) { article.style.setProperty('--joycon-left', l); article.style.setProperty('--joycon-left-shadow', l + '80'); }
         if(r) { article.style.setProperty('--joycon-right', r); article.style.setProperty('--joycon-right-shadow', r + '80'); }
-        if(wp) {
-            xmbBg.style.backgroundImage = 'url(' + wp + ')';
-            xmbBg.style.backgroundSize = 'cover';
-            xmbBg.style.backgroundPosition = 'center';
-            document.querySelectorAll('.wave-line').forEach(el => el.style.display = 'none');
-        }
+        if(w) { xmbBg.style.setProperty('--wave-color', hexToRgb(w)); }
       }
       loadSavedColors(); 
+
+      // UNIVERSAL HAPTIC FEEDBACK (graceful no-op on unsupported browsers)
+      var HAPTIC_PATTERNS = {
+        soft: 8,
+        tick: 12,
+        tap: 18,
+        confirm: 28,
+        warning: [18, 28, 22]
+      };
+
+      function haptic(kind) {
+        var vibrate = navigator.vibrate || navigator.webkitVibrate;
+        if (typeof vibrate !== 'function') return false;
+        var pattern = HAPTIC_PATTERNS[kind || 'tap'] || HAPTIC_PATTERNS.tap;
+        try { vibrate.call(navigator, pattern); return true; } catch (e) { return false; }
+      }
 
       // 0. Dynamic 3D Boot Screen Generator
       const boxesWrapper = document.querySelector('.boxes-wrapper');
@@ -1360,16 +1647,36 @@
         }
       }
 
+      // 1. Standard Button Haptics (Switch shell)
+      const standardButtons = document.querySelectorAll('button:not(.mushroom):not(.home):not(.bumper):not(.popup-btn)');
+      const handlePress = (e, btn) => {
+        e.preventDefault();
+        btn.classList.add('active');
+      };
+      const handleRelease = (e, btn) => {
+        e.preventDefault();
+        btn.classList.remove('active');
+      };
+
+      standardButtons.forEach(btn => {
+        btn.addEventListener('touchstart', (e) => handlePress(e, btn), { passive: false });
+        btn.addEventListener('touchend', (e) => handleRelease(e, btn), { passive: false });
+        btn.addEventListener('touchcancel', (e) => handleRelease(e, btn), { passive: false });
+        btn.addEventListener('mousedown', (e) => handlePress(e, btn));
+        btn.addEventListener('mouseup', (e) => handleRelease(e, btn));
+        btn.addEventListener('mouseleave', (e) => handleRelease(e, btn));
+      });
+
       // ===================================================================
-      // GLOBAL BOOT SOUND CONTEXT
+      // GLOBAL BOOT SOUND CONTEXT (Separate from Emulator to prevent lag)
       // ===================================================================
+      const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
       let globalCtx = null;
       let activeOscillators = [];
       let currentMasterGain = null;
 
       function getUnlockedContext() {
         if (!globalCtx) {
-          const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
           globalCtx = new NativeAudioContext();
         }
         if (globalCtx.state === 'suspended') {
@@ -1378,7 +1685,14 @@
         return globalCtx;
       }
 
-      const initAudioContext = () => { getUnlockedContext(); };
+      const initAudioContext = () => {
+        const ctx = getUnlockedContext();
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        try { source.start(0); } catch(e) {}
+      };
 
       document.addEventListener('touchstart', initAudioContext, { once: true, passive: true });
       document.addEventListener('mousedown', initAudioContext, { once: true });
@@ -1391,12 +1705,15 @@
           currentMasterGain.gain.setValueAtTime(currentMasterGain.gain.value, now);
           currentMasterGain.gain.linearRampToValueAtTime(0.0001, now + 0.05);
         }
-        activeOscillators.forEach(osc => { try { osc.stop(now + 0.06); } catch (e) {} });
+        activeOscillators.forEach(osc => {
+          try { osc.stop(now + 0.06); } catch (e) {}
+        });
         activeOscillators = [];
       }
 
       function playBootSound() {
-        const ctx = getUnlockedContext();
+        initAudioContext();
+        const ctx = globalCtx;
         const now = ctx.currentTime;
         const totalDuration = 8.5;
 
@@ -1466,13 +1783,12 @@
       // ===================================================================
       class AudioGlue {
         constructor() {
-          const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
           this.ctx = new NativeAudioContext();
           this.volume = 1.0;
           this.scriptNode = null;
           this.dummyOsc = null;
           
-          this.bufferFrames = 65536; 
+          this.bufferFrames = 65536; // Robust array sizing limits dropouts on legacy processing hardware
           this.bufferL = new Float32Array(this.bufferFrames);
           this.bufferR = new Float32Array(this.bufferFrames);
           this.writePos = 0;
@@ -1486,6 +1802,7 @@
           this.heartBeatCallback = heartBeatCallback;
           this.postHeartBeatCallback = postHeartBeatCallback;
 
+          // 4096 buffer size prevents crackling on A7 processing chips (iPhone 5s)
           this.scriptNode = this.ctx.createScriptProcessor(4096, 0, 2);
           const ratio = this.sampleRate / this.ctx.sampleRate; 
           
@@ -1505,6 +1822,7 @@
               if (available < 0) available += this.bufferFrames;
               
               if (available > 1) {
+                // Linear Interpolation upsampling logic
                 outL[i] = (this.bufferL[readIdx] + fraction * (this.bufferL[nextIdx] - this.bufferL[readIdx])) * this.volume;
                 outR[i] = (this.bufferR[readIdx] + fraction * (this.bufferR[nextIdx] - this.bufferR[readIdx])) * this.volume;
                 
@@ -1580,6 +1898,7 @@
       }
 
       function changeVolume(delta) {
+        haptic('tick');
         currentVol = Math.max(0, Math.min(1, currentVol + delta));
         
         if (emu.audio && typeof emu.audio.setVolume === 'function') {
@@ -1596,16 +1915,8 @@
         showVolume();
       }
 
-      const handleVolDown = (e) => { 
-        if (e.type === 'touchstart') e.preventDefault(); 
-        changeVolume(-0.1); 
-        haptic('volume'); 
-      };
-      const handleVolUp = (e) => { 
-        if (e.type === 'touchstart') e.preventDefault(); 
-        changeVolume(0.1); 
-        haptic('volume'); 
-      };
+      const handleVolDown = (e) => { e.preventDefault(); changeVolume(-0.1); };
+      const handleVolUp = (e) => { e.preventDefault(); changeVolume(0.1); };
 
       document.querySelector('.vol-hitbox.down').addEventListener('touchstart', handleVolDown, { passive: false });
       document.querySelector('.vol-hitbox.down').addEventListener('mousedown', handleVolDown);
@@ -1628,10 +1939,9 @@
 
         const startDrag = (e) => {
           e.preventDefault();
+          haptic('soft');
           isDragging = true;
           stick.classList.add('dragging');
-          // Haptic: micro-tick when the joystick is first grabbed
-          haptic('stick-start');
           
           let pointer;
           if (e.changedTouches) {
@@ -1682,11 +1992,7 @@
           if (newDir !== stickDir[stickId]) {
             if (stickDir[stickId]) releaseButton(stickDir[stickId]);
             stickDir[stickId] = newDir;
-            if (newDir) {
-              pressButton(newDir);
-              // Haptic: micro-flick when the stick crosses into a new direction
-              haptic('stick-move');
-            }
+            if (newDir) pressButton(newDir);
           }
         };
 
@@ -1721,18 +2027,20 @@
       });
 
       // ===================================================================
-      // GBA Emulator Configuration
+      // Multi-System Emulator Configuration
       // ===================================================================
       var GBA_BTN = {
-        'btn-a':0, 'btn-b':1, 'btn-select':2, 'btn-start':3,
+        'btn-a':0, 'btn-b':1, 'btn-x':0, 'btn-y':1,
+        'btn-select':2, 'btn-start':3,
         'btn-right':4, 'btn-left':5, 'btn-up':6, 'btn-down':7,
         'btn-r':8, 'btn-l':9
       };
 
       var KEYCODE_MAP = {
-        88: 'btn-a', 90: 'btn-b', 16: 'btn-select', 13: 'btn-start',
+        88: 'btn-a', 90: 'btn-b', 83: 'btn-x', 65: 'btn-y',
+        16: 'btn-select', 13: 'btn-start',
         39: 'btn-right', 37: 'btn-left', 38: 'btn-up', 40: 'btn-down',
-        83: 'btn-r', 65: 'btn-l'
+        69: 'btn-r', 81: 'btn-l'
       };
 
       var CONTROL_MAP = {
@@ -1740,11 +2048,54 @@
         51: 'speed-down', 53: 'speed-reset', 54: 'fullscreen'
       };
 
-      var emu = { iodine: null, blitter: null, audio: null, rafId: null, running: false };
-      
-      // Initialize layout driver instance directly
+      // Supported ROM types and official EmulatorJS core identifiers.
+      var SYSTEM_DEFS = {
+        nes:    { key:'nes',    label:'Nintendo Entertainment System', short:'NES', core:'fceumm', extensions:['nes'] },
+        snes:   { key:'snes',   label:'Super Nintendo Entertainment System', short:'SNES', core:'snes9x', extensions:['sfc','smc','swc'] },
+        n64:    { key:'n64',    label:'Nintendo 64', short:'N64', core:'mupen64plus_next', extensions:['n64','z64','v64'] },
+        gb:     { key:'gb',     label:'Game Boy', short:'GB', core:'gambatte', extensions:['gb'] },
+        gbc:    { key:'gbc',    label:'Game Boy Color', short:'GBC', core:'gambatte', extensions:['gbc'] },
+        gba:    { key:'gba',    label:'Game Boy Advance', short:'GBA', core:'mgba', extensions:['gba'] },
+        nds:    { key:'nds',    label:'Nintendo DS', short:'NDS', core:'desmume2015', extensions:['nds'] },
+        segaMD: { key:'segaMD', label:'Sega Genesis / Mega Drive', short:'GEN', core:'genesis_plus_gx', extensions:['md','gen','smd','bin'] }
+      };
+
+      function extensionOf(name) {
+        var m = String(name || '').toLowerCase().match(/\.([a-z0-9]+)$/);
+        return m ? m[1] : '';
+      }
+
+      function detectSystem(name) {
+        var ext = extensionOf(name);
+        var keys = Object.keys(SYSTEM_DEFS);
+        for (var i = 0; i < keys.length; i++) {
+          var def = SYSTEM_DEFS[keys[i]];
+          if (def.extensions.indexOf(ext) > -1) return def;
+        }
+        return null;
+      }
+
+      function normaliseGameSystem(game) {
+        if (game && game.system && SYSTEM_DEFS[game.system]) return SYSTEM_DEFS[game.system];
+        var detected = detectSystem(game && (game.filename || game.title || game.id));
+        return detected || SYSTEM_DEFS.gba; // Legacy installs in earlier builds were GBA-only.
+      }
+
+      var EJS_KEY_MAP = {
+        'btn-up':'ArrowUp', 'btn-down':'ArrowDown', 'btn-left':'ArrowLeft', 'btn-right':'ArrowRight',
+        'btn-a':'x', 'btn-b':'z', 'btn-x':'s', 'btn-y':'a',
+        'btn-select':'v', 'btn-start':'Enter', 'btn-l':'q', 'btn-r':'e'
+      };
+
+      var emu = {
+        iodine: null, blitter: null, audio: null, rafId: null,
+        running: false, mode: null, frame: null, romUrl: null, system: null,
+        romBuffer: null, bootTimer: null, bootStarted: false
+      };
+
+      // Keep the original GBA audio object available for legacy compatibility.
       emu.audio = new AudioGlue();
-      
+
       var scriptsLoaded = false;
       var emuSpeed = 1.0;
       var TICK_MS = 16;
@@ -1783,7 +2134,7 @@
         function next() {
           if (i >= list.length) { scriptsLoaded = true; cb(); return; }
           var s = document.createElement('script');
-          s.crossOrigin = 'anonymous'; 
+          s.crossOrigin = 'anonymous';
           s.src = BASE + list[i++];
           s.onload = next;
           s.onerror = function() { console.warn('Script failed: ' + list[i-1]); next(); };
@@ -1797,39 +2148,70 @@
         if (emu.rafId) { cancelAnimationFrame(emu.rafId); emu.rafId = null; }
         if (emu.iodine) { try { emu.iodine.pause(); } catch(e) {} emu.iodine = null; }
         emu.blitter = null;
+
+        var frame = document.getElementById('multi-core-frame');
+        if (frame) {
+          try { frame.src = 'about:blank'; frame.removeAttribute('srcdoc'); } catch(e) {}
+        }
+        if (emu.romUrl) { try { URL.revokeObjectURL(emu.romUrl); } catch(e) {} }
+        if (emu.bootTimer) { clearTimeout(emu.bootTimer); emu.bootTimer = null; }
+        emu.romUrl = null;
+        emu.romBuffer = null;
+        emu.bootStarted = false;
+        emu.mode = null;
+        emu.system = null;
+
+        var gameArea = document.getElementById('game-area');
+        if (gameArea) gameArea.classList.remove('multi-core');
         var canvas = document.getElementById('game-canvas');
         var ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, 240, 160);
       }
 
-      function applyEmuSpeed() {
-        if (!emu.iodine) return;
-        var rate = Math.max(1, Math.round(TICK_MS / emuSpeed));
-        emu.iodine.setIntervalRate(rate);
+      function renderError(title, msg) {
+        document.getElementById('screen').classList.add('game-running');
+        document.getElementById('game-area').classList.remove('multi-core');
+        var canvas = document.getElementById('game-canvas');
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, 240, 160);
+        ctx.fillStyle = '#ff4444'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(title, 8, 70);
+        ctx.fillStyle = '#aaa'; ctx.font = '9px monospace';
+        var words = msg.split(' '), line = '', y = 88;
+        for (var w = 0; w < words.length; w++) {
+          var t = line + (line ? ' ' : '') + words[w];
+          if (ctx.measureText(t).width > 224 && line) { ctx.fillText(line, 8, y); line = words[w]; y += 12; }
+          else line = t;
+        }
+        if (line) ctx.fillText(line, 8, y);
       }
 
+      function applyEmuSpeed() {
+        if (emu.mode === 'iodine' && emu.iodine) {
+          var rate = Math.max(1, Math.round(TICK_MS / emuSpeed));
+          emu.iodine.setIntervalRate(rate);
+        }
+      }
+
+      // Legacy GBA engine is retained as a fallback path.
       function startIodine(biosData, romData) {
         try {
+          emu.mode = 'iodine';
           emu.iodine = new GameBoyAdvanceEmulator();
-          
           emu.iodine.attachAudioHandler(emu.audio);
           emu.iodine.enableAudio();
-
           emu.iodine.attachPlayStatusHandler(function() {});
           emu.iodine.attachSpeedHandler(function() {});
           emu.iodine.attachBIOS(new Uint8Array(biosData));
           emu.iodine.attachROM(new Uint8Array(romData));
-          
           emu.blitter = new GfxGlueCode(240, 160);
           emu.blitter.attachCanvas(document.getElementById('game-canvas'));
           emu.iodine.attachGraphicsFrameHandler(emu.blitter);
-
           applyEmuSpeed();
           emu.running = true;
           accumulator = 0;
           lastRaf = 0;
           function rafLoop(now) {
-            if (!emu.running) return;
+            if (!emu.running || emu.mode !== 'iodine') return;
             if (lastRaf === 0) lastRaf = now;
             var delta = now - lastRaf;
             lastRaf = now;
@@ -1844,15 +2226,188 @@
           emu.rafId = requestAnimationFrame(rafLoop);
           emu.iodine.play();
         } catch(e) {
-          document.getElementById('screen').classList.add('game-running');
-          var canvas = document.getElementById('game-canvas');
-          var ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#ff4444'; ctx.fillText('BOOT FAILED', 8, 70);
+          renderError('BOOT FAILED', String(e));
         }
       }
 
+      function numericGameId(text) {
+        var h = 2166136261 >>> 0;
+        text = String(text || 'GMX');
+        for (var i = 0; i < text.length; i++) {
+          h ^= text.charCodeAt(i);
+          h = Math.imul(h, 16777619) >>> 0;
+        }
+        return (h || 1) >>> 0;
+      }
+
+      function ejsDefaultControls(systemKey) {
+        var p = {};
+        function set(idx, value, value2) {
+          p[idx] = { value: value };
+          if (value2) p[idx].value2 = value2;
+        }
+        set(0, 'z', 'BUTTON_2');       // B
+        set(1, 'a', 'BUTTON_4');       // Y
+        set(2, 'v', 'SELECT');
+        set(3, 'enter', 'START');
+        set(8, 'x', 'BUTTON_1');       // A
+        set(9, 's', 'BUTTON_3');       // X
+        set(10, 'q', 'LEFT_TOP_SHOULDER');
+        set(11, 'e', 'RIGHT_TOP_SHOULDER');
+
+        if (systemKey === 'n64') {
+          // N64 needs the left analogue stick for movement.
+          set(16, 'right arrow', 'LEFT_STICK_X:+1');
+          set(17, 'left arrow',  'LEFT_STICK_X:-1');
+          set(18, 'down arrow',  'LEFT_STICK_Y:+1');
+          set(19, 'up arrow',    'LEFT_STICK_Y:-1');
+        } else {
+          set(4, 'up arrow', 'DPAD_UP');
+          set(5, 'down arrow', 'DPAD_DOWN');
+          set(6, 'left arrow', 'DPAD_LEFT');
+          set(7, 'right arrow', 'DPAD_RIGHT');
+        }
+        return { 0:p, 1:{}, 2:{}, 3:{} };
+      }
+
+      function makeEjsDocument(game, def) {
+        var controls = ejsDefaultControls(def.key);
+        var cfg = {
+          core: def.core,
+          gameName: game.title || 'GMX Game',
+          gameID: numericGameId((game.id || '') + '|' + def.key),
+          controls: controls,
+          volume: Math.max(0, Math.min(1, currentVol)),
+          extension: extensionOf(game.filename || game.title || '') || (def.extensions && def.extensions[0]) || 'rom'
+        };
+        var json = JSON.stringify(cfg).replace(/</g, '\u003c');
+        return '<!doctype html><html><head><meta charset="utf-8">' +
+          '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">' +
+          '<style>html,body,#game{margin:0;width:100%;height:100%;overflow:hidden;background:#000}body{touch-action:none}#game{position:fixed;inset:0}.gmx-loader{position:fixed;inset:0;display:grid;place-items:center;color:#b9cfff;background:#000;font:11px monospace;letter-spacing:.08em;text-align:center;padding:20px;z-index:9999}</style>' +
+          '</head><body><div id="game"></div><div id="gmx-loader" class="gmx-loader">PREPARING EMULATOR...</div><script>' +
+          'var GMX_CFG=' + json + ';var GMX_BOOTED=false;var GMX_ROM_URL="";' +
+          'var GMX_RUNTIMES=[' +
+            '{name:"OFFICIAL STABLE",loader:"https://cdn.emulatorjs.org/stable/data/loader.js",data:"https://cdn.emulatorjs.org/stable/data/"},' +
+            '{name:"OFFICIAL 4.2.3",loader:"https://cdn.emulatorjs.org/4.2.3/data/loader.js",data:"https://cdn.emulatorjs.org/4.2.3/data/"}' +
+          '];var GMX_ACTIVE_RUNTIME=null;' +
+          'function gmxStatus(t){var n=document.getElementById("gmx-loader");if(n)n.textContent=t}' +
+          'function gmxError(m){parent.postMessage({type:"gmx-ejs-error",message:String(m||"Unknown emulator error")} ,"*")}' +
+          'function gmxCoreProbeUrl(r){return r.data+"cores/"+GMX_CFG.core+"-wasm.data"}' +
+          'function gmxInjectLoader(i){if(i>=GMX_RUNTIMES.length){gmxError("Could not reach a matched EmulatorJS runtime/core set. The current host may be blocking WebAssembly core downloads. Download this HTML and run it from http://localhost instead of the ChatGPT preview.");return;}' +
+          'var r=GMX_RUNTIMES[i];GMX_ACTIVE_RUNTIME=r;' +
+          'EJS_pathtodata=r.data;window.EJS_paths=undefined;EJS_DEBUG_XX=false;' +
+          'gmxStatus("LOADING "+r.name+"...");' +
+          'var s=document.createElement("script");s.src=r.loader;s.async=true;s.crossOrigin="anonymous";' +
+          's.onload=function(){parent.postMessage({type:"gmx-ejs-loader-ok",source:r.loader,runtime:r.name},"*")};' +
+          's.onerror=function(){try{s.remove()}catch(e){}gmxInjectLoader(i+1)};' +
+          'document.body.appendChild(s)}' +
+          'function gmxLoadRuntime(i){var r=GMX_RUNTIMES[i];if(!r){gmxInjectLoader(i);return;}' +
+          'var probe=gmxCoreProbeUrl(r);gmxStatus("CHECKING "+GMX_CFG.core.toUpperCase()+" CORE...");' +
+          'fetch(probe,{method:"HEAD",mode:"cors",cache:"no-store"}).then(function(resp){if(!resp.ok)throw new Error("HTTP "+resp.status);gmxInjectLoader(i)}).catch(function(){gmxLoadRuntime(i+1)})}' +
+          'var EJS_player="#game";' +
+          'var EJS_core=GMX_CFG.core;' +
+          'var EJS_gameName=GMX_CFG.gameName;' +
+          'var EJS_gameID=GMX_CFG.gameID;' +
+          'var EJS_startOnLoaded=true;' +
+          'var EJS_volume=GMX_CFG.volume;' +
+          'var EJS_color="#69a7ff";' +
+          'var EJS_backgroundColor="#000";' +
+          'var EJS_backgroundBlur=false;' +
+          'var EJS_noAutoFocus=true;' +
+          'var EJS_askBeforeExit=false;' +
+          'var EJS_defaultControls=GMX_CFG.controls;' +
+          'var EJS_threads=false;var EJS_forceLegacyCores=false;' +
+          'var EJS_ready=function(){var n=document.getElementById("gmx-loader");if(n)n.style.display="none";parent.postMessage({type:"gmx-ejs-ready"},"*")};' +
+          'var EJS_onGameStart=function(){var n=document.getElementById("gmx-loader");if(n)n.style.display="none";parent.postMessage({type:"gmx-ejs-started"},"*")};' +
+          'window.addEventListener("error",function(ev){var m=String(ev.message||"Runtime error");if(m.indexOf("both async and sync fetching of the wasm failed")!==-1){var r=GMX_ACTIVE_RUNTIME;gmxError("WebAssembly core download failed"+(r?" from "+r.data:"")+". This usually means the host preview or a content blocker denied the core request. Run the downloaded HTML through http://localhost and allow cdn.emulatorjs.org.");return;}if(m.indexOf("Script error")===-1)gmxError(m)});' +
+          'window.addEventListener("unhandledrejection",function(ev){gmxError(String((ev.reason&&ev.reason.message)||ev.reason||"Core load failed"))});' +
+          'window.addEventListener("beforeunload",function(){if(GMX_ROM_URL)try{URL.revokeObjectURL(GMX_ROM_URL)}catch(e){}});' +
+          'window.addEventListener("message",function(ev){var d=ev.data||{};' +
+          'if(d.type==="gmx-boot"&&!GMX_BOOTED){GMX_BOOTED=true;try{' +
+          'var bytes=d.rom instanceof ArrayBuffer?new Uint8Array(d.rom):(ArrayBuffer.isView(d.rom)?new Uint8Array(d.rom.buffer,d.rom.byteOffset,d.rom.byteLength):null);' +
+          'if(!bytes||!bytes.byteLength)throw new Error("ROM transfer was empty");' +
+          'var ext=String(GMX_CFG.extension||"rom").replace(/[^a-z0-9]/gi,"")||"rom";' +
+          'GMX_ROM_URL=URL.createObjectURL(new Blob([bytes],{type:"application/octet-stream"}));' +
+          'EJS_gameUrl=GMX_ROM_URL;' +
+          'parent.postMessage({type:"gmx-ejs-rom-received",size:bytes.byteLength},"*");' +
+          'gmxLoadRuntime(0);}catch(err){gmxError(String(err&&err.message||err))}return;}' +
+          'if(d.type!=="gmx-input")return;' +
+          'var opts={key:d.key,code:d.code||"",bubbles:true,cancelable:true,repeat:false};' +
+          'window.dispatchEvent(new KeyboardEvent(d.down?"keydown":"keyup",opts));});' +
+          'parent.postMessage({type:"gmx-ejs-shell-ready"},"*");' +
+          '<\/script></body></html>';
+      }
+
+      function romAsArrayBuffer(value) {
+        try {
+          if (value instanceof ArrayBuffer) return Promise.resolve(value.slice(0));
+          if (ArrayBuffer.isView(value)) {
+            return Promise.resolve(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength));
+          }
+          if (value instanceof Blob) return value.arrayBuffer();
+        } catch(e) { return Promise.reject(e); }
+        return Promise.reject(new Error('Stored ROM data has an unsupported format.'));
+      }
+
+      function startMultiCore(game) {
+        var def = normaliseGameSystem(game);
+        if (!def) { renderError('UNSUPPORTED ROM', 'This game type is not configured.'); return; }
+        try {
+          stopEmu();
+          var frame = document.getElementById('multi-core-frame');
+          var area = document.getElementById('game-area');
+
+          emu.mode = 'ejs';
+          emu.running = true;
+          emu.system = def.key;
+          emu.frame = frame;
+          emu.bootStarted = false;
+
+          area.classList.add('multi-core');
+          document.getElementById('screen').classList.add('game-running');
+          document.getElementById('screen').classList.remove('os-ready');
+
+          romAsArrayBuffer(game.rom).then(function(buf) {
+            if (!emu.running || emu.mode !== 'ejs') return;
+            if (!buf || !buf.byteLength) throw new Error('ROM file is empty.');
+            emu.romBuffer = buf;
+            frame.srcdoc = makeEjsDocument(game, def);
+
+            emu.bootTimer = setTimeout(function() {
+              if (emu.running && emu.mode === 'ejs' && !emu.bootStarted) {
+                renderError('CORE LOAD TIMEOUT', 'The browser could not start the emulation core. Check network access to the EmulatorJS CDN and try again.');
+              }
+            }, 45000);
+          }).catch(function(err) {
+            renderError('ROM LOAD FAILED', String(err && err.message || err));
+          });
+        } catch(e) {
+          renderError('CORE BOOT FAILED', String(e));
+        }
+      }
+
+      function keyCodeFor(key) {
+        var map = {
+          ArrowUp:'ArrowUp', ArrowDown:'ArrowDown', ArrowLeft:'ArrowLeft', ArrowRight:'ArrowRight',
+          Enter:'Enter', x:'KeyX', z:'KeyZ', s:'KeyS', a:'KeyA', v:'KeyV', q:'KeyQ', e:'KeyE'
+        };
+        return map[key] || '';
+      }
+
       function sendInput(btnId, isDown) {
-        if (!emu.running || !emu.iodine) return;
+        if (!emu.running) return;
+
+        if (emu.mode === 'ejs') {
+          var key = EJS_KEY_MAP[btnId];
+          var frame = document.getElementById('multi-core-frame');
+          if (!key || !frame || !frame.contentWindow) return;
+          try {
+            frame.contentWindow.postMessage({ type:'gmx-input', key:key, code:keyCodeFor(key), down:!!isDown }, '*');
+          } catch(e) {}
+          return;
+        }
+
+        if (!emu.iodine) return;
         var bit = GBA_BTN[btnId];
         if (bit === undefined) return;
         try {
@@ -1866,26 +2421,66 @@
         } catch(e) {}
       }
 
+      window.addEventListener('message', function(e) {
+        if (!e.data) return;
+        var frame = document.getElementById('multi-core-frame');
+        if (!frame || e.source !== frame.contentWindow) return;
+        var type = e.data.type;
+
+        if (type === 'gmx-ejs-shell-ready') {
+          if (!emu.running || emu.mode !== 'ejs' || !emu.romBuffer) return;
+          try {
+            var transferable = emu.romBuffer.slice(0);
+            frame.contentWindow.postMessage({ type:'gmx-boot', rom:transferable }, '*', [transferable]);
+            emu.romBuffer = null;
+            var loadingMsg = document.getElementById('sys-msg');
+            if (loadingMsg) { loadingMsg.innerText = 'LOADING CORE...'; loadingMsg.style.opacity = 1; }
+          } catch(err) {
+            renderError('ROM TRANSFER FAILED', String(err && err.message || err));
+          }
+          return;
+        }
+
+        if (type === 'gmx-ejs-error') {
+          if (emu.bootTimer) { clearTimeout(emu.bootTimer); emu.bootTimer = null; }
+          renderError('EMULATOR ERROR', String(e.data.message || 'Unknown core error'));
+          return;
+        }
+
+        if (type === 'gmx-ejs-loader-ok') {
+          var loaderMsg = document.getElementById('sys-msg');
+          if (loaderMsg) { loaderMsg.innerText = 'EMULATOR RUNTIME LOADED'; loaderMsg.style.opacity = 1; }
+          return;
+        }
+
+        if (type === 'gmx-ejs-rom-received') {
+          var recvMsg = document.getElementById('sys-msg');
+          if (recvMsg) { recvMsg.innerText = 'ROM LOADED · STARTING CORE'; recvMsg.style.opacity = 1; }
+          return;
+        }
+
+        if (type !== 'gmx-ejs-ready' && type !== 'gmx-ejs-started') return;
+        emu.bootStarted = true;
+        if (emu.bootTimer) { clearTimeout(emu.bootTimer); emu.bootTimer = null; }
+        var msg = document.getElementById('sys-msg');
+        if (!msg) return;
+        msg.innerText = type === 'gmx-ejs-started' ? 'GAME STARTED' : 'CORE READY';
+        msg.style.opacity = 1;
+        setTimeout(function() { if (emu.running) msg.style.opacity = 0; }, 1400);
+      });
+
       // ===================================================================
-      // Storage (IndexedDB + memory fallback) v3
+      // Storage (IndexedDB + memory fallback)
       // ===================================================================
       var DB_NAME = 'GMX_GBA_Storage', STORE = 'library';
-      var memFallback = false, memStore = { bios: null, games: {}, photos: [] };
+      var memFallback = false, memStore = { bios: null, games: {}, wallpaper: null };
 
       function initDB() {
         return new Promise(function(resolve) {
           if (memFallback || !window.indexedDB) { memFallback = true; return resolve(null); }
           try {
-            var req = indexedDB.open(DB_NAME, 3);
-            req.onupgradeneeded = function(e) {
-                var db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE)) {
-                    db.createObjectStore(STORE, { keyPath: 'id' });
-                }
-                if (!db.objectStoreNames.contains('photos')) {
-                    db.createObjectStore('photos', { keyPath: 'id' });
-                }
-            };
+            var req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = function(e) { e.target.result.createObjectStore(STORE, { keyPath: 'id' }); };
             req.onsuccess = function() { resolve(req.result); };
             req.onerror = function() { memFallback = true; resolve(null); };
           } catch(e) { memFallback = true; resolve(null); }
@@ -1926,6 +2521,41 @@
         });
       }
 
+      function getStoredBiosBuffer() {
+        return initDB().then(function(db) {
+          if (!db) return memStore.bios || null;
+          return dbGet(db, '__bios__').then(function(rec) {
+            return rec && rec.data ? rec.data : null;
+          });
+        });
+      }
+
+      function startPreferredCore(game) {
+        var def = normaliseGameSystem(game);
+        if (def.key !== 'gba') {
+          startMultiCore(game);
+          return;
+        }
+
+        // GBA prefers the page's original IodineGBA engine when a BIOS has
+        // already been installed. This avoids any CDN dependency for GBA play.
+        Promise.all([romAsArrayBuffer(game.rom), getStoredBiosBuffer()]).then(function(parts) {
+          var romBuf = parts[0], biosBuf = parts[1];
+          if (biosBuf && biosBuf.byteLength) {
+            stopEmu();
+            document.getElementById('game-area').classList.remove('multi-core');
+            document.getElementById('screen').classList.add('game-running');
+            document.getElementById('screen').classList.remove('os-ready');
+            startIodine(biosBuf, romBuf);
+          } else {
+            startMultiCore(game);
+          }
+        }).catch(function(err) {
+          console.warn('Native GBA path unavailable; using EmulatorJS fallback.', err);
+          startMultiCore(game);
+        });
+      }
+
       function saveBios(file) {
         return file.arrayBuffer().then(function(buf) {
           return initDB().then(function(db) {
@@ -1936,13 +2566,25 @@
       }
 
       function saveGame(romFile, imgFile) {
+        var def = detectSystem(romFile && romFile.name);
+        if (!def) return Promise.reject(new Error('Unsupported ROM type'));
         return romFile.arrayBuffer().then(function(romBuf) {
           var coverP = imgFile
             ? new Promise(function(res) { var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.readAsDataURL(imgFile); })
             : Promise.resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
           return coverP.then(function(cover) {
-            var id = romFile.name.replace(/\.[^/.]+$/, '');
-            var rec = { id: id, title: id, rom: romBuf, cover: cover };
+            var title = romFile.name.replace(/\.[^/.]+$/, '');
+            var id = 'game::' + def.key + '::' + title;
+            var rec = {
+              id: id,
+              title: title,
+              filename: romFile.name,
+              extension: extensionOf(romFile.name),
+              system: def.key,
+              core: def.core,
+              rom: romBuf,
+              cover: cover
+            };
             return initDB().then(function(db) {
               if (!db) { memStore.games[id] = rec; return; }
               return dbPut(db, rec);
@@ -1951,23 +2593,86 @@
         });
       }
 
-      function loadRom(romData) {
-        stopEmu();
-        document.getElementById('screen').classList.add('game-running');
-        document.getElementById('screen').classList.remove('os-ready');
-        initDB().then(function(db) {
-          var p = db ? dbGet(db, '__bios__').then(function(r) { return r ? r.data : null; }) : Promise.resolve(memStore.bios);
-          p.then(function(biosData) {
-            if (!biosData) { renderError('NO BIOS FOUND', 'Please insert a GBA BIOS .bin via Settings before playing.'); return; }
-            loadScripts(function() { startIodine(biosData, romData); });
+      function applyWallpaper(dataUrl) {
+        var layer = document.getElementById('wallpaper-layer');
+        if (!layer) return;
+        if (dataUrl) {
+          layer.style.backgroundImage = 'url(' + JSON.stringify(dataUrl) + ')';
+          layer.classList.add('has-wallpaper');
+        } else {
+          layer.style.backgroundImage = 'none';
+          layer.classList.remove('has-wallpaper');
+        }
+      }
+
+      function saveWallpaper(file) {
+        return new Promise(function(resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            var dataUrl = e.target.result;
+            initDB().then(function(db) {
+              if (!db) {
+                memStore.wallpaper = dataUrl;
+                try { localStorage.setItem('gmx_screen_wallpaper', dataUrl); } catch(err) {}
+                applyWallpaper(dataUrl);
+                resolve();
+                return;
+              }
+              dbPut(db, { id: '__wallpaper__', data: dataUrl }).then(function() {
+                applyWallpaper(dataUrl);
+                resolve();
+              }).catch(reject);
+            });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function loadWallpaper() {
+        return initDB().then(function(db) {
+          if (!db) {
+            var fallback = memStore.wallpaper;
+            if (!fallback) {
+              try { fallback = localStorage.getItem('gmx_screen_wallpaper'); } catch(e) {}
+            }
+            applyWallpaper(fallback || null);
+            return;
+          }
+          return dbGet(db, '__wallpaper__').then(function(rec) {
+            applyWallpaper(rec && rec.data ? rec.data : null);
           });
         });
       }
 
+      function removeWallpaper() {
+        return initDB().then(function(db) {
+          if (!db) {
+            memStore.wallpaper = null;
+            try { localStorage.removeItem('gmx_screen_wallpaper'); } catch(e) {}
+            applyWallpaper(null);
+            return;
+          }
+          return dbDelete(db, '__wallpaper__').then(function() { applyWallpaper(null); });
+        });
+      }
+
+      loadWallpaper();
+
+      function loadGame(game) {
+        if (!game || !game.rom) { renderError('ROM NOT FOUND', 'The installed game data is missing.'); return; }
+        startPreferredCore(game);
+      }
+
+      // Backward-compatible helper for any legacy caller.
+      function loadRom(romData) {
+        loadGame({ id:'legacy-gba', title:'Legacy GBA Game', system:'gba', rom:romData });
+      }
+
       // ===================================================================
-      // XMB OS NAVIGATION
+      // XMB OS & COLOR PICKER LOGIC
       // ===================================================================
-      var isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0, maxRows = [4, 1, 2, 1]; // 4 columns total
+      var isPoweredOn = false, isOSReady = false, colIdx = 1, rowIdx = 0, maxRows = [5,1,1]; 
       var bootTimers = [];
       var currentColorTarget = '';
 
@@ -1977,10 +2682,30 @@
         col.querySelectorAll('.dynamic-game').forEach(function(el) { el.remove(); });
         var count = 1;
         games.forEach(function(g) {
-          if (g.id === '__bios__' || g.id.startsWith('__img__')) return;
+          if (!g || String(g.id || '').indexOf('__') === 0) return;
+          var def = normaliseGameSystem(g);
           var d = document.createElement('div');
           d.className = 'xmb-sub game-item dynamic-game';
-          d.innerHTML = '<img src="' + g.cover + '" class="box-art"><div class="game-details"><span class="game-title">' + g.title + '</span></div>';
+          d.dataset.gameId = String(g.id || g.title || '');
+          d.dataset.system = def.key;
+
+          var img = document.createElement('img');
+          img.className = 'box-art';
+          img.alt = '';
+          img.src = g.cover || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+          var details = document.createElement('div');
+          details.className = 'game-details';
+          var title = document.createElement('span');
+          title.className = 'game-title';
+          title.textContent = g.title || 'Untitled Game';
+          var badge = document.createElement('span');
+          badge.className = 'system-badge';
+          badge.textContent = def.short;
+          details.appendChild(title);
+          details.appendChild(badge);
+          d.appendChild(img);
+          d.appendChild(details);
           col.insertBefore(d, stick);
           count++;
         });
@@ -2000,7 +2725,7 @@
         var cols = document.querySelectorAll('.xmb-col');
         var sysMsg = document.getElementById('sys-msg');
         var bgLayer = document.getElementById('game-bg-layer');
-        grid.style.transform = 'translate(calc(-50% + ' + ((1 - colIdx) * 100) + 'px), ' + (-rowIdx * 60) + 'px)';
+        grid.style.transform = 'translate(calc(-50% + ' + ((1 - colIdx) * 166) + 'px), ' + (-rowIdx * 50) + 'px)';
         cols.forEach(function(col, c) {
           var active = (c === colIdx);
           col.classList.toggle('active-col', active);
@@ -2010,13 +2735,17 @@
         if (img) { bgLayer.style.backgroundImage = 'linear-gradient(to right,rgba(15,16,26,0.95) 0%,rgba(15,16,26,0.5) 60%,rgba(0,0,0,0) 100%),url(' + img.src + ')'; bgLayer.style.opacity = 1; }
         else bgLayer.style.opacity = 0;
         var games = document.querySelectorAll('.dynamic-game');
-        if (colIdx === 1 && rowIdx > 0 && rowIdx <= games.length) { sysMsg.innerText = '(B) Delete'; sysMsg.style.opacity = 1; }
+        var helpPrimary = document.getElementById('xmb-help-primary');
+        var helpSecondary = document.getElementById('xmb-help-secondary');
+        if (helpPrimary) helpPrimary.innerText = (colIdx === 1 && rowIdx > 0 && rowIdx <= games.length) ? 'Start' : 'Enter';
+        if (helpSecondary) helpSecondary.innerText = (colIdx === 1 && rowIdx > 0 && rowIdx <= games.length) ? 'Delete' : 'Back';
+        if (colIdx === 1 && rowIdx > 0 && rowIdx <= games.length) { sysMsg.innerText = 'B  Delete Game'; sysMsg.style.opacity = 1; }
         else { sysMsg.innerText = ''; sysMsg.style.opacity = 0; }
       }
 
       function popupVisible() { return document.getElementById('install-popup').classList.contains('visible'); }
       function navLeft()  { if (colIdx > 0 && isOSReady && !popupVisible()) { colIdx--; rowIdx = 0; updateXMB(); } }
-      function navRight() { if (colIdx < 3 && isOSReady && !popupVisible()) { colIdx++; rowIdx = 0; updateXMB(); } }
+      function navRight() { if (colIdx < 2 && isOSReady && !popupVisible()) { colIdx++; rowIdx = 0; updateXMB(); } }
       function navUp()    { if (rowIdx > 0 && isOSReady && !popupVisible()) { rowIdx--; updateXMB(); } }
       function navDown()  { if (rowIdx < maxRows[colIdx] && isOSReady && !popupVisible()) { rowIdx++; updateXMB(); } }
 
@@ -2028,35 +2757,29 @@
 
         var sysMsg = document.getElementById('sys-msg');
         
-        // COL 0: SETTINGS
         if (colIdx === 0) { 
           if (rowIdx === 1) openBiosPopup(); 
           else if (rowIdx === 2) openColorPopup('left');
           else if (rowIdx === 3) openColorPopup('right');
-          else if (rowIdx === 4) openWallpaperPopup();
+          else if (rowIdx === 4) openColorPopup('wave');
+          else if (rowIdx === 5) openWallpaperPopup();
           return; 
         }
 
-        // COL 2: GALLERY
-        if (colIdx === 2) { 
-          if (rowIdx === 1) openPhotoApp();
-          // rowIdx === 2 (Upload Media) is handled on button release to bypass iOS restrictions
-          return; 
-        }
-
-        // COL 3: ABOUT
-        if (colIdx === 3) { sysMsg.innerText = 'Module offline.'; sysMsg.style.opacity = 1; return; }
+        if (colIdx === 2) { sysMsg.innerText = 'Module offline.'; sysMsg.style.opacity = 1; return; }
         
-        // COL 1: GAME
         var games = document.querySelectorAll('.dynamic-game');
         if (rowIdx > 0 && rowIdx <= games.length) {
-          var title = games[rowIdx - 1].querySelector('.game-title').innerText;
-          sysMsg.innerText = 'BOOTING: ' + title; sysMsg.style.opacity = 1;
+          var gameEl = games[rowIdx - 1];
+          var title = gameEl.querySelector('.game-title').innerText;
+          var gameId = gameEl.dataset.gameId;
+          var def = SYSTEM_DEFS[gameEl.dataset.system] || SYSTEM_DEFS.gba;
+          sysMsg.innerText = 'BOOTING ' + def.short + ': ' + title; sysMsg.style.opacity = 1;
           initDB().then(function(db) {
-            var p = db ? dbGet(db, title) : Promise.resolve(memStore.games[title] || null);
+            var p = db ? dbGet(db, gameId) : Promise.resolve(memStore.games[gameId] || null);
             p.then(function(g) {
               if (!g) { sysMsg.innerText = 'ROM not found.'; return; }
-              loadRom(g.rom);
+              loadGame(g);
             });
           });
         } else if (rowIdx === games.length + 1) {
@@ -2067,16 +2790,15 @@
       function triggerB() {
         if (popupVisible()) { closePopup(); return; }
         if (!isOSReady) return;
-        if (colIdx !== 1) return; // Only delete items when hovering over games column
-
         var games = document.querySelectorAll('.dynamic-game');
-        if (rowIdx < 1 || rowIdx > games.length) return;
-
-        var title = games[rowIdx - 1].querySelector('.game-title').innerText;
+        if (colIdx !== 1 || rowIdx < 1 || rowIdx > games.length) return;
+        var gameEl = games[rowIdx - 1];
+        var title = gameEl.querySelector('.game-title').innerText;
+        var gameId = gameEl.dataset.gameId;
         var sysMsg = document.getElementById('sys-msg');
         sysMsg.innerText = 'Deleting ' + title + '...'; sysMsg.style.opacity = 1;
         initDB().then(function(db) {
-          var p = db ? dbDelete(db, title) : Promise.resolve(delete memStore.games[title]);
+          var p = db ? dbDelete(db, gameId) : Promise.resolve(delete memStore.games[gameId]);
           p.then(function() { return buildXMB(); }).then(function() {
             rowIdx = Math.min(rowIdx, maxRows[1] - 1);
             updateXMB(); sysMsg.style.opacity = 0;
@@ -2085,123 +2807,32 @@
       }
 
       // ===================================================================
-      // PHOTO GALLERY LOGIC (Single Image Cyber-shot Slider)
+      // Install & Color Popups
       // ===================================================================
-      var isPhotoAppOpen = false;
-      var photosList = [];
-      var currentPhotoIdx = 0;
-      var pgApp = document.getElementById('photo-gallery-app');
-      var pgImg = document.getElementById('pg-img');
-      var pgVideo = document.getElementById('pg-video');
-      var pgDate = document.getElementById('pg-date');
-      var pgEmptyMsg = document.getElementById('pg-empty-msg');
-
-      function loadPhotosList() {
-        return initDB().then(db => {
-          if (!db) return memStore.photos;
-          return new Promise(res => {
-            var tx = db.transaction('photos', 'readonly');
-            var req = tx.objectStore('photos').getAll();
-            req.onsuccess = () => res(req.result || []);
-          });
-        });
-      }
-
-      function renderPhoto() {
-        if (photosList.length === 0) {
-          pgImg.style.display = 'block';
-          pgVideo.style.display = 'none';
-          pgImg.src = '';
-          pgEmptyMsg.style.display = 'block';
-          pgDate.innerText = '---';
-        } else {
-          pgEmptyMsg.style.display = 'none';
-          var p = photosList[currentPhotoIdx];
-          var isVideo = p.data && p.data.startsWith('data:video');
-
-          if (isVideo) {
-             pgImg.style.display = 'none';
-             pgVideo.style.display = 'block';
-             pgVideo.src = p.data;
-             pgVideo.play().catch(e=>{});
-          } else {
-             pgVideo.style.display = 'none';
-             pgImg.style.display = 'block';
-             pgImg.src = p.data;
-          }
-          pgDate.innerText = p.date || new Date().toLocaleString();
-        }
-      }
-
-      function openPhotoApp() {
-        isPhotoAppOpen = true;
-        pgApp.classList.add('active');
-        document.getElementById('sys-msg').style.opacity = 0;
-        loadPhotosList().then(list => {
-          photosList = list;
-          currentPhotoIdx = photosList.length > 0 ? photosList.length - 1 : 0;
-          renderPhoto();
-        });
-      }
-
-      function closePhotoApp() {
-        isPhotoAppOpen = false;
-        pgApp.classList.remove('active');
-        pgImg.src = ''; 
-        pgVideo.src = '';
-      }
-
-      document.getElementById('import-photo-input').addEventListener('change', function(e) {
-        var files = e.target.files;
-        if (!files.length) return;
-        var sysMsg = document.getElementById('sys-msg');
-        sysMsg.innerText = 'IMPORTING MEDIA...'; 
-        sysMsg.style.opacity = 1;
-        var promises = [];
-        for(let i=0; i<files.length; i++) {
-          promises.push(new Promise((res) => {
-            var reader = new FileReader();
-            reader.onload = function(evt) {
-              var rec = { id: Date.now() + i, data: evt.target.result, date: new Date().toLocaleString() };
-              initDB().then(db => {
-                 if (db) { var tx = db.transaction('photos', 'readwrite'); tx.objectStore('photos').put(rec); tx.oncomplete = res; }
-                 else { memStore.photos.push(rec); res(); }
-              });
-            };
-            reader.readAsDataURL(files[i]);
-          }));
-        }
-        Promise.all(promises).then(() => {
-          sysMsg.innerText = files.length + ' MEDIA IMPORTED';
-          setTimeout(() => { 
-            sysMsg.style.opacity = 0; 
-            openPhotoApp(); // Auto-launch exactly as requested
-          }, 1500);
-        });
-      });
-
-      // ===================================================================
-      // Install Popups & Settings
-      // ===================================================================
-      var selRom = null, selCover = null, selBios = null;
+      var selRom = null, selCover = null, selBios = null, selSystem = null;
 
       function closePopup() { document.getElementById('install-popup').classList.remove('visible'); }
 
       function openPopup() {
         document.getElementById('install-popup').classList.add('visible');
-        document.querySelectorAll('.popup-box').forEach(box => box.style.display = 'none');
         document.getElementById('popup-box-game').style.display = 'block';
-        selRom = null; selCover = null;
+        document.getElementById('popup-box-bios').style.display = 'none';
+        document.getElementById('popup-box-color').style.display = 'none';
+        document.getElementById('popup-box-wallpaper').style.display = 'none';
+        selRom = null; selCover = null; selSystem = null;
         document.getElementById('install-rom-upload').value = '';
         document.getElementById('install-cover-upload').value = '';
         document.getElementById('popup-rom-name').textContent = '';
+        document.getElementById('popup-system-name').textContent = '';
         document.getElementById('popup-cover-name').textContent = '';
         document.getElementById('popup-install').disabled = true;
       }
 
       function openBiosPopup() {
         document.getElementById('install-popup').classList.add('visible');
-        document.querySelectorAll('.popup-box').forEach(box => box.style.display = 'none');
+        document.getElementById('popup-box-game').style.display = 'none';
+        document.getElementById('popup-box-color').style.display = 'none';
+        document.getElementById('popup-box-wallpaper').style.display = 'none';
         document.getElementById('popup-box-bios').style.display = 'block';
         selBios = null;
         document.getElementById('install-bios-upload').value = '';
@@ -2211,8 +2842,10 @@
 
       function openColorPopup(target) {
         document.getElementById('install-popup').classList.add('visible');
-        document.querySelectorAll('.popup-box').forEach(box => box.style.display = 'none');
+        document.getElementById('popup-box-game').style.display = 'none';
+        document.getElementById('popup-box-bios').style.display = 'none';
         document.getElementById('popup-box-color').style.display = 'block';
+        document.getElementById('popup-box-wallpaper').style.display = 'none';
         currentColorTarget = target;
         
         var title = document.getElementById('color-popup-title');
@@ -2224,18 +2857,74 @@
         } else if (target === 'right') {
             title.innerText = 'R-Control Color';
             input.value = safeGetItem('gmx_color_right', '#ff6658');
+        } else if (target === 'wave') {
+            title.innerText = 'Wave Color';
+            input.value = safeGetItem('gmx_color_wave', '#ffffff');
         }
       }
 
+      var selWallpaper = null;
+
       function openWallpaperPopup() {
         document.getElementById('install-popup').classList.add('visible');
-        document.querySelectorAll('.popup-box').forEach(box => box.style.display = 'none');
+        document.getElementById('popup-box-game').style.display = 'none';
+        document.getElementById('popup-box-bios').style.display = 'none';
+        document.getElementById('popup-box-color').style.display = 'none';
         document.getElementById('popup-box-wallpaper').style.display = 'block';
+        selWallpaper = null;
+        document.getElementById('wallpaper-upload').value = '';
+        document.getElementById('wallpaper-file-name').textContent = '';
+        document.getElementById('popup-apply-wallpaper').disabled = true;
       }
+
+      document.getElementById('wallpaper-upload').addEventListener('change', function(e) {
+        var f = e.target.files && e.target.files[0];
+        if (!f || !f.type || f.type.indexOf('image/') !== 0) {
+          selWallpaper = null;
+          document.getElementById('wallpaper-file-name').textContent = '';
+          document.getElementById('popup-apply-wallpaper').disabled = true;
+          return;
+        }
+        selWallpaper = f;
+        document.getElementById('wallpaper-file-name').textContent = f.name;
+        document.getElementById('popup-apply-wallpaper').disabled = false;
+      });
+
+      document.getElementById('popup-apply-wallpaper').addEventListener('click', function() {
+        if (!selWallpaper) return;
+        var btn = this;
+        btn.disabled = true;
+        saveWallpaper(selWallpaper).then(function() {
+          closePopup();
+          var s = document.getElementById('sys-msg');
+          s.innerText = 'Wallpaper applied!';
+          s.style.opacity = 1;
+          setTimeout(function() { s.style.opacity = 0; }, 2000);
+        }).catch(function() {
+          btn.disabled = false;
+          var s = document.getElementById('sys-msg');
+          s.innerText = 'Wallpaper could not be saved.';
+          s.style.opacity = 1;
+          setTimeout(function() { s.style.opacity = 0; }, 2500);
+        });
+      });
+
+      document.getElementById('popup-remove-wallpaper').addEventListener('click', function() {
+        removeWallpaper().then(function() {
+          closePopup();
+          var s = document.getElementById('sys-msg');
+          s.innerText = 'Wallpaper removed.';
+          s.style.opacity = 1;
+          setTimeout(function() { s.style.opacity = 0; }, 2000);
+        });
+      });
+
+      document.getElementById('popup-cancel-wallpaper').addEventListener('click', closePopup);
 
       document.getElementById('popup-save-color').addEventListener('click', function() {
         var hex = document.getElementById('color-picker-input').value;
         var article = document.querySelector('article');
+        var xmbBg = document.querySelector('.xmb-bg');
         
         if (currentColorTarget === 'left') {
             article.style.setProperty('--joycon-left', hex);
@@ -2245,6 +2934,9 @@
             article.style.setProperty('--joycon-right', hex);
             article.style.setProperty('--joycon-right-shadow', hex + '80');
             safeSetItem('gmx_color_right', hex);
+        } else if (currentColorTarget === 'wave') {
+            xmbBg.style.setProperty('--wave-color', hexToRgb(hex));
+            safeSetItem('gmx_color_wave', hex);
         }
         
         closePopup();
@@ -2256,6 +2948,15 @@
 
       document.getElementById('popup-cancel-color').addEventListener('click', closePopup);
 
+      var installPopup = document.getElementById('install-popup');
+      installPopup.addEventListener('click', function(e) {
+        if (e.target.closest('.popup-btn, input[type="color"]')) haptic('tap');
+      });
+      installPopup.addEventListener('change', function(e) {
+        if (e.target.matches('input[type="file"], input[type="color"]')) haptic('confirm');
+      });
+
+      // System Interactions
       document.getElementById('install-bios-upload').addEventListener('change', function(e) {
         var f = e.target.files[0];
         if (f && f.name.toLowerCase().endsWith('.bin')) { selBios = f; document.getElementById('popup-bios-name').textContent = f.name; document.getElementById('popup-install-bios').disabled = false; }
@@ -2268,17 +2969,21 @@
           setTimeout(function() { s.style.opacity = 0; }, 2000);
         });
       });
-
       document.getElementById('install-rom-upload').addEventListener('change', function(e) {
-        var f = e.target.files[0];
-        if (f && f.name.toLowerCase().endsWith('.gba')) { selRom = f; document.getElementById('popup-rom-name').textContent = f.name; document.getElementById('popup-install').disabled = false; }
+        var f = e.target.files && e.target.files[0];
+        var def = f ? detectSystem(f.name) : null;
+        selRom = def ? f : null;
+        selSystem = def;
+        document.getElementById('popup-rom-name').textContent = f ? f.name : '';
+        document.getElementById('popup-system-name').textContent = def ? ('Detected: ' + def.label) : (f ? 'Unsupported ROM type' : '');
+        document.getElementById('popup-install').disabled = !def;
       });
       document.getElementById('install-cover-upload').addEventListener('change', function(e) {
         var f = e.target.files[0]; if (f) { selCover = f; document.getElementById('popup-cover-name').textContent = f.name; }
       });
       document.getElementById('popup-install').addEventListener('click', function() {
         if (!selRom) return;
-        var s = document.getElementById('sys-msg'); s.innerText = 'Installing ' + selRom.name + '...'; s.style.opacity = 1;
+        var s = document.getElementById('sys-msg'); s.innerText = 'Installing ' + (selSystem ? selSystem.short + ' · ' : '') + selRom.name + '...'; s.style.opacity = 1;
         closePopup();
         saveGame(selRom, selCover).then(function() {
           s.innerText = 'Install Complete!';
@@ -2286,55 +2991,16 @@
         }).catch(function() { s.innerText = 'Install Failed'; });
       });
 
-      document.getElementById('wallpaper-upload').addEventListener('change', function(e) {
-        var f = e.target.files[0];
-        if (f) {
-          var reader = new FileReader();
-          reader.onload = function(evt) {
-            var dataUrl = evt.target.result;
-            safeSetItem('gmx_wallpaper', dataUrl);
-            var xmbBg = document.querySelector('.xmb-bg');
-            xmbBg.style.backgroundImage = 'url(' + dataUrl + ')';
-            xmbBg.style.backgroundSize = 'cover';
-            xmbBg.style.backgroundPosition = 'center';
-            document.querySelectorAll('.wave-line').forEach(el => el.style.display = 'none');
-            closePopup();
-            var s = document.getElementById('sys-msg');
-            s.innerText = 'Wallpaper applied!'; s.style.opacity = 1;
-            setTimeout(function() { s.style.opacity = 0; }, 2000);
-          };
-          reader.readAsDataURL(f);
-        }
-      });
-      document.getElementById('popup-clear-wallpaper').addEventListener('click', function() {
-        localStorage.removeItem('gmx_wallpaper');
-        var xmbBg = document.querySelector('.xmb-bg');
-        xmbBg.style.backgroundImage = 'linear-gradient(135deg, #181926 0%, #0f101a 50%, #08080d 100%)';
-        document.querySelectorAll('.wave-line').forEach(el => el.style.display = 'block');
-        closePopup();
-        var s = document.getElementById('sys-msg');
-        s.innerText = 'Wallpaper reset!'; s.style.opacity = 1;
-        setTimeout(function() { s.style.opacity = 0; }, 2000);
-      });
-      document.getElementById('popup-cancel-wallpaper').addEventListener('click', closePopup);
-
-
       // ===================================================================
-      // Switch button → Router Logic
+      // Switch button → Multi-System/OS input routing
       // ===================================================================
       var held = {};
       var osHeld = {};
+
       var repeatTimers = {};
       var NAV_REPEAT = ['btn-left','btn-right','btn-up','btn-down'];
 
       function doNavAction(id) {
-        if (isPhotoAppOpen) {
-           if (id === 'btn-left') { if (currentPhotoIdx > 0) { currentPhotoIdx--; renderPhoto(); } }
-           else if (id === 'btn-right') { if (currentPhotoIdx < photosList.length - 1) { currentPhotoIdx++; renderPhoto(); } }
-           else if (id === 'btn-b') closePhotoApp();
-           return;
-        }
-
         if (id==='btn-left') navLeft(); else if (id==='btn-right') navRight();
         else if (id==='btn-up') navUp(); else if (id==='btn-down') navDown();
         else if (id==='btn-a') triggerA(); else if (id==='btn-b') triggerB();
@@ -2343,9 +3009,7 @@
       function pressButton(id) {
         if (held[id]) return;
         held[id] = true;
-        // Typed haptic: looks up the correct vibration pattern for this button.
-        // Non-blocking fire-and-forget — does not delay sendInput or doNavAction.
-        haptic(BTN_HAPTIC_TYPE[id] || 'default'); 
+        haptic(NAV_REPEAT.indexOf(id) > -1 ? 'tick' : 'tap');
         if (emu.running) {
           sendInput(id, true);
         } else {
@@ -2353,6 +3017,7 @@
           if (NAV_REPEAT.indexOf(id) > -1) {
             repeatTimers[id] = setTimeout(function rep() {
               if (!held[id]) return;
+              haptic('tick');
               doNavAction(id);
               repeatTimers[id] = setTimeout(rep, 70);
             }, 220);
@@ -2371,7 +3036,7 @@
         'switch-up': 'btn-up', 'switch-down': 'btn-down',
         'switch-left': 'btn-left', 'switch-right': 'btn-right',
         'switch-a': 'btn-a', 'switch-b': 'btn-b',
-        'switch-x': 'btn-a', 'switch-y': 'btn-b',  
+        'switch-x': 'btn-x', 'switch-y': 'btn-y',  
         'switch-l': 'btn-l', 'switch-r': 'btn-r',
         'switch-minus': 'btn-select', 'switch-plus': 'btn-start'
       };
@@ -2382,47 +3047,37 @@
         var gbaId = SWITCH_MAP[switchId];
         if (!gbaId) return;
 
-        var switchEl = document.createElement("div");
-        switchEl.className = "hitbox";
-
-        var styles = {
-          position: "absolute", top: 0, left: 0, width: "100%", height: "100%", margin: 0,
-          opacity: 0, cursor: "pointer", clipPath: "inset(0 round 999px)", touchAction: "manipulation",
-          zIndex: 10
-        };
-        Object.assign(switchEl.style, styles);
-        switchEl.style.setProperty("-webkit-tap-highlight-color", "transparent");
-
-        if (window.getComputedStyle(el).position === 'static') { el.style.position = "relative"; }
-        el.insertAdjacentElement("beforeend", switchEl);
-
-        var press = function(e) { 
-            if (e.type === 'touchstart' && e.cancelable) e.preventDefault(); 
-            e.stopPropagation(); 
-            pressButton(gbaId); 
-            el.classList.add('active'); 
-        };
-        
-        var release = function(e) { 
-            if (e.type === 'touchend' && e.cancelable) e.preventDefault(); 
-            e.stopPropagation(); 
-            
-            var wasHeld = held[gbaId];
-            releaseButton(gbaId); 
-            el.classList.remove('active'); 
-            
-            if (wasHeld && !emu.running && gbaId === 'btn-a' && colIdx === 2 && rowIdx === 2 && isOSReady && !popupVisible()) {
-                document.getElementById('import-photo-input').click();
-            }
-        };
-
-        switchEl.addEventListener('touchstart', press, { passive: false });
-        switchEl.addEventListener('touchend', release, { passive: false });
-        switchEl.addEventListener('touchcancel', release, { passive: false });
-        
-        switchEl.addEventListener('mousedown', press);
-        switchEl.addEventListener('mouseup', release);
-        switchEl.addEventListener('mouseleave', release);
+        el.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          el.classList.add('active');
+          pressButton(gbaId);
+        }, { passive: false });
+        el.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          el.classList.remove('active');
+          releaseButton(gbaId);
+        }, { passive: false });
+        el.addEventListener('touchcancel', function(e) {
+          e.stopPropagation();
+          el.classList.remove('active');
+          releaseButton(gbaId);
+        }, { passive: false });
+        el.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          el.classList.add('active');
+          pressButton(gbaId);
+        });
+        el.addEventListener('mouseup', function(e) {
+          e.preventDefault();
+          el.classList.remove('active');
+          releaseButton(gbaId);
+        });
+        el.addEventListener('mouseleave', function(e) {
+          el.classList.remove('active');
+          releaseButton(gbaId);
+        });
       }
 
       Object.keys(SWITCH_MAP).forEach(bindSwitchButton);
@@ -2439,7 +3094,7 @@
         var gameBtn = KEYCODE_MAP[code]; 
         if (gameBtn) {
           if (emu.running) {
-            if (!held[gameBtn]) { held[gameBtn] = true; }
+            if (!held[gameBtn]) { held[gameBtn] = true; haptic(NAV_REPEAT.indexOf(gameBtn) > -1 ? 'tick' : 'tap'); }
             sendInput(gameBtn, true);
           } else {
             if (!osHeld[gameBtn]) { osHeld[gameBtn] = true; pressButton(gameBtn); }
@@ -2451,10 +3106,11 @@
         if (ctrlBtn) {
           if (ctrlBtn === 'vol-up') changeVolume(0.1);
           else if (ctrlBtn === 'vol-down') changeVolume(-0.1);
-          else if (ctrlBtn === 'speed-up') setSpeedIdx(speedIdx + 1);
-          else if (ctrlBtn === 'speed-down') setSpeedIdx(speedIdx - 1);
-          else if (ctrlBtn === 'speed-reset') setSpeedIdx(2);
+          else if (ctrlBtn === 'speed-up') { haptic('tick'); setSpeedIdx(speedIdx + 1); }
+          else if (ctrlBtn === 'speed-down') { haptic('tick'); setSpeedIdx(speedIdx - 1); }
+          else if (ctrlBtn === 'speed-reset') { haptic('confirm'); setSpeedIdx(2); }
           else if (ctrlBtn === 'fullscreen') {
+            haptic('confirm');
             if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => {});
             else document.exitFullscreen().catch(err => {});
           }
@@ -2468,15 +3124,10 @@
         
         delete osHeld[gameBtn];
         releaseButton(gameBtn);
-
-        // Keyup fix for file upload when pressing 'X' mapped to 'A'
-        if (!emu.running && gameBtn === 'btn-a' && colIdx === 2 && rowIdx === 2 && isOSReady && !popupVisible()) {
-            document.getElementById('import-photo-input').click();
-        }
       });
 
       // ===================================================================
-      // Power button — Switch home button triggers GBA OS boot
+      // Power button — Switch home button triggers GMX OS boot
       // ===================================================================
       var homeBtn = document.getElementById('switch-home');
       var screen = document.getElementById('screen');
@@ -2484,14 +3135,11 @@
 
       function togglePower(e) {
         if (e) e.preventDefault();
+        haptic('confirm');
         isPoweredOn = !isPoweredOn; isOSReady = false;
         bootTimers.forEach(clearTimeout); bootTimers = [];
 
-        getUnlockedContext(); // BRUTE FORCE UNLOCK AUDIO IMMEDIATELY
-
         homeBtn.classList.add('active');
-        // Home button haptic: distinctive double-pulse pattern
-        haptic('home');
         setTimeout(function() { homeBtn.classList.remove('active'); }, 150);
 
         if (isPoweredOn) {
@@ -2514,7 +3162,7 @@
           screen.classList.add('power-off');
           screen.className = 'screen power-off'; 
           document.getElementById('sys-msg').style.opacity = 0;
-          stopEmu(); closePopup(); closePhotoApp();
+          stopEmu(); closePopup();
           stopBootSound();
         }
       }
@@ -2522,43 +3170,23 @@
       screen.classList.add('power-off');
 
       homeBtn.addEventListener('touchstart', function(e) {
-        if(e.cancelable) e.preventDefault(); 
-        e.stopPropagation(); 
-        _powerTouched = true; 
-        homeBtn.classList.add('active'); 
-        // Home button touch-start haptic: double-pulse
-        haptic('home');
+        e.stopPropagation();
+        e.preventDefault();
+        _powerTouched = true;
+        homeBtn.classList.add('active');
       }, { passive: false });
-      
       homeBtn.addEventListener('touchend', function(e) {
-        if(e.cancelable) e.preventDefault();
-        e.stopPropagation(); 
-        homeBtn.classList.remove('active'); 
+        e.stopPropagation();
+        e.preventDefault();
+        homeBtn.classList.remove('active');
         if (_powerTouched) { _powerTouched = false; togglePower(null); }
       }, { passive: false });
-      
       homeBtn.addEventListener('touchcancel', function(e) {
-        e.stopPropagation(); 
-        _powerTouched = false; 
+        e.stopPropagation();
+        _powerTouched = false;
         homeBtn.classList.remove('active');
       }, { passive: false });
-      
-      homeBtn.addEventListener('mousedown', function(e) {
-        _powerTouched = true; 
-        homeBtn.classList.add('active'); 
-        // Home button mouse-down haptic: double-pulse
-        haptic('home');
-      });
-      
-      homeBtn.addEventListener('mouseup', function(e) {
-        homeBtn.classList.remove('active');
-        if (_powerTouched) { _powerTouched = false; togglePower(null); }
-      });
-      
-      homeBtn.addEventListener('mouseleave', function(e) {
-        _powerTouched = false; 
-        homeBtn.classList.remove('active');
-      });
+      homeBtn.addEventListener('click', togglePower);
 
       // ===================================================================
       // AR / Camera Passthrough (Capture Button)
@@ -2571,8 +3199,7 @@
 
       captureBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        // Capture button haptic: medium tap
-        haptic('capture');
+        haptic('confirm');
         
         if (isCameraActive) {
           if (cameraStream) {
@@ -2585,11 +3212,19 @@
         } else {
           try {
             cameraStream = await navigator.mediaDevices.getUserMedia({ 
-              video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } }, audio: false
+              video: { 
+                facingMode: 'environment',
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                frameRate: { ideal: 60 } 
+              },
+              audio: false
             });
+            
             cameraBg.srcObject = cameraStream;
             document.body.classList.add('camera-active');
             isCameraActive = true;
+            
           } catch (err) {
             console.error("Camera access failed:", err);
             if (camSysMsg) {
@@ -2631,8 +3266,11 @@
       }
 
       window.addEventListener('resize', applyOsScale);
-      window.addEventListener('orientationchange', function() { setTimeout(applyOsScale, 200); });
-      setTimeout(applyOsScale, 100); setTimeout(applyOsScale, 500);
+      window.addEventListener('orientationchange', function() {
+        setTimeout(applyOsScale, 200);
+      });
+      setTimeout(applyOsScale, 100);
+      setTimeout(applyOsScale, 500);
 
       var SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
       var speedIdx = 2;
@@ -2649,8 +3287,12 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-          .then((registration) => { console.log('[GMX SW] Registration successful with scope: ', registration.scope); })
-          .catch((error) => { console.log('[GMX SW] Registration failed: ', error); });
+          .then((registration) => {
+            console.log('[GMX SW] Registration successful with scope: ', registration.scope);
+          })
+          .catch((error) => {
+            console.log('[GMX SW] Registration failed: ', error);
+          });
       });
     }
   </script>
