@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>GMX Switch - Multi-System iPhone PWA Fix</title>
-<!-- GMX multisystem runtime fix: matched official EmulatorJS loader + core tree -->
+<title>GMX Switch - Multi-System Edition</title>
+<link rel="manifest" href="manifest.json">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -119,37 +119,6 @@
   main {
     transform: translateX(1vw);
   }
-  /* iPhone/PWA native picker fix: never inherit the global touch-action:none reset. */
-  input[type="file"], input[type="color"], label.popup-btn {
-    touch-action: manipulation !important;
-    -webkit-user-select: auto;
-    user-select: auto;
-  }
-
-  /* iOS 18+ native switch controls provide the only WebKit-native tap haptic
-     available to ordinary web content. These transparent proxies do not alter
-     the console's physical appearance. They are created only on iPhone/iPad. */
-  #ios-haptic-layer {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    pointer-events: none;
-    z-index: 2147483000;
-  }
-  #ios-haptic-layer .ios-haptic-switch {
-    position: fixed !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    opacity: 0.001 !important;
-    pointer-events: auto !important;
-    touch-action: manipulation !important;
-    -webkit-user-select: none !important;
-    user-select: none !important;
-    border: 0 !important;
-    z-index: 2147483001 !important;
-  }
-
 
   /* ============================================================
      SWITCH SHELL - FIXED FOR IPHONE 5S TO MODERN ENGINE DEVCES
@@ -1305,6 +1274,7 @@
     padding: 0;
     display: none;
     background: #000;
+    overflow: hidden;
   }
   #game-area.multi-core #multi-core-frame { display: block; }
   #game-area.multi-core #game-canvas { display: none; }
@@ -1533,7 +1503,7 @@
                 <h3>Install Game</h3>
                 <label class="popup-btn">
                     Select Game ROM
-                    <input type="file" id="install-rom-upload"
+                    <input type="file" id="install-rom-upload" accept=".nes,.sfc,.smc,.swc,.n64,.z64,.v64,.gb,.gbc,.gba,.nds,.md,.gen,.smd,.bin"
                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                                   opacity: 0; cursor: pointer; touch-action: manipulation;">
                 </label>
@@ -1594,7 +1564,7 @@
             </div>
             <div id="game-area">
               <canvas id="game-canvas" width="240" height="160"></canvas>
-              <iframe id="multi-core-frame" title="Multi-system game emulator" allow="autoplay; fullscreen; gamepad"></iframe>
+              <iframe id="multi-core-frame" title="Multi-system game emulator" allow="autoplay; fullscreen; gamepad" referrerpolicy="no-referrer"></iframe>
             </div>
           </div>
         </div>
@@ -1602,6 +1572,7 @@
     </article>
   </main>
 <script>
+    /* GMX multisystem input/performance repair: no virtual controls, direct core input. */
     document.addEventListener('DOMContentLoaded', () => {
 
       // SAFE LOCALSTORAGE WRAPPERS
@@ -1631,10 +1602,7 @@
       }
       loadSavedColors(); 
 
-      // PLATFORM-AWARE HAPTIC FEEDBACK
-      // Android/compatible browsers: Vibration API.
-      // iOS/iPadOS: navigator.vibrate is not exposed; native switch haptic
-      // proxies are installed later over tap controls without changing visuals.
+      // UNIVERSAL HAPTIC FEEDBACK (graceful no-op on unsupported browsers)
       var HAPTIC_PATTERNS = {
         soft: 8,
         tick: 12,
@@ -1642,10 +1610,6 @@
         confirm: 28,
         warning: [18, 28, 22]
       };
-      var IS_APPLE_TOUCH = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      var IS_STANDALONE_PWA = !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-        navigator.standalone === true;
 
       function haptic(kind) {
         var vibrate = navigator.vibrate || navigator.webkitVibrate;
@@ -1941,6 +1905,15 @@
         if (emu.audio && typeof emu.audio.setVolume === 'function') {
             emu.audio.setVolume(currentVol);
         }
+        if (emu.mode === 'ejs') {
+          var ejsFrame = document.getElementById('multi-core-frame');
+          if (ejsFrame && ejsFrame.contentWindow) {
+            try {
+              if (typeof ejsFrame.contentWindow.GMX_setVolume === 'function') ejsFrame.contentWindow.GMX_setVolume(currentVol);
+              else ejsFrame.contentWindow.postMessage({ type:'gmx-volume', value:currentVol }, '*');
+            } catch(e) {}
+          }
+        }
         
         if (currentMasterGain) {
           try { currentMasterGain.gain.setValueAtTime(currentVol * 0.5, globalCtx.currentTime); } catch(e) {}
@@ -2020,11 +1993,15 @@
 
           let newDir = null;
           if (distance > STICK_THRESHOLD) {
+            var dirName;
             if (Math.abs(dx) > Math.abs(dy)) {
-              newDir = dx > 0 ? 'btn-right' : 'btn-left';
+              dirName = dx > 0 ? 'right' : 'left';
             } else {
-              newDir = dy > 0 ? 'btn-down' : 'btn-up';
+              dirName = dy > 0 ? 'down' : 'up';
             }
+            // XMB navigation still uses btn-*; gameplay distinguishes the
+            // left and right sticks so N64 analogue/C-button input works.
+            newDir = emu.running ? ((idx === 0 ? 'stick-' : 'rstick-') + dirName) : ('btn-' + dirName);
           }
           if (newDir !== stickDir[stickId]) {
             if (stickDir[stickId]) releaseButton(stickDir[stickId]);
@@ -2087,14 +2064,14 @@
 
       // Supported ROM types and official EmulatorJS core identifiers.
       var SYSTEM_DEFS = {
-        nes:    { key:'nes',    label:'Nintendo Entertainment System', short:'NES', core:'fceumm', extensions:['nes'] },
-        snes:   { key:'snes',   label:'Super Nintendo Entertainment System', short:'SNES', core:'snes9x', extensions:['sfc','smc','swc'] },
-        n64:    { key:'n64',    label:'Nintendo 64', short:'N64', core:'mupen64plus_next', extensions:['n64','z64','v64'] },
-        gb:     { key:'gb',     label:'Game Boy', short:'GB', core:'gambatte', extensions:['gb'] },
-        gbc:    { key:'gbc',    label:'Game Boy Color', short:'GBC', core:'gambatte', extensions:['gbc'] },
-        gba:    { key:'gba',    label:'Game Boy Advance', short:'GBA', core:'mgba', extensions:['gba'] },
+        nes:    { key:'nes',    label:'Nintendo Entertainment System', short:'NES', core:'nes', extensions:['nes'] },
+        snes:   { key:'snes',   label:'Super Nintendo Entertainment System', short:'SNES', core:'snes', extensions:['sfc','smc','swc'] },
+        n64:    { key:'n64',    label:'Nintendo 64', short:'N64', core:'n64', extensions:['n64','z64','v64'] },
+        gb:     { key:'gb',     label:'Game Boy', short:'GB', core:'gb', extensions:['gb'] },
+        gbc:    { key:'gbc',    label:'Game Boy Color', short:'GBC', core:'gb', extensions:['gbc'] },
+        gba:    { key:'gba',    label:'Game Boy Advance', short:'GBA', core:'gba', extensions:['gba'] },
         nds:    { key:'nds',    label:'Nintendo DS', short:'NDS', core:'desmume2015', extensions:['nds'] },
-        segaMD: { key:'segaMD', label:'Sega Genesis / Mega Drive', short:'GEN', core:'genesis_plus_gx', extensions:['md','gen','smd','bin'] }
+        segaMD: { key:'segaMD', label:'Sega Genesis / Mega Drive', short:'GEN', core:'segaMD', extensions:['md','gen','smd','bin'] }
       };
 
       function extensionOf(name) {
@@ -2118,17 +2095,21 @@
         return detected || SYSTEM_DEFS.gba; // Legacy installs in earlier builds were GBA-only.
       }
 
-      var EJS_KEY_MAP = {
-        'btn-up':'ArrowUp', 'btn-down':'ArrowDown', 'btn-left':'ArrowLeft', 'btn-right':'ArrowRight',
-        'btn-a':'x', 'btn-b':'z', 'btn-x':'s', 'btn-y':'a',
-        'btn-select':'v', 'btn-start':'Enter', 'btn-l':'q', 'btn-r':'e'
+      // RetroArch/libretro joypad indices used by EmulatorJS.
+      // Sending these directly is considerably more reliable than synthesising
+      // browser KeyboardEvent objects inside the embedded core.
+      var EJS_INPUT_MAP = {
+        'btn-b':0, 'btn-y':1, 'btn-select':2, 'btn-start':3,
+        'btn-up':4, 'btn-down':5, 'btn-left':6, 'btn-right':7,
+        'btn-a':8, 'btn-x':9, 'btn-l':10, 'btn-r':11,
+        'stick-right':16, 'stick-left':17, 'stick-down':18, 'stick-up':19,
+        'rstick-right':20, 'rstick-left':21, 'rstick-down':22, 'rstick-up':23
       };
 
       var emu = {
         iodine: null, blitter: null, audio: null, rafId: null,
         running: false, mode: null, frame: null, romUrl: null, system: null,
-        romBuffer: null, bootTimer: null, bootStarted: false,
-        ready: false, suspended: false, gameKey: null
+        coreReady: false, gameStarted: false
       };
 
       // Keep the original GBA audio object available for legacy compatibility.
@@ -2181,30 +2162,6 @@
         next();
       }
 
-      function gameSessionKey(game, def) {
-        def = def || normaliseGameSystem(game || {});
-        return String((game && game.id) || ((game && game.filename) || (game && game.title) || 'game')) + '|' + String(def && def.key || 'unknown');
-      }
-
-      function suspendEmuForPower() {
-        // Fake console power-off should not destroy a loaded WebAssembly core.
-        // Keep the iframe warm and pause it so the same game can resume without
-        // re-running the loader/core fetch path on the next GMX boot cycle.
-        if (emu.mode === 'ejs' && emu.frame && emu.frame.contentWindow) {
-          try { emu.frame.contentWindow.postMessage({ type:'gmx-power', on:false }, '*'); } catch(e) {}
-          emu.suspended = true;
-          emu.running = false;
-          return true;
-        }
-        if (emu.mode === 'iodine' && emu.iodine) {
-          try { emu.iodine.pause(); } catch(e) {}
-          emu.suspended = true;
-          emu.running = false;
-          return true;
-        }
-        return false;
-      }
-
       function stopEmu() {
         emu.running = false;
         if (emu.rafId) { cancelAnimationFrame(emu.rafId); emu.rafId = null; }
@@ -2216,15 +2173,11 @@
           try { frame.src = 'about:blank'; frame.removeAttribute('srcdoc'); } catch(e) {}
         }
         if (emu.romUrl) { try { URL.revokeObjectURL(emu.romUrl); } catch(e) {} }
-        if (emu.bootTimer) { clearTimeout(emu.bootTimer); emu.bootTimer = null; }
         emu.romUrl = null;
-        emu.romBuffer = null;
-        emu.bootStarted = false;
-        emu.ready = false;
-        emu.suspended = false;
-        emu.gameKey = null;
         emu.mode = null;
         emu.system = null;
+        emu.coreReady = false;
+        emu.gameStarted = false;
 
         var gameArea = document.getElementById('game-area');
         if (gameArea) gameArea.classList.remove('multi-core');
@@ -2335,187 +2288,254 @@
         return { 0:p, 1:{}, 2:{}, 3:{} };
       }
 
-      function makeEjsDocument(game, def) {
-        var controls = ejsDefaultControls(def.key);
+      function makeEjsDocument(game, def, romUrl) {
         var cfg = {
           core: def.core,
-          system: def.key,
+          systemKey: def.key,
+          gameUrl: romUrl,
           gameName: game.title || 'GMX Game',
           gameID: numericGameId((game.id || '') + '|' + def.key),
-          controls: controls,
           volume: Math.max(0, Math.min(1, currentVol)),
-          extension: extensionOf(game.filename || game.title || '') || (def.extensions && def.extensions[0]) || 'rom'
+          threads: !!(window.crossOriginIsolated && typeof SharedArrayBuffer === 'function'),
+          disableStorage: location.protocol === 'file:' || location.origin === 'null'
         };
-        var json = JSON.stringify(cfg).replace(/</g, '\u003c');
-        return '<!doctype html><html><head><meta charset="utf-8">' +
-          '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">' +
-          '<style>html,body,#game{margin:0;width:100%;height:100%;overflow:hidden;background:#000}body{touch-action:none}#game{position:fixed;inset:0}.gmx-loader{position:fixed;inset:0;display:grid;place-items:center;color:#b9cfff;background:#000;font:11px monospace;letter-spacing:.08em;text-align:center;padding:20px;z-index:9999}</style>' +
-          '</head><body><div id="game"></div><div id="gmx-loader" class="gmx-loader">PREPARING EMULATOR...</div><script>' +
-          'var GMX_CFG=' + json + ';var GMX_BOOTED=false;var GMX_ROM_BLOB=null;var GMX_GAME_STARTED=false;var GMX_PAUSED_BY_GMX=false;var GMX_INPUT_STATE={};' +
-          'var GMX_IS_APPLE=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);' +
-          'var GMX_RUNTIMES=[' +
-            '{name:"OFFICIAL STABLE",loader:"https://cdn.emulatorjs.org/stable/data/loader.js",data:"https://cdn.emulatorjs.org/stable/data/"},' +
-            '{name:"OFFICIAL 4.2.3",loader:"https://cdn.emulatorjs.org/4.2.3/data/loader.js",data:"https://cdn.emulatorjs.org/4.2.3/data/"}' +
-          '];var GMX_ACTIVE_RUNTIME=null;' +
-          'function gmxStatus(t){var n=document.getElementById("gmx-loader");if(n)n.textContent=t}' +
-          'function gmxError(m){parent.postMessage({type:"gmx-ejs-error",message:String(m||"Unknown emulator error")} ,"*")}' +
-          'function gmxInjectLoader(i){if(i>=GMX_RUNTIMES.length){gmxError("Could not load EmulatorJS. Check that this PWA has internet access to cdn.emulatorjs.org.");return;}' +
-          'var r=GMX_RUNTIMES[i];GMX_ACTIVE_RUNTIME=r;' +
-          'EJS_pathtodata=r.data;window.EJS_paths=undefined;EJS_DEBUG_XX=false;' +
-          'gmxStatus("LOADING "+r.name+"...");' +
-          'var s=document.createElement("script");s.src=r.loader;s.async=true;' +
-          's.onload=function(){parent.postMessage({type:"gmx-ejs-loader-ok",source:r.loader,runtime:r.name},"*")};' +
-          's.onerror=function(){try{s.remove()}catch(e){}gmxInjectLoader(i+1)};' +
-          'document.body.appendChild(s)}' +
-          'var EJS_player="#game";' +
-          'var EJS_core=GMX_CFG.core;' +
-          'var EJS_gameName=GMX_CFG.gameName;' +
-          'var EJS_gameID=GMX_CFG.gameID;' +
-          'var EJS_startOnLoaded=!GMX_IS_APPLE;' +
-          'var EJS_browserMode=GMX_IS_APPLE?"mobile":undefined;' +
-          'var EJS_volume=GMX_CFG.volume;' +
-          'var EJS_color="#69a7ff";' +
-          'var EJS_backgroundColor="#000";' +
-          'var EJS_backgroundBlur=false;' +
-          'var EJS_noAutoFocus=true;' +
-          'var EJS_askBeforeExit=false;' +
-          'var EJS_defaultControls=GMX_CFG.controls;' +
-          'var EJS_controlScheme=GMX_CFG.system;' +
-          'var EJS_threads=false;var EJS_forceLegacyCores=GMX_IS_APPLE;' +
-          'function gmxFocus(){try{window.focus();var g=document.getElementById("game");if(g){g.tabIndex=-1;g.focus({preventScroll:true})}}catch(e){}}' +
-          'function gmxApplyInput(d){var idx=Number(d.index);if(!Number.isFinite(idx))return false;var val=d.down?1:0;GMX_INPUT_STATE[idx]=val;var gm=window.EJS_emulator&&EJS_emulator.gameManager;if(gm&&typeof gm.simulateInput==="function"){try{gmxFocus();gm.simulateInput(0,idx,val);return true}catch(e){}}return false}' +
-          'function gmxFlushInput(){var ks=Object.keys(GMX_INPUT_STATE);for(var i=0;i<ks.length;i++)gmxApplyInput({index:Number(ks[i]),down:!!GMX_INPUT_STATE[ks[i]]})}' +
-          'function gmxReleaseAll(){var ks=Object.keys(GMX_INPUT_STATE);for(var i=0;i<ks.length;i++){var idx=Number(ks[i]);GMX_INPUT_STATE[idx]=0;var gm=window.EJS_emulator&&EJS_emulator.gameManager;if(gm&&typeof gm.simulateInput==="function"){try{gm.simulateInput(0,idx,0)}catch(e){}}}}' +
-          'function gmxPower(on){gmxReleaseAll();var em=window.EJS_emulator;if(!em||!GMX_GAME_STARTED)return;if(!on&&!GMX_PAUSED_BY_GMX&&typeof em.togglePlaying==="function"){try{em.togglePlaying(true);GMX_PAUSED_BY_GMX=true}catch(e){}}else if(on&&GMX_PAUSED_BY_GMX&&typeof em.togglePlaying==="function"){try{em.togglePlaying(true);GMX_PAUSED_BY_GMX=false;setTimeout(function(){gmxFocus();gmxFlushInput()},0)}catch(e){}}}' +
-          'var EJS_ready=function(){var n=document.getElementById("gmx-loader");if(n)n.style.display="none";setTimeout(gmxFlushInput,0);parent.postMessage({type:"gmx-ejs-ready",manualStart:GMX_IS_APPLE},"*")};' +
-          'var EJS_onGameStart=function(){GMX_GAME_STARTED=true;GMX_PAUSED_BY_GMX=false;var n=document.getElementById("gmx-loader");if(n)n.style.display="none";setTimeout(function(){gmxFocus();gmxFlushInput()},0);parent.postMessage({type:"gmx-ejs-started"},"*")};' +
-          'window.addEventListener("error",function(ev){var m=String(ev.message||"Runtime error");if(m.indexOf("both async and sync fetching of the wasm failed")!==-1){var r=GMX_ACTIVE_RUNTIME;gmxError("WebAssembly core download failed"+(r?" from "+r.data:"")+". The PWA must be online and allowed to reach cdn.emulatorjs.org.");return;}if(m.indexOf("Script error")===-1)gmxError(m)});' +
-          'window.addEventListener("unhandledrejection",function(ev){gmxError(String((ev.reason&&ev.reason.message)||ev.reason||"Core load failed"))});' +
-          'window.addEventListener("message",function(ev){var d=ev.data||{};' +
-          'if(d.type==="gmx-boot"&&!GMX_BOOTED){GMX_BOOTED=true;try{' +
-          'var bytes=d.rom instanceof ArrayBuffer?new Uint8Array(d.rom):(ArrayBuffer.isView(d.rom)?new Uint8Array(d.rom.buffer,d.rom.byteOffset,d.rom.byteLength):null);' +
-          'if(!bytes||!bytes.byteLength)throw new Error("ROM transfer was empty");' +
-          'GMX_ROM_BLOB=new Blob([bytes],{type:"application/octet-stream"});' +
-          'EJS_gameUrl=GMX_ROM_BLOB;' +
-          'parent.postMessage({type:"gmx-ejs-rom-received",size:bytes.byteLength},"*");' +
-          'gmxInjectLoader(0);}catch(err){gmxError(String(err&&err.message||err))}return;}' +
-          'if(d.type==="gmx-power"){gmxPower(!!d.on);return;}' +
-          'if(d.type!=="gmx-input")return;' +
-          'if(!gmxApplyInput(d)){var opts={key:d.key||"",code:d.code||"",bubbles:true,cancelable:true,repeat:false};document.dispatchEvent(new KeyboardEvent(d.down?"keydown":"keyup",opts));window.dispatchEvent(new KeyboardEvent(d.down?"keydown":"keyup",opts));}});' +
-          'parent.postMessage({type:"gmx-ejs-shell-ready"},"*");' +
-          '<\/script></body></html>';
-      }
+        var json = JSON.stringify(cfg).replace(/</g, '\\u003c');
+        return `<!doctype html><html><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+          <style>
+            html,body,#game{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+            body{touch-action:none;overscroll-behavior:none}
+            #game{position:fixed;inset:0}
+            #game canvas,.ejs_canvas{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:contain!important;margin:0!important;background:#000!important}
+            .ejs_start_button{opacity:0!important;pointer-events:none!important}
+            .ejs_virtualGamepad,.ejs-vgamepad,.ejs-vgamepad-active,.ejs_mobile_controls,.ejs_gamepad_bar,
+            [class*="virtual-gamepad"],[class*="vgamepad"],
+            .ejs_menu_bar,.ejs_control_bar,.ejs_controls,.ejs_bottom_bar,.ejs_top_bar,
+            [class*="menu-bar"],[class*="control-bar"],[class*="gamepad-bar"]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+          </style>
+        </head><body><div id="game"></div><script>
+          var GMX_CFG=${json};
+          var EJS_player="#game";
+          var EJS_core=GMX_CFG.core;
+          var EJS_controlScheme=GMX_CFG.systemKey;
+          var EJS_gameUrl=GMX_CFG.gameUrl;
+          var EJS_gameName=GMX_CFG.gameName;
+          var EJS_gameID=GMX_CFG.gameID;
+          var EJS_pathtodata="https://cdn.emulatorjs.org/stable/data/";
+          var EJS_startOnLoaded=true;
+          var EJS_volume=GMX_CFG.volume;
+          var EJS_color="#69a7ff";
+          var EJS_backgroundColor="#000";
+          var EJS_backgroundBlur=false;
+          var EJS_browserMode="desktop";
+          var EJS_noAutoFocus=true;
+          var EJS_askBeforeExit=false;
+          var EJS_threads=GMX_CFG.threads;
+          // Do not reload stale EmulatorJS UI/speed preferences from an earlier run.
+          // Parent GMX settings and installed games use separate storage and are unaffected.
+          var EJS_disableLocalStorage=true;
+          var EJS_cacheConfig={enabled:!GMX_CFG.disableStorage,cacheMaxSizeMB:512,cacheMaxAgeMins:7200};
+          var EJS_defaultOptions={
+            "virtual-gamepad":"disabled",
+            "shader":"disabled",
+            "fps":"hide",
+            "vsync":"enabled"
+          };
+          var EJS_hideSettings=["virtual-gamepad","shader","fps","slowMotion","fastForward"];
+          var EJS_Buttons={
+            playPause:false,play:false,pause:false,restart:false,mute:false,unmute:false,
+            settings:false,fullscreen:false,enterFullscreen:false,exitFullscreen:false,
+            saveState:false,loadState:false,screenRecord:false,gamepad:false,cheat:false,
+            volume:false,saveSavFiles:false,loadSavFiles:false,quickSave:false,quickLoad:false,
+            screenshot:false,cacheManager:false,exitEmulation:false
+          };
 
-      function romAsArrayBuffer(value) {
-        try {
-          if (value instanceof ArrayBuffer) return Promise.resolve(value.slice(0));
-          if (ArrayBuffer.isView(value)) {
-            return Promise.resolve(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength));
+          var GMX_INPUT_STATE={};
+          var GMX_GAME_STARTED=false;
+
+          function gmxHideEmulatorChrome(){
+            var selectors=[
+              ".ejs_virtualGamepad",".ejs-vgamepad",".ejs-vgamepad-active",".ejs_mobile_controls",
+              ".ejs_gamepad_bar","[class*='virtual-gamepad']","[class*='vgamepad']",
+              ".ejs_menu_bar",".ejs_control_bar",".ejs_controls",".ejs_bottom_bar",".ejs_top_bar",
+              "[class*='menu-bar']","[class*='control-bar']","[class*='gamepad-bar']"
+            ];
+            try{
+              document.querySelectorAll(selectors.join(",")).forEach(function(el){
+                el.classList.remove("ejs-vgamepad-active");
+                el.style.setProperty("display","none","important");
+                el.style.setProperty("visibility","hidden","important");
+                el.style.setProperty("pointer-events","none","important");
+              });
+              var start=document.querySelector(".ejs_start_button");
+              if(start){start.style.opacity="0";start.style.pointerEvents="none";}
+              var canvas=document.querySelector("canvas");
+              if(canvas){
+                canvas.style.setProperty("width","100%","important");
+                canvas.style.setProperty("height","100%","important");
+                canvas.style.setProperty("object-fit","contain","important");
+                canvas.style.pointerEvents="auto";
+              }
+            }catch(e){}
           }
-          if (value instanceof Blob) return value.arrayBuffer();
-        } catch(e) { return Promise.reject(e); }
-        return Promise.reject(new Error('Stored ROM data has an unsupported format.'));
+
+          function gmxResumeAudio(){
+            try{
+              var candidates=[];
+              if(window.EJS_emulator){
+                candidates.push(EJS_emulator.audioContext);
+                if(EJS_emulator.gameManager){
+                  candidates.push(EJS_emulator.gameManager.audioContext);
+                  var m=EJS_emulator.gameManager.Module;
+                  if(m){
+                    candidates.push(m.audioContext);
+                    if(m.SDL2)candidates.push(m.SDL2.audioContext);
+                  }
+                }
+              }
+              candidates.forEach(function(ctx){if(ctx&&ctx.state==="suspended"&&ctx.resume)ctx.resume().catch(function(){});});
+            }catch(e){}
+          }
+
+          function gmxManager(){
+            try{
+              return window.EJS_emulator && EJS_emulator.gameManager &&
+                typeof EJS_emulator.gameManager.simulateInput==="function" ? EJS_emulator.gameManager : null;
+            }catch(e){return null;}
+          }
+
+          function gmxApplyInput(index,value){
+            var manager=gmxManager();
+            if(!manager)return false;
+            try{manager.simulateInput(0,Number(index),Number(value));return true;}catch(e){return false;}
+          }
+
+          function gmxFlushInputs(){
+            Object.keys(GMX_INPUT_STATE).forEach(function(index){gmxApplyInput(index,GMX_INPUT_STATE[index]);});
+          }
+
+          function gmxStartCore(){
+            if(GMX_GAME_STARTED)return;
+            try{
+              var start=document.querySelector(".ejs_start_button");
+              if(start)start.click();
+            }catch(e){}
+          }
+
+          window.GMX_receiveInput=function(index,value){
+            index=Number(index);value=Number(value);
+            GMX_INPUT_STATE[index]=value;
+            if(value>0)gmxStartCore();
+            gmxResumeAudio();
+            gmxApplyInput(index,value);
+            setTimeout(gmxFlushInputs,0);
+          };
+
+          window.GMX_setVolume=function(value){
+            try{
+              EJS_volume=Math.max(0,Math.min(1,Number(value)));
+              if(window.EJS_emulator&&typeof EJS_emulator.setVolume==="function")EJS_emulator.setVolume(EJS_volume);
+            }catch(e){}
+            gmxResumeAudio();
+          };
+
+          window.addEventListener("message",function(ev){
+            var d=ev.data||{};
+            if(d.type==="gmx-input")window.GMX_receiveInput(d.index,d.value);
+            if(d.type==="gmx-volume")window.GMX_setVolume(d.value);
+          });
+
+          var EJS_ready=function(){
+            gmxHideEmulatorChrome();
+            setTimeout(gmxHideEmulatorChrome,60);
+            setTimeout(gmxHideEmulatorChrome,300);
+            parent.postMessage({type:"gmx-ejs-ready"},"*");
+          };
+
+          var EJS_onGameStart=function(){
+            GMX_GAME_STARTED=true;
+            gmxHideEmulatorChrome();
+            gmxResumeAudio();
+            gmxFlushInputs();
+            setTimeout(gmxHideEmulatorChrome,100);
+            parent.postMessage({type:"gmx-ejs-started"},"*");
+          };
+
+          new MutationObserver(function(){gmxHideEmulatorChrome();}).observe(document.documentElement,{childList:true,subtree:true});
+        <\/script><script src="https://cdn.emulatorjs.org/stable/data/loader.js"><\/script></body></html>`;
       }
 
       function startMultiCore(game) {
         var def = normaliseGameSystem(game);
         if (!def) { renderError('UNSUPPORTED ROM', 'This game type is not configured.'); return; }
         try {
+          stopEmu();
+          var romBlob = new Blob([game.rom], { type:'application/octet-stream' });
+          var romUrl = URL.createObjectURL(romBlob);
           var frame = document.getElementById('multi-core-frame');
           var area = document.getElementById('game-area');
-          var wantedKey = gameSessionKey(game, def);
-
-          // A fake GMX power cycle must not tear down a working core. If the
-          // same game is selected again, resume the warm iframe immediately.
-          if (emu.mode === 'ejs' && emu.suspended && emu.ready && emu.gameKey === wantedKey && emu.frame === frame && frame.contentWindow) {
-            emu.running = true;
-            emu.suspended = false;
-            area.classList.add('multi-core');
-            document.getElementById('screen').classList.add('game-running');
-            document.getElementById('screen').classList.remove('os-ready');
-            try { frame.contentWindow.postMessage({ type:'gmx-power', on:true }, '*'); } catch(e) {}
-            var warmMsg = document.getElementById('sys-msg');
-            if (warmMsg) { warmMsg.innerText = 'RESUMING LOADED CORE...'; warmMsg.style.opacity = 1; setTimeout(function(){ if(emu.running) warmMsg.style.opacity=0; }, 1200); }
-            return;
-          }
-
-          stopEmu();
 
           emu.mode = 'ejs';
           emu.running = true;
           emu.system = def.key;
           emu.frame = frame;
-          emu.bootStarted = false;
-          emu.ready = false;
-          emu.suspended = false;
-          emu.gameKey = wantedKey;
+          emu.romUrl = romUrl;
+          emu.coreReady = false;
+          emu.gameStarted = false;
 
           area.classList.add('multi-core');
           document.getElementById('screen').classList.add('game-running');
           document.getElementById('screen').classList.remove('os-ready');
-
-          romAsArrayBuffer(game.rom).then(function(buf) {
-            if (!emu.running || emu.mode !== 'ejs') return;
-            if (!buf || !buf.byteLength) throw new Error('ROM file is empty.');
-            emu.romBuffer = buf;
-            frame.srcdoc = makeEjsDocument(game, def);
-
-            emu.bootTimer = setTimeout(function() {
-              if (emu.running && emu.mode === 'ejs' && !emu.bootStarted) {
-                renderError('CORE LOAD TIMEOUT', 'The browser could not start the emulation core. Check network access to the EmulatorJS CDN and try again.');
-              }
-            }, 45000);
-          }).catch(function(err) {
-            renderError('ROM LOAD FAILED', String(err && err.message || err));
-          });
+          frame.srcdoc = makeEjsDocument(game, def, romUrl);
         } catch(e) {
           renderError('CORE BOOT FAILED', String(e));
         }
       }
 
-      function keyCodeFor(key) {
-        var map = {
-          ArrowUp:'ArrowUp', ArrowDown:'ArrowDown', ArrowLeft:'ArrowLeft', ArrowRight:'ArrowRight',
-          Enter:'Enter', x:'KeyX', z:'KeyZ', s:'KeyS', a:'KeyA', v:'KeyV', q:'KeyQ', e:'KeyE'
-        };
-        return map[key] || '';
-      }
-
-      function ejsInputIndex(btnId, systemKey) {
-        // EmulatorJS/RetroArch logical input slots. N64 movement uses the
-        // analogue axis-direction slots 16-19 instead of the D-pad slots 4-7.
-        if (systemKey === 'n64') {
-          if (btnId === 'btn-right') return 16;
-          if (btnId === 'btn-left')  return 17;
-          if (btnId === 'btn-down')  return 18;
-          if (btnId === 'btn-up')    return 19;
+      function ejsIndexFor(btnId) {
+        // The shell D-pad always remains the console D-pad.
+        // The left shell stick becomes an analogue stick only for N64; on the
+        // other systems it mirrors the D-pad. The right stick supplies N64 C-buttons.
+        if (emu.system === 'n64') {
+          if (btnId === 'btn-x') return 23; // C-Up
+          if (btnId === 'btn-y') return 21; // C-Left
+          return EJS_INPUT_MAP[btnId];
         }
-        var map = {
-          'btn-b':0, 'btn-y':1, 'btn-select':2, 'btn-start':3,
-          'btn-up':4, 'btn-down':5, 'btn-left':6, 'btn-right':7,
-          'btn-a':8, 'btn-x':9, 'btn-l':10, 'btn-r':11
-        };
-        return Object.prototype.hasOwnProperty.call(map, btnId) ? map[btnId] : null;
+        if (btnId.indexOf('stick-') === 0) {
+          return EJS_INPUT_MAP['btn-' + btnId.substring(6)];
+        }
+        if (btnId.indexOf('rstick-') === 0) return undefined;
+        return EJS_INPUT_MAP[btnId];
       }
 
       function sendInput(btnId, isDown) {
         if (!emu.running) return;
 
         if (emu.mode === 'ejs') {
-          var key = EJS_KEY_MAP[btnId];
-          var idx = ejsInputIndex(btnId, emu.system);
+          var index = ejsIndexFor(btnId);
           var frame = document.getElementById('multi-core-frame');
-          if (idx === null || !frame || !frame.contentWindow) return;
+          if (index === undefined || !frame || !frame.contentWindow) return;
+          var value = isDown ? 1 : 0;
           try {
-            frame.contentWindow.postMessage({
-              type:'gmx-input', index:idx, key:key || '', code:key ? keyCodeFor(key) : '', down:!!isDown
-            }, '*');
-          } catch(e) {}
+            // The iframe is deliberately same-origin. Calling the bridge directly
+            // keeps the physical button's user gesture intact, which also lets the
+            // browser unlock audio and dismiss EmulatorJS' hidden start gate.
+            if (typeof frame.contentWindow.GMX_receiveInput === 'function') {
+              frame.contentWindow.GMX_receiveInput(index, value);
+            } else {
+              frame.contentWindow.postMessage({ type:'gmx-input', index:index, value:value }, '*');
+            }
+          } catch(e) {
+            try { frame.contentWindow.postMessage({ type:'gmx-input', index:index, value:value }, '*'); } catch(ignore) {}
+          }
           return;
         }
 
         if (!emu.iodine) return;
-        var bit = GBA_BTN[btnId];
+        var legacyId = btnId;
+        if (btnId.indexOf('stick-') === 0) legacyId = 'btn-' + btnId.substring(6);
+        if (btnId.indexOf('rstick-') === 0) return;
+        var bit = GBA_BTN[legacyId];
         if (bit === undefined) return;
         try {
           if (emu.iodine.IOCore && emu.iodine.IOCore.joypad) {
@@ -2529,59 +2549,16 @@
       }
 
       window.addEventListener('message', function(e) {
-        if (!e.data) return;
-        var frame = document.getElementById('multi-core-frame');
-        if (!frame || e.source !== frame.contentWindow) return;
-        var type = e.data.type;
-
-        if (type === 'gmx-ejs-shell-ready') {
-          if (!emu.running || emu.mode !== 'ejs' || !emu.romBuffer) return;
-          try {
-            var transferable = emu.romBuffer.slice(0);
-            frame.contentWindow.postMessage({ type:'gmx-boot', rom:transferable }, '*', [transferable]);
-            emu.romBuffer = null;
-            var loadingMsg = document.getElementById('sys-msg');
-            if (loadingMsg) { loadingMsg.innerText = 'LOADING CORE...'; loadingMsg.style.opacity = 1; }
-          } catch(err) {
-            renderError('ROM TRANSFER FAILED', String(err && err.message || err));
-          }
-          return;
-        }
-
-        if (type === 'gmx-ejs-error') {
-          if (emu.bootTimer) { clearTimeout(emu.bootTimer); emu.bootTimer = null; }
-          renderError('EMULATOR ERROR', String(e.data.message || 'Unknown core error'));
-          return;
-        }
-
-        if (type === 'gmx-ejs-loader-ok') {
-          var loaderMsg = document.getElementById('sys-msg');
-          if (loaderMsg) { loaderMsg.innerText = 'EMULATOR RUNTIME LOADED'; loaderMsg.style.opacity = 1; }
-          return;
-        }
-
-        if (type === 'gmx-ejs-rom-received') {
-          var recvMsg = document.getElementById('sys-msg');
-          if (recvMsg) { recvMsg.innerText = 'ROM LOADED · STARTING CORE'; recvMsg.style.opacity = 1; }
-          return;
-        }
-
-        if (type !== 'gmx-ejs-ready' && type !== 'gmx-ejs-started') return;
-        emu.bootStarted = true;
-        emu.ready = true;
-        emu.suspended = false;
-        if (emu.bootTimer) { clearTimeout(emu.bootTimer); emu.bootTimer = null; }
+        if (!e.data || (e.data.type !== 'gmx-ejs-ready' && e.data.type !== 'gmx-ejs-started')) return;
         var msg = document.getElementById('sys-msg');
+        if (e.data.type === 'gmx-ejs-ready') emu.coreReady = true;
+        if (e.data.type === 'gmx-ejs-started') emu.gameStarted = true;
         if (!msg) return;
-        if (type === 'gmx-ejs-started') {
-          msg.innerText = 'GAME STARTED';
-        } else if (IS_APPLE_TOUCH && e.data && e.data.manualStart) {
-          msg.innerText = 'CORE READY · TAP THE GAME SCREEN TO START';
-        } else {
-          msg.innerText = 'CORE READY';
-        }
+        msg.innerText = e.data.type === 'gmx-ejs-started' ? 'GAME STARTED' : 'PRESS A TO START';
         msg.style.opacity = 1;
-        setTimeout(function() { if (emu.running && type === 'gmx-ejs-started') msg.style.opacity = 0; }, 1600);
+        if (e.data.type === 'gmx-ejs-started') {
+          setTimeout(function() { if (emu.running) msg.style.opacity = 0; }, 1200);
+        }
       });
 
       // ===================================================================
@@ -2633,41 +2610,6 @@
           var tx = db.transaction(STORE, 'readwrite');
           tx.objectStore(STORE).delete(key);
           tx.oncomplete = res; tx.onerror = rej;
-        });
-      }
-
-      function getStoredBiosBuffer() {
-        return initDB().then(function(db) {
-          if (!db) return memStore.bios || null;
-          return dbGet(db, '__bios__').then(function(rec) {
-            return rec && rec.data ? rec.data : null;
-          });
-        });
-      }
-
-      function startPreferredCore(game) {
-        var def = normaliseGameSystem(game);
-        if (def.key !== 'gba') {
-          startMultiCore(game);
-          return;
-        }
-
-        // GBA prefers the page's original IodineGBA engine when a BIOS has
-        // already been installed. This avoids any CDN dependency for GBA play.
-        Promise.all([romAsArrayBuffer(game.rom), getStoredBiosBuffer()]).then(function(parts) {
-          var romBuf = parts[0], biosBuf = parts[1];
-          if (biosBuf && biosBuf.byteLength) {
-            stopEmu();
-            document.getElementById('game-area').classList.remove('multi-core');
-            document.getElementById('screen').classList.add('game-running');
-            document.getElementById('screen').classList.remove('os-ready');
-            startIodine(biosBuf, romBuf);
-          } else {
-            startMultiCore(game);
-          }
-        }).catch(function(err) {
-          console.warn('Native GBA path unavailable; using EmulatorJS fallback.', err);
-          startMultiCore(game);
         });
       }
 
@@ -2776,7 +2718,7 @@
 
       function loadGame(game) {
         if (!game || !game.rom) { renderError('ROM NOT FOUND', 'The installed game data is missing.'); return; }
-        startPreferredCore(game);
+        startMultiCore(game);
       }
 
       // Backward-compatible helper for any legacy caller.
@@ -3084,23 +3026,13 @@
           setTimeout(function() { s.style.opacity = 0; }, 2000);
         });
       });
-      var romPicker = document.getElementById('install-rom-upload');
-      // Do not use an accept= extension list here: iOS Files can gray out custom
-      // ROM extensions even though JavaScript can read them perfectly well.
-      romPicker.removeAttribute('accept');
-      romPicker.addEventListener('click', function() {
-        // Allows choosing the same ROM twice after a failed/aborted install.
-        this.value = '';
-      });
-      romPicker.addEventListener('change', function(e) {
+      document.getElementById('install-rom-upload').addEventListener('change', function(e) {
         var f = e.target.files && e.target.files[0];
         var def = f ? detectSystem(f.name) : null;
         selRom = def ? f : null;
         selSystem = def;
         document.getElementById('popup-rom-name').textContent = f ? f.name : '';
-        document.getElementById('popup-system-name').textContent = def
-          ? ('Detected: ' + def.label)
-          : (f ? 'Unsupported ROM type: .' + (extensionOf(f.name) || '?') : '');
+        document.getElementById('popup-system-name').textContent = def ? ('Detected: ' + def.label) : (f ? 'Unsupported ROM type' : '');
         document.getElementById('popup-install').disabled = !def;
       });
       document.getElementById('install-cover-upload').addEventListener('change', function(e) {
@@ -3113,10 +3045,7 @@
         saveGame(selRom, selCover).then(function() {
           s.innerText = 'Install Complete!';
           setTimeout(function() { s.style.opacity = 0; buildXMB().then(updateXMB); }, 1500);
-        }).catch(function(err) {
-          s.innerText = 'Install Failed: ' + String(err && err.message || err || 'storage error');
-          s.style.opacity = 1;
-        });
+        }).catch(function() { s.innerText = 'Install Failed'; });
       });
 
       // ===================================================================
@@ -3211,100 +3140,6 @@
       Object.keys(SWITCH_MAP).forEach(bindSwitchButton);
 
       // ===================================================================
-      // iOS / iPadOS native haptic proxy layer
-      // WebKit does not expose navigator.vibrate() on iPhone. Safari 18+
-      // does provide a native haptic when the user directly taps an
-      // <input type="checkbox" switch>. Transparent proxies are placed over
-      // tap controls only on Apple touch devices; shell visuals are unchanged.
-      // ===================================================================
-      function installAppleHapticProxies() {
-        if (!IS_APPLE_TOUCH) return;
-        var layer = document.createElement('div');
-        layer.id = 'ios-haptic-layer';
-        layer.setAttribute('aria-hidden', 'true');
-        document.body.appendChild(layer);
-
-        var specs = [];
-        Object.keys(SWITCH_MAP).forEach(function(targetId) {
-          specs.push({
-            target: document.getElementById(targetId),
-            down: function() { pressButton(SWITCH_MAP[targetId]); },
-            up: function() { releaseButton(SWITCH_MAP[targetId]); }
-          });
-        });
-
-        // Power, camera, and volume are also direct emulator inputs.
-        specs.push({
-          target: document.getElementById('switch-home'),
-          down: function() { var t=document.getElementById('switch-home'); if(t)t.classList.add('active'); },
-          up: function() { var t=document.getElementById('switch-home'); if(t)t.classList.remove('active'); togglePower(null); }
-        });
-        specs.push({
-          target: document.querySelector('.menu'),
-          down: function() { var t=document.querySelector('.menu'); if(t)t.classList.add('active'); },
-          up: function() { var t=document.querySelector('.menu'); if(t){t.classList.remove('active'); t.click();} }
-        });
-        specs.push({ target: document.querySelector('.vol-hitbox.down'), down: function(){ changeVolume(-0.1); }, up: function(){} });
-        specs.push({ target: document.querySelector('.vol-hitbox.up'), down: function(){ changeVolume(0.1); }, up: function(){} });
-
-        function place(proxy, target) {
-          if (!target || !target.isConnected) return;
-          var r = target.getBoundingClientRect();
-          proxy.style.left = r.left + 'px';
-          proxy.style.top = r.top + 'px';
-          proxy.style.width = Math.max(1, r.width) + 'px';
-          proxy.style.height = Math.max(1, r.height) + 'px';
-          proxy.style.borderRadius = getComputedStyle(target).borderRadius || '0';
-        }
-
-        specs.forEach(function(spec, idx) {
-          if (!spec.target) return;
-          var proxy = document.createElement('input');
-          proxy.type = 'checkbox';
-          proxy.setAttribute('switch', '');
-          proxy.className = 'ios-haptic-switch';
-          proxy.tabIndex = -1;
-          proxy.setAttribute('aria-hidden', 'true');
-          proxy.dataset.proxyIndex = String(idx);
-          layer.appendChild(proxy);
-          spec.proxy = proxy;
-
-          var active = false;
-          proxy.addEventListener('touchstart', function(e) {
-            // Do not preventDefault: the native switch default action is what
-            // asks iOS to produce its built-in tap haptic.
-            e.stopPropagation();
-            active = true;
-            try { spec.down(); } catch(err) {}
-          }, { passive: true });
-          proxy.addEventListener('touchend', function(e) {
-            e.stopPropagation();
-            if (!active) return;
-            active = false;
-            try { spec.up(); } catch(err) {}
-          }, { passive: true });
-          proxy.addEventListener('touchcancel', function(e) {
-            e.stopPropagation();
-            if (!active) return;
-            active = false;
-            try { spec.up(); } catch(err) {}
-          }, { passive: true });
-          proxy.addEventListener('click', function(e) { e.stopPropagation(); });
-          place(proxy, spec.target);
-        });
-
-        function refresh() {
-          specs.forEach(function(spec) { if (spec.proxy) place(spec.proxy, spec.target); });
-        }
-        window.addEventListener('resize', refresh);
-        window.addEventListener('orientationchange', function(){ setTimeout(refresh, 250); });
-        setTimeout(refresh, 100);
-        setTimeout(refresh, 700);
-      }
-
-      installAppleHapticProxies();
-
-      // ===================================================================
       // Keyboard Events 
       // ===================================================================
       window.addEventListener('keydown', function(e) {
@@ -3384,8 +3219,7 @@
           screen.classList.add('power-off');
           screen.className = 'screen power-off'; 
           document.getElementById('sys-msg').style.opacity = 0;
-          if (!suspendEmuForPower()) stopEmu();
-          closePopup();
+          stopEmu(); closePopup();
           stopBootSound();
         }
       }
@@ -3507,21 +3341,15 @@
     });
   </script>
   <script>
-    // iPhone repair build: do not register the old app-shell service worker.
-    // Unregister only the legacy ./sw.js for this folder so a stale cached HTML
-    // build cannot keep reopening from the Home Screen icon.
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.getRegistrations().then((registrations) => {
-          const folderScope = new URL('./', location.href).href;
-          registrations.forEach((registration) => {
-            const worker = registration.active || registration.waiting || registration.installing;
-            const scriptURL = worker && worker.scriptURL ? worker.scriptURL : '';
-            if (registration.scope === folderScope && /\/sw\.js(?:$|[?#])/.test(scriptURL)) {
-              registration.unregister().catch(() => {});
-            }
+        navigator.serviceWorker.register('./sw.js')
+          .then((registration) => {
+            console.log('[GMX SW] Registration successful with scope: ', registration.scope);
+          })
+          .catch((error) => {
+            console.log('[GMX SW] Registration failed: ', error);
           });
-        }).catch(() => {});
       });
     }
   </script>
