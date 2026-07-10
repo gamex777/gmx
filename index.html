@@ -2127,7 +2127,8 @@
       var emu = {
         iodine: null, blitter: null, audio: null, rafId: null,
         running: false, mode: null, frame: null, romUrl: null, system: null,
-        romBuffer: null, bootTimer: null, bootStarted: false
+        romBuffer: null, bootTimer: null, bootStarted: false,
+        ready: false, suspended: false, gameKey: null
       };
 
       // Keep the original GBA audio object available for legacy compatibility.
@@ -2180,6 +2181,30 @@
         next();
       }
 
+      function gameSessionKey(game, def) {
+        def = def || normaliseGameSystem(game || {});
+        return String((game && game.id) || ((game && game.filename) || (game && game.title) || 'game')) + '|' + String(def && def.key || 'unknown');
+      }
+
+      function suspendEmuForPower() {
+        // Fake console power-off should not destroy a loaded WebAssembly core.
+        // Keep the iframe warm and pause it so the same game can resume without
+        // re-running the loader/core fetch path on the next GMX boot cycle.
+        if (emu.mode === 'ejs' && emu.frame && emu.frame.contentWindow) {
+          try { emu.frame.contentWindow.postMessage({ type:'gmx-power', on:false }, '*'); } catch(e) {}
+          emu.suspended = true;
+          emu.running = false;
+          return true;
+        }
+        if (emu.mode === 'iodine' && emu.iodine) {
+          try { emu.iodine.pause(); } catch(e) {}
+          emu.suspended = true;
+          emu.running = false;
+          return true;
+        }
+        return false;
+      }
+
       function stopEmu() {
         emu.running = false;
         if (emu.rafId) { cancelAnimationFrame(emu.rafId); emu.rafId = null; }
@@ -2195,6 +2220,9 @@
         emu.romUrl = null;
         emu.romBuffer = null;
         emu.bootStarted = false;
+        emu.ready = false;
+        emu.suspended = false;
+        emu.gameKey = null;
         emu.mode = null;
         emu.system = null;
 
@@ -2311,6 +2339,7 @@
         var controls = ejsDefaultControls(def.key);
         var cfg = {
           core: def.core,
+          system: def.key,
           gameName: game.title || 'GMX Game',
           gameID: numericGameId((game.id || '') + '|' + def.key),
           controls: controls,
@@ -2322,7 +2351,7 @@
           '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">' +
           '<style>html,body,#game{margin:0;width:100%;height:100%;overflow:hidden;background:#000}body{touch-action:none}#game{position:fixed;inset:0}.gmx-loader{position:fixed;inset:0;display:grid;place-items:center;color:#b9cfff;background:#000;font:11px monospace;letter-spacing:.08em;text-align:center;padding:20px;z-index:9999}</style>' +
           '</head><body><div id="game"></div><div id="gmx-loader" class="gmx-loader">PREPARING EMULATOR...</div><script>' +
-          'var GMX_CFG=' + json + ';var GMX_BOOTED=false;var GMX_ROM_BLOB=null;' +
+          'var GMX_CFG=' + json + ';var GMX_BOOTED=false;var GMX_ROM_BLOB=null;var GMX_GAME_STARTED=false;var GMX_PAUSED_BY_GMX=false;var GMX_INPUT_STATE={};' +
           'var GMX_IS_APPLE=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);' +
           'var GMX_RUNTIMES=[' +
             '{name:"OFFICIAL STABLE",loader:"https://cdn.emulatorjs.org/stable/data/loader.js",data:"https://cdn.emulatorjs.org/stable/data/"},' +
@@ -2351,9 +2380,15 @@
           'var EJS_noAutoFocus=true;' +
           'var EJS_askBeforeExit=false;' +
           'var EJS_defaultControls=GMX_CFG.controls;' +
+          'var EJS_controlScheme=GMX_CFG.system;' +
           'var EJS_threads=false;var EJS_forceLegacyCores=GMX_IS_APPLE;' +
-          'var EJS_ready=function(){var n=document.getElementById("gmx-loader");if(n)n.style.display="none";parent.postMessage({type:"gmx-ejs-ready",manualStart:GMX_IS_APPLE},"*")};' +
-          'var EJS_onGameStart=function(){var n=document.getElementById("gmx-loader");if(n)n.style.display="none";parent.postMessage({type:"gmx-ejs-started"},"*")};' +
+          'function gmxFocus(){try{window.focus();var g=document.getElementById("game");if(g){g.tabIndex=-1;g.focus({preventScroll:true})}}catch(e){}}' +
+          'function gmxApplyInput(d){var idx=Number(d.index);if(!Number.isFinite(idx))return false;var val=d.down?1:0;GMX_INPUT_STATE[idx]=val;var gm=window.EJS_emulator&&EJS_emulator.gameManager;if(gm&&typeof gm.simulateInput==="function"){try{gmxFocus();gm.simulateInput(0,idx,val);return true}catch(e){}}return false}' +
+          'function gmxFlushInput(){var ks=Object.keys(GMX_INPUT_STATE);for(var i=0;i<ks.length;i++)gmxApplyInput({index:Number(ks[i]),down:!!GMX_INPUT_STATE[ks[i]]})}' +
+          'function gmxReleaseAll(){var ks=Object.keys(GMX_INPUT_STATE);for(var i=0;i<ks.length;i++){var idx=Number(ks[i]);GMX_INPUT_STATE[idx]=0;var gm=window.EJS_emulator&&EJS_emulator.gameManager;if(gm&&typeof gm.simulateInput==="function"){try{gm.simulateInput(0,idx,0)}catch(e){}}}}' +
+          'function gmxPower(on){gmxReleaseAll();var em=window.EJS_emulator;if(!em||!GMX_GAME_STARTED)return;if(!on&&!GMX_PAUSED_BY_GMX&&typeof em.togglePlaying==="function"){try{em.togglePlaying(true);GMX_PAUSED_BY_GMX=true}catch(e){}}else if(on&&GMX_PAUSED_BY_GMX&&typeof em.togglePlaying==="function"){try{em.togglePlaying(true);GMX_PAUSED_BY_GMX=false;setTimeout(function(){gmxFocus();gmxFlushInput()},0)}catch(e){}}}' +
+          'var EJS_ready=function(){var n=document.getElementById("gmx-loader");if(n)n.style.display="none";setTimeout(gmxFlushInput,0);parent.postMessage({type:"gmx-ejs-ready",manualStart:GMX_IS_APPLE},"*")};' +
+          'var EJS_onGameStart=function(){GMX_GAME_STARTED=true;GMX_PAUSED_BY_GMX=false;var n=document.getElementById("gmx-loader");if(n)n.style.display="none";setTimeout(function(){gmxFocus();gmxFlushInput()},0);parent.postMessage({type:"gmx-ejs-started"},"*")};' +
           'window.addEventListener("error",function(ev){var m=String(ev.message||"Runtime error");if(m.indexOf("both async and sync fetching of the wasm failed")!==-1){var r=GMX_ACTIVE_RUNTIME;gmxError("WebAssembly core download failed"+(r?" from "+r.data:"")+". The PWA must be online and allowed to reach cdn.emulatorjs.org.");return;}if(m.indexOf("Script error")===-1)gmxError(m)});' +
           'window.addEventListener("unhandledrejection",function(ev){gmxError(String((ev.reason&&ev.reason.message)||ev.reason||"Core load failed"))});' +
           'window.addEventListener("message",function(ev){var d=ev.data||{};' +
@@ -2364,9 +2399,9 @@
           'EJS_gameUrl=GMX_ROM_BLOB;' +
           'parent.postMessage({type:"gmx-ejs-rom-received",size:bytes.byteLength},"*");' +
           'gmxInjectLoader(0);}catch(err){gmxError(String(err&&err.message||err))}return;}' +
+          'if(d.type==="gmx-power"){gmxPower(!!d.on);return;}' +
           'if(d.type!=="gmx-input")return;' +
-          'var opts={key:d.key,code:d.code||"",bubbles:true,cancelable:true,repeat:false};' +
-          'window.dispatchEvent(new KeyboardEvent(d.down?"keydown":"keyup",opts));});' +
+          'if(!gmxApplyInput(d)){var opts={key:d.key||"",code:d.code||"",bubbles:true,cancelable:true,repeat:false};document.dispatchEvent(new KeyboardEvent(d.down?"keydown":"keyup",opts));window.dispatchEvent(new KeyboardEvent(d.down?"keydown":"keyup",opts));}});' +
           'parent.postMessage({type:"gmx-ejs-shell-ready"},"*");' +
           '<\/script></body></html>';
       }
@@ -2386,15 +2421,34 @@
         var def = normaliseGameSystem(game);
         if (!def) { renderError('UNSUPPORTED ROM', 'This game type is not configured.'); return; }
         try {
-          stopEmu();
           var frame = document.getElementById('multi-core-frame');
           var area = document.getElementById('game-area');
+          var wantedKey = gameSessionKey(game, def);
+
+          // A fake GMX power cycle must not tear down a working core. If the
+          // same game is selected again, resume the warm iframe immediately.
+          if (emu.mode === 'ejs' && emu.suspended && emu.ready && emu.gameKey === wantedKey && emu.frame === frame && frame.contentWindow) {
+            emu.running = true;
+            emu.suspended = false;
+            area.classList.add('multi-core');
+            document.getElementById('screen').classList.add('game-running');
+            document.getElementById('screen').classList.remove('os-ready');
+            try { frame.contentWindow.postMessage({ type:'gmx-power', on:true }, '*'); } catch(e) {}
+            var warmMsg = document.getElementById('sys-msg');
+            if (warmMsg) { warmMsg.innerText = 'RESUMING LOADED CORE...'; warmMsg.style.opacity = 1; setTimeout(function(){ if(emu.running) warmMsg.style.opacity=0; }, 1200); }
+            return;
+          }
+
+          stopEmu();
 
           emu.mode = 'ejs';
           emu.running = true;
           emu.system = def.key;
           emu.frame = frame;
           emu.bootStarted = false;
+          emu.ready = false;
+          emu.suspended = false;
+          emu.gameKey = wantedKey;
 
           area.classList.add('multi-core');
           document.getElementById('screen').classList.add('game-running');
@@ -2427,15 +2481,35 @@
         return map[key] || '';
       }
 
+      function ejsInputIndex(btnId, systemKey) {
+        // EmulatorJS/RetroArch logical input slots. N64 movement uses the
+        // analogue axis-direction slots 16-19 instead of the D-pad slots 4-7.
+        if (systemKey === 'n64') {
+          if (btnId === 'btn-right') return 16;
+          if (btnId === 'btn-left')  return 17;
+          if (btnId === 'btn-down')  return 18;
+          if (btnId === 'btn-up')    return 19;
+        }
+        var map = {
+          'btn-b':0, 'btn-y':1, 'btn-select':2, 'btn-start':3,
+          'btn-up':4, 'btn-down':5, 'btn-left':6, 'btn-right':7,
+          'btn-a':8, 'btn-x':9, 'btn-l':10, 'btn-r':11
+        };
+        return Object.prototype.hasOwnProperty.call(map, btnId) ? map[btnId] : null;
+      }
+
       function sendInput(btnId, isDown) {
         if (!emu.running) return;
 
         if (emu.mode === 'ejs') {
           var key = EJS_KEY_MAP[btnId];
+          var idx = ejsInputIndex(btnId, emu.system);
           var frame = document.getElementById('multi-core-frame');
-          if (!key || !frame || !frame.contentWindow) return;
+          if (idx === null || !frame || !frame.contentWindow) return;
           try {
-            frame.contentWindow.postMessage({ type:'gmx-input', key:key, code:keyCodeFor(key), down:!!isDown }, '*');
+            frame.contentWindow.postMessage({
+              type:'gmx-input', index:idx, key:key || '', code:key ? keyCodeFor(key) : '', down:!!isDown
+            }, '*');
           } catch(e) {}
           return;
         }
@@ -2494,6 +2568,8 @@
 
         if (type !== 'gmx-ejs-ready' && type !== 'gmx-ejs-started') return;
         emu.bootStarted = true;
+        emu.ready = true;
+        emu.suspended = false;
         if (emu.bootTimer) { clearTimeout(emu.bootTimer); emu.bootTimer = null; }
         var msg = document.getElementById('sys-msg');
         if (!msg) return;
@@ -3308,7 +3384,8 @@
           screen.classList.add('power-off');
           screen.className = 'screen power-off'; 
           document.getElementById('sys-msg').style.opacity = 0;
-          stopEmu(); closePopup();
+          if (!suspendEmuForPower()) stopEmu();
+          closePopup();
           stopBootSound();
         }
       }
